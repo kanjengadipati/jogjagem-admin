@@ -6,13 +6,13 @@ async function getAuthToken() {
   return cookieStore.get('admin_token')?.value;
 }
 
-const BACKEND_URL = process.env.BACKEND_URL || "http://localhost:8081";
+const NEXT_PUBLIC_API_BASE = process.env.NEXT_PUBLIC_API_BASE || "http://localhost:8081";
 
 export async function GET() {
   const token = await getAuthToken();
   if (!token) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-  const res = await fetch(`${BACKEND_URL}/auth/admin/users`, {
+  const res = await fetch(`${NEXT_PUBLIC_API_BASE}/auth/admin/users`, {
     headers: { Authorization: `Bearer ${token}` },
   });
   const data = await res.json();
@@ -24,7 +24,7 @@ export async function POST(request: Request) {
   if (!token) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const body = await request.json();
-  const res = await fetch(`${BACKEND_URL}/auth/admin/users`, {
+  const res = await fetch(`${NEXT_PUBLIC_API_BASE}/auth/admin/users`, {
     method: 'POST',
     headers: { 
       'Content-Type': 'application/json',

@@ -5,9 +5,9 @@ export async function GET(request: Request) {
   
   if (!token) return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
 
-  const BACKEND_URL = process.env.BACKEND_URL || "http://localhost:8081";
+  const NEXT_PUBLIC_API_BASE = process.env.NEXT_PUBLIC_API_BASE || "http://localhost:8081";
   
-  const res = await fetch(`${BACKEND_URL}/destinations`, {
+  const res = await fetch(`${NEXT_PUBLIC_API_BASE}/destinations`, {
     headers: { Authorization: `Bearer ${token}` }
   });
   

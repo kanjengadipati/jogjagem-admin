@@ -2,10 +2,10 @@ import { NextResponse } from 'next/server';
 
 export async function POST(request: Request) {
   const body = await request.json();
-  const BACKEND_URL = process.env.BACKEND_URL || "http://localhost:8081";
+  const NEXT_PUBLIC_API_BASE = process.env.NEXT_PUBLIC_API_BASE || "http://localhost:8081";
 
   try {
-    const res = await fetch(`${BACKEND_URL}/auth/login`, {
+    const res = await fetch(`${NEXT_PUBLIC_API_BASE}/auth/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ ...body, device_name: "explore-jogja-admin" }),
