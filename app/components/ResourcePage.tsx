@@ -17,13 +17,18 @@ export function ResourcePage({ title, apiPath, columns, renderCell }: ResourcePa
 
   useEffect(() => {
     fetch(apiPath)
-      .then(res => res.json())
+      .then(async res => {
+        const text = await res.text();
+        if (!text) return null;
+        return JSON.parse(text);
+      })
       .then(res => {
-        if (res.status === 'success') {
+        if (res?.status === 'success' && Array.isArray(res.data)) {
           setData(res.data);
         }
         setLoading(false);
-      });
+      })
+      .catch(() => setLoading(false));
   }, [apiPath]);
 
   return (
