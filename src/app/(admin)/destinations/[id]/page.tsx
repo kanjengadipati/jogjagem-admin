@@ -11,7 +11,7 @@ import { ArrowLeft, Sparkles, ImagePlus, Trash2, Loader2 } from "lucide-react";
 import type { Destination } from "@/types";
 
 const CLOUDINARY_CLOUD = "wdsepioa";
-const CLOUDINARY_PRESET = "ml_default"; // unsigned preset — create one in Cloudinary dashboard if needed
+const _CLOUDINARY_PRESET = "ml_default"; // unsigned preset — create one in Cloudinary dashboard if needed
 // For signed upload without a preset, we use the API key directly:
 const CLOUDINARY_API_KEY = "738718397121653";
 const CLOUDINARY_UPLOAD_URL = `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD}/image/upload`;
