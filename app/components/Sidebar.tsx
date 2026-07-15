@@ -118,7 +118,7 @@ export const Sidebar: React.FC = () => {
       {!collapsed && (
         <div className="p-4 border-t border-border mt-auto sidebar-profile-box">
           <div className="space-y-2">
-            <a href="/" target="_blank" className="flex items-center gap-2.5 p-3 rounded-xl border border-border hover:border-primary/20 hover:bg-primary/5 transition-premium text-xs font-semibold text-gray-700">
+            <a href={process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3001'} target="_blank" className="flex items-center gap-2.5 p-3 rounded-xl border border-border hover:border-primary/20 hover:bg-primary/5 transition-premium text-xs font-semibold text-gray-700">
               <ExternalLink className="w-4 h-4 text-primary" />
               <span>Visit Main Portal</span>
             </a>
