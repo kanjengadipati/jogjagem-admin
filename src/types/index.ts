@@ -42,6 +42,23 @@ export interface Destination {
   facilities?: string[] | string;
 }
 
+export interface Partner {
+  id: string;
+  name: string;
+  description?: string;
+  category?: string;
+  location?: string;
+  address?: string;
+  image?: string;
+  rating?: number;
+  price?: string;
+  distance?: string;
+  phone?: string;
+  website?: string;
+  latitude?: number;
+  longitude?: number;
+}
+
 export interface Role {
   id: string;
   name: string;
