@@ -1,7 +1,7 @@
 import type { MenuGroup, AdminUser } from "@/types";
 
 export const BACKEND_URL =
-  process.env.BACKEND_URL || "http://localhost:8081";
+  process.env.NEXT_PUBLIC_API_BASE || "http://localhost:8081";
 
 export const COOKIE_NAME = "admin_token";
 
