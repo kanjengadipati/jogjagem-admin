@@ -35,7 +35,7 @@ export default function AIRecommendationsPage() {
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
             <h2 className="text-2xl font-extrabold font-display text-gray-900 tracking-tight">AI Recommendation Engine</h2>
-            <p className="text-xs text-gray-500 mt-1">Configure systemic prompts, manage tourism category weighting, and audit Gemini recommendation APIs.</p>
+            <p className="text-xs text-gray-500 mt-1">Configure systemic prompts, manage tourism category weighting, and audit AI recommendation APIs.</p>
           </div>
           <button onClick={() => showToast("Prompt Saved","Systemic prompt saved successfully.","success")} className="flex items-center gap-2 bg-primary hover:bg-primary-dark text-white px-4 py-2.5 rounded-xl text-xs font-semibold shadow-premium transition cursor-pointer">
             <Save className="w-4 h-4" /><span>Save Prompt Engine</span>
@@ -47,7 +47,7 @@ export default function AIRecommendationsPage() {
             <div className="bg-white p-6 rounded-card border border-border shadow-soft space-y-5">
               <div className="flex items-center justify-between">
                 <h4 className="text-sm font-bold text-gray-800 font-display">System Prompt Template</h4>
-                <span className="text-[9px] font-mono text-gray-400 font-bold">MODEL: GEMINI-2.5-FLASH</span>
+                <span className="text-[9px] font-mono text-gray-400 font-bold">BACKEND AI ENGINE</span>
               </div>
               <textarea defaultValue={`You are the expert tourism advisor for Yogyakarta. Based on the user's personality (Adventurous, Relaxed, Cultural, Culinary, Historic), recommend exactly 3 verified destinations with short description summaries, approximate budgets, and Javanese cultural fun facts.`} rows={8} className="w-full bg-bg focus:bg-white text-xs p-4 rounded-xl border border-transparent focus:border-border outline-none font-mono leading-relaxed text-gray-700" />
               <div className="grid grid-cols-2 gap-4">
@@ -104,7 +104,7 @@ export default function AIRecommendationsPage() {
                 {loading ? (
                   <div className="flex items-center justify-center gap-2 py-6">
                     <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary" />
-                    <span className="text-[10px] text-gray-500 font-semibold">Generating via Gemini…</span>
+                    <span className="text-[10px] font-semibold">Generating via AI engine…</span>
                   </div>
                 ) : results ? (
                   <div className="space-y-3">

@@ -32,7 +32,7 @@ export default async function DashboardPage() {
     userCount = Array.isArray(users) ? users.length : 0;
   }
   backendConnected = healthRes.status === 200;
-  const aiActive = !!process.env.GEMINI_API_KEY;
+  const aiActive = backendConnected;
 
   return (
     <>

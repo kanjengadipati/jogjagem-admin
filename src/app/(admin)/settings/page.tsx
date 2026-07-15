@@ -75,18 +75,14 @@ export default function SettingsPage() {
               </div>
               <div className="flex items-center justify-between p-4 rounded-2xl bg-bg border border-border">
                 <div>
-                  <p className="text-xs font-bold text-gray-800">Enable Gemini AI Integration</p>
-                  <p className="text-[10px] text-gray-500 mt-0.5">Powers description generation, SEO, and review summarization</p>
+                  <p className="text-xs font-bold text-gray-800">Enable AI Integration</p>
+                  <p className="text-[10px] text-gray-500 mt-0.5">Powers description generation, SEO, and review summarization via the backend AI engine</p>
                 </div>
                 <button onClick={() => setAiEnabled(!aiEnabled)} className={`relative w-11 h-6 rounded-full transition-colors cursor-pointer ${aiEnabled ? "bg-primary" : "bg-gray-200"}`}>
                   <span className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${aiEnabled ? "translate-x-5" : ""}`} />
                 </button>
               </div>
-              <div className="space-y-1.5">
-                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block">Gemini API Key</label>
-                <input type="password" defaultValue="••••••••••••••••••••••••" className="w-full bg-bg focus:bg-white text-xs px-4 py-3 rounded-xl border border-transparent focus:border-border outline-none font-mono" />
-                <p className="text-[10px] text-gray-400">Set via GEMINI_API_KEY environment variable.</p>
-              </div>
+              <p className="text-[10px] text-gray-400">AI is powered by the backend engine. Configure the provider via <code className="font-mono bg-bg px-1 py-0.5 rounded">AI_PROVIDER</code> in the API environment.</p>
             </div>
 
           </div>
