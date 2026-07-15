@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Image from "next/image";
 import Header from "@/components/Header";
 import { useToast } from "@/components/Toast";
 import { Briefcase, CheckCircle, Clock, Search, Star, Loader2, MapPin, Phone, Globe } from "lucide-react";
@@ -99,85 +100,96 @@ export default function PartnersPage() {
             {filtered.map((p) => (
               <div
                 key={p.id}
-                className="bg-white p-6 rounded-card border border-border shadow-soft space-y-4 hover:border-primary/20 hover:shadow-premium transition-premium"
+                className="bg-white rounded-card border border-border shadow-soft overflow-hidden hover:border-primary/20 hover:shadow-premium transition-premium flex flex-col"
               >
-                {/* Top row */}
-                <div className="flex items-start justify-between">
-                  <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center text-primary flex-shrink-0">
-                    <Briefcase className="w-5 h-5" />
-                  </div>
-                  {p.rating && p.rating > 0 ? (
-                    <span className="flex items-center gap-1 bg-warning/10 text-warning text-[10px] font-bold px-2 py-0.5 rounded-full">
-                      <Star className="w-3 h-3 fill-warning" />{p.rating.toFixed(1)}
-                    </span>
+                {/* Hero image */}
+                <div className="relative h-44 bg-gray-100 flex-shrink-0">
+                  {p.image ? (
+                    <Image
+                      src={p.image}
+                      alt={p.name}
+                      fill
+                      className="object-cover group-hover:scale-105 transition duration-500"
+                      sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                    />
                   ) : (
-                    <span className="flex items-center gap-1 bg-gray-100 text-gray-400 text-[10px] font-bold px-2 py-0.5 rounded-full">
-                      <Clock className="w-3 h-3" /> Pending
-                    </span>
+                    <div className="w-full h-full flex items-center justify-center text-gray-300">
+                      <Briefcase className="w-10 h-10" />
+                    </div>
                   )}
-                </div>
-
-                {/* Name & category */}
-                <div>
-                  <h4 className="text-sm font-bold text-gray-900 font-display">{p.name}</h4>
+                  {/* Category badge */}
                   {p.category && (
-                    <span className="text-[10px] font-bold text-primary bg-primary/10 px-2 py-0.5 rounded-full mt-1 inline-block">
+                    <span className="absolute top-3 left-3 text-[10px] font-bold text-primary bg-white/90 backdrop-blur-sm px-2.5 py-0.5 rounded-lg shadow-sm">
                       {p.category}
                     </span>
                   )}
+                  {/* Rating badge */}
+                  <span className="absolute top-3 right-3 flex items-center gap-1 bg-black/50 text-white text-[10px] font-bold px-2 py-0.5 rounded-full backdrop-blur-sm">
+                    {p.rating && p.rating > 0 ? (
+                      <><Star className="w-3 h-3 fill-warning text-warning" />{p.rating.toFixed(1)}</>
+                    ) : (
+                      <><Clock className="w-3 h-3" /> Pending</>
+                    )}
+                  </span>
                 </div>
 
-                {/* Description */}
-                {p.description && (
-                  <p className="text-[11px] text-gray-500 leading-relaxed line-clamp-2">{p.description}</p>
-                )}
+                {/* Card body */}
+                <div className="p-5 flex flex-col gap-3 flex-1">
+                  {/* Name */}
+                  <h4 className="text-sm font-bold text-gray-900 font-display leading-snug">{p.name}</h4>
 
-                {/* Details */}
-                <div className="text-[10px] text-gray-400 space-y-1.5 border-t border-border pt-3">
-                  {p.location && (
-                    <div className="flex items-center gap-1.5">
-                      <MapPin className="w-3 h-3 flex-shrink-0" />
-                      <span className="text-gray-600 font-medium truncate">{p.location}</span>
-                    </div>
+                  {/* Description */}
+                  {p.description && (
+                    <p className="text-[11px] text-gray-500 leading-relaxed line-clamp-2">{p.description}</p>
                   )}
-                  {p.phone && (
-                    <div className="flex items-center gap-1.5">
-                      <Phone className="w-3 h-3 flex-shrink-0" />
-                      <span className="text-gray-600 font-medium">{p.phone}</span>
-                    </div>
-                  )}
-                  {p.website && (
-                    <div className="flex items-center gap-1.5">
-                      <Globe className="w-3 h-3 flex-shrink-0" />
-                      <a
-                        href={p.website}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-primary font-medium hover:underline truncate"
-                      >
-                        {p.website.replace(/^https?:\/\//, "")}
-                      </a>
-                    </div>
-                  )}
-                  {p.price && (
-                    <div className="flex justify-between">
-                      <span>Price</span>
-                      <span className="text-gray-600 font-medium">{p.price}</span>
-                    </div>
-                  )}
-                </div>
 
-                {/* Status badge */}
-                <div className="pt-1">
-                  {p.rating && p.rating > 0 ? (
-                    <span className="flex items-center gap-1 bg-success/10 text-success text-[10px] font-bold px-2.5 py-1 rounded-full w-fit">
-                      <CheckCircle className="w-3 h-3" /> Active Partner
-                    </span>
-                  ) : (
-                    <span className="flex items-center gap-1 bg-warning/10 text-warning text-[10px] font-bold px-2.5 py-1 rounded-full w-fit">
-                      <Clock className="w-3 h-3" /> Pending Verification
-                    </span>
-                  )}
+                  {/* Details */}
+                  <div className="text-[10px] text-gray-400 space-y-1.5 border-t border-border pt-3 mt-auto">
+                    {p.location && (
+                      <div className="flex items-center gap-1.5">
+                        <MapPin className="w-3 h-3 flex-shrink-0" />
+                        <span className="text-gray-600 font-medium truncate">{p.location}</span>
+                      </div>
+                    )}
+                    {p.phone && (
+                      <div className="flex items-center gap-1.5">
+                        <Phone className="w-3 h-3 flex-shrink-0" />
+                        <span className="text-gray-600 font-medium">{p.phone}</span>
+                      </div>
+                    )}
+                    {p.website && (
+                      <div className="flex items-center gap-1.5">
+                        <Globe className="w-3 h-3 flex-shrink-0" />
+                        <a
+                          href={p.website}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-primary font-medium hover:underline truncate"
+                        >
+                          {p.website.replace(/^https?:\/\//, "")}
+                        </a>
+                      </div>
+                    )}
+                    {p.price && (
+                      <div className="flex justify-between">
+                        <span>Price</span>
+                        <span className="text-gray-600 font-medium">{p.price}</span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Status badge */}
+                  <div>
+                    {p.rating && p.rating > 0 ? (
+                      <span className="flex items-center gap-1 bg-success/10 text-success text-[10px] font-bold px-2.5 py-1 rounded-full w-fit">
+                        <CheckCircle className="w-3 h-3" /> Active Partner
+                      </span>
+                    ) : (
+                      <span className="flex items-center gap-1 bg-warning/10 text-warning text-[10px] font-bold px-2.5 py-1 rounded-full w-fit">
+                        <Clock className="w-3 h-3" /> Pending Verification
+                      </span>
+                    )}
+                  </div>
                 </div>
               </div>
             ))}
