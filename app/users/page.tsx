@@ -1,8 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import Sidebar from '../components/Sidebar';
-import Header from '../components/Header';
+import { Sidebar } from '../components/Sidebar';
+import { Header } from '../components/Header';
 
 export default function UsersPage() {
   const [users, setUsers] = useState([]);
@@ -23,7 +23,11 @@ export default function UsersPage() {
     <div className="flex min-h-screen bg-bg">
       <Sidebar />
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
-        <Header />
+        <Header 
+          activeId="users" 
+          user={{ name: "Admin", role: "Super Admin", email: "admin@explorejogja.com", avatar: "https://unavatar.io/gravatar/elbhrecat@gmail.com" }} 
+          currentDate={new Date().toLocaleDateString("en-US", { day: "numeric", month: "long", year: "numeric" })}
+        />
         <main className="flex-1 overflow-y-auto p-8">
           <h2 className="text-2xl font-extrabold text-gray-900">User Management</h2>
           {loading ? (
