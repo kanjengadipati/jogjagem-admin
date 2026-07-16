@@ -192,7 +192,11 @@ export default function UsersPage() {
             </div>
             <div className="p-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {roles.map(role => {
-                const perms = Array.isArray(role.permissions) ? role.permissions : JSON.parse((role.permissions as string) || "[]");
+              const perms: string[] = Array.isArray(role.permissions)
+                ? (role.permissions as (string | { permission: string })[]).map(p =>
+                    typeof p === 'string' ? p : p.permission
+                  )
+                : [];
                 return (
                   <div key={role.id} className="p-4 rounded-2xl border border-border hover:border-primary/20 hover:bg-primary/5 transition-premium">
                     <div className="flex items-center gap-3 mb-2">

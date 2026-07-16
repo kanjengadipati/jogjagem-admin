@@ -40,6 +40,10 @@ export interface Destination {
   review_count?: number;
   images?: DestinationImage[] | string[] | string;
   facilities?: string[] | string;
+  seo_title?: string;
+  seo_keywords?: string;
+  seo_description?: string;
+  og_image_url?: string;
 }
 
 export interface Partner {
@@ -158,9 +162,10 @@ export interface Story {
 }
 
 export interface Role {
-  id: string;
+  id: string | number;
   name: string;
-  permissions?: string[] | string;
+  // BE returns role_permissions as {id, permission}[] but we normalise to string[]
+  permissions?: string[] | { permission: string }[] | string;
 }
 
 // ─── Navigation ───────────────────────────────────────────────────────────────
@@ -195,4 +200,16 @@ export interface ReviewSummary {
 export interface DescriptionResult {
   description: string;
   seoKeywords: string;
+}
+
+// ─── Site Config ─────────────────────────────────────────────────────────────
+export interface SiteSeoConfig {
+  site_title: string;
+  site_description: string;
+  site_keywords: string;
+  og_default_image: string;
+  twitter_handle: string;
+  landing_hero_title: string;
+  landing_hero_subtitle: string;
+  landing_cta_text: string;
 }
