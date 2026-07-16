@@ -15,6 +15,20 @@ export async function GET(
 ) {
   const { id } = await params;
   const api = await getApi();
-  const { status, data } = await api(`/auth/admin/roles/${id}`);
+  const { status, data } = await api(`/auth/admin/roles/${id}/permissions`);
+  return NextResponse.json(data, { status });
+}
+
+export async function PUT(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const { id } = await params;
+  const api = await getApi();
+  const body = await req.json().catch(() => ({}));
+  const { status, data } = await api(`/auth/admin/roles/${id}/permissions`, {
+    method: "PUT",
+    body: JSON.stringify(body),
+  });
   return NextResponse.json(data, { status });
 }

@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { fetchWithAuth } from "@/lib/api";
 import { COOKIE_NAME } from "@/lib/constants";
@@ -9,12 +9,8 @@ async function getApi() {
   return fetchWithAuth(token);
 }
 
-export async function GET(
-  _: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  const { id } = await params;
+export async function GET() {
   const api = await getApi();
-  const { status, data } = await api(`/auth/admin/roles/${id}`);
+  const { status, data } = await api("/auth/admin/permissions");
   return NextResponse.json(data, { status });
 }
