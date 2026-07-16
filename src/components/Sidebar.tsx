@@ -57,7 +57,7 @@ export default function Sidebar() {
             <Image src="/logo-gold.png" alt="Logo" width={40} height={40} className="object-contain" />
             <div>
               <h1 className="font-display font-extrabold text-base tracking-tight text-primary leading-none">
-                EXPLORE JOGJA
+                JOGJAGEM
               </h1>
               <span className="text-[10px] font-semibold text-secondary tracking-widest uppercase">
                 Ecosystem Admin

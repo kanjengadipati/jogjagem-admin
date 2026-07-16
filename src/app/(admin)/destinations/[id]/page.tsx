@@ -33,15 +33,16 @@ type FormState = {
   best_time: string;
   latitude: string;
   longitude: string;
-  seoTitle: string;
-  seoKeywords: string;
-  seoDesc: string;
+  seo_title: string;
+  seo_keywords: string;
+  seo_description: string;
+  og_image_url: string;
 };
 
 const EMPTY_FORM: FormState = {
   name: "", category: "", sub_region: "", tagline: "", location: "",
   description: "", story: "", ticket_price: "", opening_hours: "", best_time: "",
-  latitude: "", longitude: "", seoTitle: "", seoKeywords: "", seoDesc: "",
+  latitude: "", longitude: "", seo_title: "", seo_keywords: "", seo_description: "", og_image_url: "",
 };
 
 function FieldInput({ label, value, onChange, mono = false }: {
@@ -120,9 +121,10 @@ export default function DestinationDetailPage() {
             best_time: data.best_time ?? "",
             latitude: String(data.latitude ?? ""),
             longitude: String(data.longitude ?? ""),
-            seoTitle: `${data.name} - Jogjagem`,
-            seoKeywords: `${data.name}, Jogja Tourism, ${data.category ?? ""}`,
-            seoDesc: (data.description ?? "").substring(0, 160),
+            seo_title: data.seo_title ?? "",
+            seo_keywords: data.seo_keywords ?? "",
+            seo_description: data.seo_description ?? "",
+            og_image_url: data.og_image_url ?? "",
           });
           setGalleryImgs(parseImages(data.images));
         }
@@ -163,7 +165,7 @@ export default function DestinationDetailPage() {
       });
       const data = await res.json();
       if (data.description) { setField("description", data.description); showToast("AI", "Description generated", "success"); }
-      if (data.seoKeywords) setField("seoKeywords", data.seoKeywords);
+      if (data.seoKeywords) setField("seo_keywords", data.seoKeywords);
     } catch {
       showToast("AI Error", "Generation failed", "error");
     } finally {
@@ -439,13 +441,25 @@ export default function DestinationDetailPage() {
                   </button>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                  <FieldInput label="Meta Title" value={form.seoTitle} onChange={(v) => setField("seoTitle", v)} />
-                  <FieldInput label="Meta Keywords" value={form.seoKeywords} onChange={(v) => setField("seoKeywords", v)} />
+                  <FieldInput label="Meta Title" value={form.seo_title} onChange={(v) => setField("seo_title", v)} />
+                  <FieldInput label="Meta Keywords" value={form.seo_keywords} onChange={(v) => setField("seo_keywords", v)} />
                 </div>
                 <div className="space-y-1.5">
                   <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block">Meta Description</label>
-                  <textarea value={form.seoDesc} onChange={(e) => setField("seoDesc", e.target.value)} rows={3}
+                  <textarea value={form.seo_description} onChange={(e) => setField("seo_description", e.target.value)} rows={3}
                     className="w-full bg-bg focus:bg-white text-xs p-4 rounded-xl border border-transparent focus:border-border outline-none font-medium" />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block">OG Image URL</label>
+                  <input type="text" value={form.og_image_url} onChange={(e) => setField("og_image_url", e.target.value)}
+                    placeholder="Leave empty to use first gallery image"
+                    className="w-full bg-bg focus:bg-white text-xs p-4 rounded-xl border border-transparent focus:border-border outline-none font-medium" />
+                  {form.og_image_url && (
+                    <div className="relative rounded-xl overflow-hidden aspect-video border border-border mt-2">
+                      <img src={form.og_image_url} alt="OG Preview" className="w-full h-full object-cover" />
+                    </div>
+                  )}
+                  <p className="text-[10px] text-gray-400">Used for social media sharing (Facebook, Twitter, WhatsApp). Leave empty to use the first gallery image.</p>
                 </div>
               </div>
             )}

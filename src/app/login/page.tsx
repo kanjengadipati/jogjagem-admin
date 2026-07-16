@@ -40,7 +40,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
           </div>
           <div>
             <h1 className="font-display font-extrabold text-xl tracking-tight text-primary">
-              EXPLORE JOGJA
+              JOGJAGEM
             </h1>
             <p className="text-xs text-gray-400 font-medium tracking-wide uppercase mt-0.5">
               Ecosystem Operations Console

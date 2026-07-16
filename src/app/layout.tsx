@@ -16,7 +16,7 @@ const manrope = Manrope({
 
 export const metadata: Metadata = {
   title: "Jogjagem — Tourism Ecosystem Operations Center",
-  description: "Admin panel for the Explore Jogja tourism ecosystem",
+  description: "Admin panel for the Jogjagem tourism ecosystem",
   icons: { icon: "/favicon-gold.png" },
 };
 
