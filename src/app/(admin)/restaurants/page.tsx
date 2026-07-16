@@ -5,6 +5,7 @@ import Image from "next/image";
 import Header from "@/components/Header";
 import { useToast } from "@/components/Toast";
 import { Utensils, Star, MapPin, Search, Loader2 } from "lucide-react";
+import { firstImage } from "@/lib/images";
 import type { Restaurant } from "@/types";
 
 export default function RestaurantsPage() {
@@ -32,7 +33,7 @@ export default function RestaurantsPage() {
   }, [search, cuisine, all]);
 
   const cuisines = Array.from(new Set(all.map(r => r.cuisine_type).filter(Boolean))) as string[];
-  const firstImg = (r: Restaurant) => { const imgs = r.images as string[] | undefined; return Array.isArray(imgs) && imgs.length > 0 ? imgs[0] : null; };
+  const firstImg = (r: Restaurant) => firstImage(r.images as never) || null;
 
   return (
     <>

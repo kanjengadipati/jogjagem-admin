@@ -5,6 +5,7 @@ import Image from "next/image";
 import Header from "@/components/Header";
 import { useToast } from "@/components/Toast";
 import { Hotel, Star, MapPin, Search, Loader2 } from "lucide-react";
+import { firstImage } from "@/lib/images";
 import type { Hotel as HotelType } from "@/types";
 
 export default function HotelsPage() {
@@ -31,10 +32,7 @@ export default function HotelsPage() {
     ));
   }, [search, hotels]);
 
-  const firstImg = (h: HotelType) => {
-    const imgs = h.images as string[] | undefined;
-    return Array.isArray(imgs) && imgs.length > 0 ? imgs[0] : null;
-  };
+  const getFirstImg = (h: HotelType) => firstImage(h.images as never);
 
   return (
     <>
@@ -86,7 +84,7 @@ export default function HotelsPage() {
                     <div className="flex flex-col items-center gap-2"><Hotel className="w-8 h-8" /><span>No hotels found</span></div>
                   </td></tr>
                 ) : filtered.map(h => {
-                  const img = firstImg(h);
+                  const img = getFirstImg(h);
                   return (
                     <tr key={h.id} className="hover:bg-bg/40 transition">
                       <td className="py-4 px-6">
