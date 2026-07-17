@@ -77,7 +77,7 @@ export default function LoginForm() {
                 name="email"
                 required
                 className="w-full bg-bg focus:bg-white text-xs pl-10 pr-4 py-3.5 rounded-xl border border-transparent focus:border-border outline-none transition duration-200 font-medium"
-                placeholder="admin@mail.com"
+                placeholder="useradmin@email.com"
               />
             </div>
           </div>
