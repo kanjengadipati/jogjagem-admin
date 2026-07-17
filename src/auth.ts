@@ -31,6 +31,9 @@ export const authOptions: NextAuthOptions = {
               name: data.data.name ?? "Admin Jogjagem",
               accessToken: data.data.access_token,
             } as any;
+          } else {
+            console.error("Login failed:", res.status, data);
+            return null;
           }
         } catch {
           return null;

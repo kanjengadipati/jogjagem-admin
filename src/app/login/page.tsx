@@ -16,15 +16,9 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
     redirect("/dashboard");
   }
 
-  // Token passed via redirect from main portal
+  // Token passed via redirect from main portal — hand off to Route Handler to set cookie
   if (params.token && params.token.length > 10) {
-    cookieStore.set(COOKIE_NAME, params.token, {
-      httpOnly: true,
-      maxAge: 24 * 60 * 60,
-      sameSite: "lax",
-      path: "/",
-    });
-    redirect("/dashboard");
+    redirect(`/api/auth/token?token=${encodeURIComponent(params.token)}`);
   }
 
   return <LoginForm />;

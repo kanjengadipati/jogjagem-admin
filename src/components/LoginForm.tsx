@@ -1,28 +1,40 @@
 "use client";
 
-import { signIn } from "next-auth/react";
 import { useState } from "react";
 import { Mail, Lock, ArrowRight, Compass, Loader2 } from "lucide-react";
 
 export default function LoginForm() {
-  const [loading, setLoading] = useState<"email" | null>(null);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   async function handleEmailLogin(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    setLoading("email");
+    setLoading(true);
     setError(null);
+
     const form = new FormData(e.currentTarget);
-    const res = await signIn("credentials", {
-      email: form.get("email"),
-      password: form.get("password"),
-      redirect: false,
-    });
-    if (res?.error) {
-      setError("Login failed. Check your credentials.");
-      setLoading(null);
-    } else {
-      window.location.href = "/dashboard";
+    const email = form.get("email") as string;
+    const password = form.get("password") as string;
+
+    try {
+      const res = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
+      });
+
+      const data = await res.json().catch(() => ({}));
+
+      if (res.ok && data.ok) {
+        window.location.href = "/dashboard";
+        return;
+      }
+
+      setError(data.error || "Login failed. Check your credentials.");
+    } catch {
+      setError("Network error. Please try again.");
+    } finally {
+      setLoading(false);
     }
   }
 
@@ -102,10 +114,10 @@ export default function LoginForm() {
 
           <button
             type="submit"
-            disabled={loading !== null}
+            disabled={loading}
             className="w-full bg-primary hover:bg-primary-dark text-white py-3.5 rounded-xl text-xs font-semibold shadow-lg shadow-primary/20 transition duration-300 cursor-pointer flex items-center justify-center gap-2 disabled:opacity-50"
           >
-            {loading === "email" ? (
+            {loading ? (
               <Loader2 className="w-4 h-4 animate-spin" />
             ) : (
               <>
