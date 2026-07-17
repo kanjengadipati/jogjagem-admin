@@ -88,7 +88,7 @@ export default function RolesPage() {
   }
 
   // Group permissions by resource prefix for better UX
-  const grouped = allPermissions.reduce<Record<string, string[]>>((acc, p) => {
+  const grouped = allPermissions.filter((p): p is string => typeof p === 'string' && p.length > 0).reduce<Record<string, string[]>>((acc, p) => {
     const prefix = p.split(".")[0];
     if (!acc[prefix]) acc[prefix] = [];
     acc[prefix].push(p);
