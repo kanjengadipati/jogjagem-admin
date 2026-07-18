@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import Image from "next/image";
 import Header from "@/components/Header";
 import { useToast } from "@/components/Toast";
-import { Briefcase, CheckCircle, Clock, Search, Star, Loader2, MapPin, Phone, Globe } from "lucide-react";
+import { Briefcase, CheckCircle, Clock, Search, Star, Loader2, MapPin, Phone, Globe, Trash2, Edit3 } from "lucide-react";
 import type { Partner } from "@/types";
 
 export default function PartnersPage() {
@@ -39,6 +39,17 @@ export default function PartnersPage() {
     if (category) list = list.filter((p) => p.category === category);
     setFiltered(list);
   }, [all, search, category]);
+
+  async function deletePartner(id: string) {
+    if (!confirm("Delete this partner?")) return;
+    const res = await fetch(`/api/partners/${id}`, { method: "DELETE" });
+    if (res.ok) {
+      setAll(prev => prev.filter(p => p.id !== id));
+      showToast("Deleted", "Partner removed", "success");
+    } else {
+      showToast("Error", "Delete failed", "error");
+    }
+  }
 
   const categories = Array.from(new Set(all.map((p) => p.category).filter(Boolean))) as string[];
 
@@ -135,8 +146,14 @@ export default function PartnersPage() {
 
                 {/* Card body */}
                 <div className="p-5 flex flex-col gap-3 flex-1">
-                  {/* Name */}
-                  <h4 className="text-sm font-bold text-gray-900 font-display leading-snug">{p.name}</h4>
+                  <div className="flex justify-between items-start">
+                    {/* Name */}
+                    <h4 className="text-sm font-bold text-gray-900 font-display leading-snug">{p.name}</h4>
+                    <div className="flex gap-1">
+                        <button className="p-1 hover:bg-bg rounded"><Edit3 className="w-3.5 h-3.5 text-gray-400" /></button>
+                        <button onClick={() => deletePartner(p.id)} className="p-1 hover:bg-red-50 rounded"><Trash2 className="w-3.5 h-3.5 text-danger" /></button>
+                    </div>
+                  </div>
 
                   {/* Description */}
                   {p.description && (

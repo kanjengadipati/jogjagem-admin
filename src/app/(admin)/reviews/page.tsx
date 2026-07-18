@@ -14,6 +14,7 @@ interface Review {
   status: string;
   traveler_type?: string;
   CreatedAt?: string;
+  image_url?: string;
 }
 
 const STATUS_STYLES: Record<string, string> = {
@@ -53,6 +54,21 @@ export default function ReviewsPage() {
     if (statusFilter) list = list.filter(r => r.status === statusFilter);
     setFiltered(list);
   }, [search, statusFilter, all]);
+
+  async function removeImage(id: string) {
+    if (!confirm("Remove this image?")) return;
+    const res = await fetch(`/api/reviews/${id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ image_url: null }),
+    });
+    if (res.ok) {
+      setAll(prev => prev.map(r => r.id === id ? { ...r, image_url: undefined } : r));
+      showToast("Updated", "Image removed", "success");
+    } else {
+      showToast("Error", "Update failed", "error");
+    }
+  }
 
   async function updateStatus(id: string, status: string) {
     const res = await fetch(`/api/reviews/${id}`, {
@@ -129,17 +145,18 @@ export default function ReviewsPage() {
                   <th className="py-4 px-6">Destination</th>
                   <th className="py-4 px-4 text-center">Rating</th>
                   <th className="py-4 px-6">Review</th>
+                  <th className="py-4 px-6">Image</th>
                   <th className="py-4 px-6 text-center">Status</th>
                   <th className="py-4 px-6 text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border text-xs text-gray-700 font-medium">
                 {loading ? (
-                  <tr><td colSpan={6} className="py-16 text-center text-gray-400">
+                  <tr><td colSpan={7} className="py-16 text-center text-gray-400">
                     <div className="flex items-center justify-center gap-2"><Loader2 className="w-4 h-4 animate-spin" /><span>Loading reviews…</span></div>
                   </td></tr>
                 ) : filtered.length === 0 ? (
-                  <tr><td colSpan={6} className="py-16 text-center text-gray-400">
+                  <tr><td colSpan={7} className="py-16 text-center text-gray-400">
                     <div className="flex flex-col items-center gap-2"><MessageSquare className="w-8 h-8" /><span>No reviews found</span></div>
                   </td></tr>
                 ) : filtered.map(r => (
@@ -164,6 +181,13 @@ export default function ReviewsPage() {
                     <td className="py-4 px-6 max-w-xs">
                       <p className="line-clamp-2 text-gray-600">{r.comment}</p>
                     </td>
+                    <td className="py-4 px-6">
+                      {r.image_url ? (
+                        <img src={r.image_url} alt="Review" className="w-16 h-16 rounded-lg object-cover" />
+                      ) : (
+                        <span className="text-gray-400 text-[10px]">No image</span>
+                      )}
+                    </td>
                     <td className="py-4 px-6 text-center">
                       <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full capitalize ${STATUS_STYLES[r.status] ?? "bg-gray-100 text-gray-500"}`}>
                         {r.status || "unknown"}
@@ -171,6 +195,12 @@ export default function ReviewsPage() {
                     </td>
                     <td className="py-4 px-6 text-right">
                       <div className="flex items-center justify-end gap-1.5">
+                        {r.image_url && (
+                          <button onClick={() => removeImage(r.id)} title="Remove Image"
+                            className="p-1.5 rounded-lg border border-border hover:bg-danger/10 text-gray-500 hover:text-danger cursor-pointer transition">
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        )}
                         {r.status !== "published" && (
                           <button onClick={() => updateStatus(r.id, "published")} title="Approve"
                             className="p-1.5 rounded-lg border border-border hover:bg-success/10 text-gray-500 hover:text-success cursor-pointer transition">
