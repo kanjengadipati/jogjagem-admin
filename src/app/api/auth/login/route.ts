@@ -24,8 +24,17 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Verify the user has an admin or superadmin role
-    const role = data?.data?.role;
+    // Verify the user has an admin or superadmin role by decoding the JWT payload
+    let role: string | undefined;
+    try {
+      const payload = JSON.parse(
+        Buffer.from(data.data.access_token.split(".")[1], "base64url").toString("utf-8")
+      );
+      role = payload?.role;
+    } catch {
+      return NextResponse.json({ error: "Invalid token received from server" }, { status: 500 });
+    }
+
     if (role !== "admin" && role !== "superadmin") {
       return NextResponse.json(
         { error: "Access denied. Admin privileges required." },
