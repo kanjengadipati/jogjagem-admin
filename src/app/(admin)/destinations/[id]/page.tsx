@@ -33,6 +33,7 @@ type FormState = {
   best_time: string;
   latitude: string;
   longitude: string;
+  video_url: string; // Add this
   seo_title: string;
   seo_keywords: string;
   seo_description: string;
@@ -42,7 +43,7 @@ type FormState = {
 const EMPTY_FORM: FormState = {
   name: "", category: "", sub_region: "", tagline: "", location: "",
   description: "", story: "", ticket_price: "", opening_hours: "", best_time: "",
-  latitude: "", longitude: "", seo_title: "", seo_keywords: "", seo_description: "", og_image_url: "",
+  latitude: "", longitude: "", video_url: "", seo_title: "", seo_keywords: "", seo_description: "", og_image_url: "",
 };
 
 function FieldInput({ label, value, onChange, mono = false }: {
@@ -121,6 +122,7 @@ export default function DestinationDetailPage() {
             best_time: data.best_time ?? "",
             latitude: String(data.latitude ?? ""),
             longitude: String(data.longitude ?? ""),
+            video_url: data.video_url ?? "",
             seo_title: data.seo_title ?? "",
             seo_keywords: data.seo_keywords ?? "",
             seo_description: data.seo_description ?? "",
@@ -343,6 +345,9 @@ export default function DestinationDetailPage() {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                     <FieldInput label="Latitude" value={form.latitude} onChange={(v) => setField("latitude", v)} mono />
                     <FieldInput label="Longitude" value={form.longitude} onChange={(v) => setField("longitude", v)} mono />
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-1 gap-5">
+                    <FieldInput label="Video URL" value={form.video_url} onChange={(v) => setField("video_url", v)} />
                   </div>
                 </div>
               </div>

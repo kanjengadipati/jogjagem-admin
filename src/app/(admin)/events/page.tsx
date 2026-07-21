@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import Image from "next/image";
 import Header from "@/components/Header";
 import { useToast } from "@/components/Toast";
@@ -69,7 +70,7 @@ export default function EventsPage() {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {filtered.map(ev => (
               <div key={ev.id} className="bg-white rounded-card border border-border shadow-soft overflow-hidden hover:border-primary/20 hover:shadow-premium transition-premium flex flex-col">
-                <div className="relative h-40 bg-gray-100">
+                <Link href={`/events/${ev.id}`} className="block relative h-40 bg-gray-100">
                   {ev.image_url ? (
                     <Image src={ev.image_url} alt={ev.title} fill className="object-cover" sizes="400px" />
                   ) : (
@@ -81,8 +82,8 @@ export default function EventsPage() {
                   {ev.status && (
                     <span className={`absolute top-3 right-3 text-[10px] font-bold px-2 py-0.5 rounded-full capitalize ${statusColor(ev.status)}`}>{ev.status}</span>
                   )}
-                </div>
-                <div className="p-5 flex flex-col gap-3 flex-1">
+                </Link>
+                <Link href={`/events/${ev.id}`} className="p-5 flex flex-col gap-3 flex-1">
                   <h4 className="text-sm font-bold text-gray-900 font-display leading-snug">{ev.title}</h4>
                   {ev.description && <p className="text-[11px] text-gray-500 line-clamp-2 leading-relaxed">{ev.description}</p>}
                   <div className="mt-auto border-t border-border pt-3 space-y-1.5 text-[10px] text-gray-400">
@@ -94,7 +95,7 @@ export default function EventsPage() {
                     )}
                     {ev.ticket_price && <div className="flex items-center gap-1.5"><Tag className="w-3 h-3" /><span className="text-primary font-bold">{ev.ticket_price}</span></div>}
                   </div>
-                </div>
+                </Link>
               </div>
             ))}
           </div>

@@ -44,6 +44,7 @@ export interface Destination {
   seo_keywords?: string;
   seo_description?: string;
   og_image_url?: string;
+  video_url?: string;
 }
 
 export interface Partner {
@@ -108,6 +109,7 @@ export interface Event {
   ticket_price?: string;
   organizer?: string;
   max_attendees?: number;
+  video_url?: string;
 }
 
 export interface Guide {
