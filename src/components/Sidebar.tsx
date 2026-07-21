@@ -9,7 +9,7 @@ import {
   LayoutDashboard, BarChart3, FileText, MapPin, Calendar, Hotel,
   Utensils, Briefcase, Users, ShoppingBag, Car, MessageSquareDashed,
   BookOpen, Sparkles, Tag, UserCog, Shield, Settings, ChevronLeft,
-  ChevronRight, ExternalLink,
+  ChevronRight, ExternalLink, Bot,
 } from "lucide-react";
 
 // Map icon name strings → Lucide components
@@ -29,6 +29,7 @@ const ICON_MAP: Record<string, React.ElementType> = {
   "book-open": BookOpen,
   "sparkles": Sparkles,
   "tag": Tag,
+  "bot": Bot,
   "user-cog": UserCog,
   "shield": Shield,
   "settings": Settings,
