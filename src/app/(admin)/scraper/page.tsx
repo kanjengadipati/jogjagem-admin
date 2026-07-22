@@ -43,7 +43,11 @@ export default function ScraperPage() {
       if (body?.status === "success" && body?.data?.results) {
         setResults(body.data.results);
         const label = type === "all" ? "All" : type === "destinations" ? "Destinations" : "Events";
-        showToast("Scrape Complete", `${label} scrape finished`, "success");
+        
+        const totalE = body.data.results.reduce((s, r) => s + r.EventsInserted + r.EventsUpdated, 0);
+        const totalD = body.data.results.reduce((s, r) => s + r.DestinationsInserted + r.DestinationsUpdated, 0);
+        
+        showToast("Scrape Complete", `${label} scrape finished: ${totalE} events, ${totalD} destinations processed.`, "success");
       } else {
         showToast("Error", "Unexpected response format", "error");
       }
@@ -122,6 +126,14 @@ export default function ScraperPage() {
         </div>
 
         {/* Status summary */}
+        {results && (
+          <div className="bg-success/10 border border-success/20 rounded-2xl p-4 mb-4">
+            <p className="text-sm font-semibold text-success flex items-center gap-2">
+              <CheckCircle2 className="w-5 h-5" />
+              Successfully processed a total of {totalEvents + totalDests} items ({totalEvents} events, {totalDests} destinations).
+            </p>
+          </div>
+        )}
         {results && (
           <div className="grid grid-cols-3 gap-4">
             <div className="bg-white rounded-card border border-border shadow-soft p-5 flex items-center gap-4">
