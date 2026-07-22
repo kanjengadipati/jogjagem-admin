@@ -2,85 +2,193 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import Header from "@/components/Header";
+import Pagination from "@/components/Pagination";
 import { useToast } from "@/components/Toast";
 import { firstImage } from "@/lib/images";
-import { DownloadCloud, FileSpreadsheet, Plus, Search, Star, Edit3 } from "lucide-react";
-import type { Destination } from "@/types";
+import { DownloadCloud, FileSpreadsheet, Plus, Search, Star, Edit3, X } from "lucide-react";
+import type { Destination, PaginationMeta } from "@/types";
 
-const CATEGORIES = ["Temple","Beach","Nature","Heritage","Cultural","Culinary","Shopping"];
-const REGIONS = ["Sleman","Bantul","Yogyakarta","Gunungkidul","Kulon Progo"];
+const PAGE_SIZE = 25;
+const CATEGORIES = ["Temple","Beach","Nature","Heritage","Cultural","Culinary","Shopping","Adventure","hidden-gem","family","weekend"];
+const REGIONS    = ["Sleman","Bantul","Yogyakarta","Gunungkidul","Kulon Progo"];
+const RATING_OPTIONS = [
+  { value: "",     label: "All Ratings" },
+  { value: "high", label: "High (4.5+)" },
+  { value: "mid",  label: "Mid (3.5–4.5)" },
+  { value: "low",  label: "Low (< 3.5)" },
+];
+
+/* ------------------------------------------------------------------ */
+/* Helpers                                                             */
+/* ------------------------------------------------------------------ */
+
+function matchesRegion(subRegion: string | undefined, filter: string): boolean {
+  if (!subRegion || !filter) return true;
+  const sr = subRegion.toLowerCase();
+  const f  = filter.toLowerCase();
+  // "Yogyakarta" should match both "Yogyakarta" and "Kota Yogyakarta"
+  return sr === f || sr.includes(f) || f.includes(sr);
+}
+
+function matchesCategory(cat: string | undefined, filter: string): boolean {
+  if (!cat || !filter) return true;
+  return cat.toLowerCase() === filter.toLowerCase();
+}
+
+function matchesSearch(d: Destination, q: string): boolean {
+  if (!q) return true;
+  const needle = q.toLowerCase();
+  return (
+    d.name.toLowerCase().includes(needle) ||
+    (d.location ?? "").toLowerCase().includes(needle) ||
+    (d.sub_region ?? "").toLowerCase().includes(needle) ||
+    (d.category ?? "").toLowerCase().includes(needle)
+  );
+}
+
+function matchesRating(rating: number | undefined, filter: string): boolean {
+  if (!filter) return true;
+  const r = rating ?? 0;
+  if (filter === "high") return r >= 4.5;
+  if (filter === "mid")  return r >= 3.5 && r < 4.5;
+  if (filter === "low")  return r < 3.5;
+  return true;
+}
+
+function applyFilters(all: Destination[], search: string, category: string, region: string, rating: string): Destination[] {
+  return all.filter(d =>
+    matchesSearch(d, search) &&
+    matchesCategory(d.category, category) &&
+    matchesRegion(d.sub_region, region) &&
+    matchesRating(d.rating, rating)
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* Page                                                                */
+/* ------------------------------------------------------------------ */
 
 export default function DestinationsPage() {
   const { showToast } = useToast();
-  const [all, setAll] = useState<Destination[]>([]);
-  const [filtered, setFiltered] = useState<Destination[]>([]);
-  const [search, setSearch] = useState("");
-  const [category, setCategory] = useState("");
-  const [region, setRegion] = useState("");
-  const [rating, setRating] = useState("");
-  const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    fetch("/api/destinations")
-      .then(r => r.json())
-      .then(d => {
-        const list: Destination[] = d?.data ?? [];
-        setAll(list);
-        setFiltered(list);
-      })
-      .catch(() => showToast("Error", "Failed to load destinations", "error"))
-      .finally(() => setLoading(false));
+  // ── Data state ──────────────────────────────────────────────────────────────
+  const [allItems,  setAllItems]  = useState<Destination[]>([]);
+  const [loading,   setLoading]   = useState(true);
+  const [exporting, setExporting] = useState(false);
+
+  // ── Filter / page state ─────────────────────────────────────────────────────
+  const [page,     setPage]     = useState(1);
+  const [search,   setSearch]   = useState("");
+  const [category, setCategory] = useState("");
+  const [region,   setRegion]   = useState("");
+  const [rating,   setRating]   = useState("");
+
+  // Track whether we've done the initial full fetch
+  const didInit = useRef(false);
+
+  // ── Fetch ALL destinations on mount (for client-side filtering) ─────────────
+  const fetchAll = useCallback(async () => {
+    setLoading(true);
+    try {
+      const pages: Destination[] = [];
+      let p = 1;
+      // eslint-disable-next-line no-constant-condition
+      while (true) {
+        const res  = await fetch(`/api/destinations?page=${p}&limit=100`);
+        const json = await res.json();
+        const batch: Destination[] = json?.data ?? [];
+        pages.push(...batch);
+        const meta = json?.meta;
+        if (!meta || p >= meta.total_pages) break;
+        p++;
+      }
+      setAllItems(pages);
+    } catch {
+      showToast("Error", "Failed to load destinations", "error");
+    } finally {
+      setLoading(false);
+    }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
-    let list = all;
-    if (search) list = list.filter(d =>
-      d.name.toLowerCase().includes(search.toLowerCase()) ||
-      (d.location ?? "").toLowerCase().includes(search.toLowerCase())
-    );
-    if (category) list = list.filter(d => d.category === category);
-    if (region)   list = list.filter(d => d.sub_region === region);
-    if (rating === "high") list = list.filter(d => (d.rating ?? 0) >= 4.5);
-    else if (rating === "mid") list = list.filter(d => (d.rating ?? 0) >= 3.5 && (d.rating ?? 0) < 4.5);
-    else if (rating === "low") list = list.filter(d => (d.rating ?? 0) < 3.5);
-    setFiltered(list);
-  }, [all, search, category, region, rating]);
+    if (!didInit.current) {
+      didInit.current = true;
+      fetchAll();
+    }
+  }, [fetchAll]);
 
-  function exportCSV() {
-    const rows = [["Name","Category","Region","Rating","Reviews"]];
-    filtered.forEach(d => rows.push([d.name, d.category ?? "", d.sub_region ?? "", String(d.rating ?? 0), String(d.review_count ?? 0)]));
-    const csv = rows.map(r => r.join(",")).join("\n");
-    const a = document.createElement("a");
-    a.href = "data:text/csv;charset=utf-8," + encodeURIComponent(csv);
-    a.download = "destinations.csv";
-    a.click();
-    showToast("Export", "CSV download started", "success");
+  // Reset to page 1 when filters change
+  useEffect(() => { setPage(1); }, [search, category, region, rating]);
+
+  // ── Filtered + paginated ────────────────────────────────────────────────────
+  const filtered = applyFilters(allItems, search, category, region, rating);
+  const anyFilter = !!(search || category || region || rating);
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const safePage = Math.min(page, totalPages);
+  const paged = filtered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
+  const meta: PaginationMeta = {
+    total: filtered.length,
+    page: safePage,
+    limit: PAGE_SIZE,
+    total_pages: totalPages,
+  };
+
+  // ── Export CSV ──────────────────────────────────────────────────────────────
+  async function exportCSV() {
+    setExporting(true);
+    try {
+      const rows = [["Name","Category","Region","Rating","Reviews"]];
+      filtered.forEach(d => rows.push([d.name, d.category ?? "", d.sub_region ?? "", String(d.rating ?? 0), String(d.review_count ?? 0)]));
+      const csv = rows.map(r => r.map(v => `"${v}"`).join(",")).join("\n");
+      const a   = document.createElement("a");
+      a.href    = "data:text/csv;charset=utf-8," + encodeURIComponent(csv);
+      a.download = "destinations.csv";
+      a.click();
+      showToast("Export", `${filtered.length} destinations exported`, "success");
+    } catch {
+      showToast("Error", "Export failed", "error");
+    } finally {
+      setExporting(false);
+    }
   }
 
-  const imgFor = (dest: Destination): string => firstImage(dest.images);
+  const clearFilters = () => { setSearch(""); setCategory(""); setRegion(""); setRating(""); };
 
   return (
     <>
       <Header activeId="destinations" />
-      <main className="flex-1 overflow-y-auto p-8 space-y-8">
+      <main className="flex-1 overflow-y-auto p-8 space-y-6">
 
         {/* Header row */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <h2 className="text-2xl font-extrabold font-display text-gray-900 tracking-tight">Destination Registry</h2>
-            <p className="text-xs text-gray-500 mt-1">Manage locations, categories, AI scoring, and publishing statuses.</p>
+            <h2 className="text-2xl font-extrabold font-display text-gray-900 tracking-tight">
+              Destination Registry
+            </h2>
+            <p className="text-xs text-gray-500 mt-1">
+              {anyFilter ? (
+                <>Showing <span className="font-bold text-gray-700">{filtered.length}</span> of {allItems.length} destinations</>
+              ) : allItems.length > 0 ? (
+                <>Total <span className="font-bold text-gray-700">{allItems.length.toLocaleString()}</span> destinations in the system</>
+              ) : "Manage locations, categories, AI scoring, and publishing statuses."}
+            </p>
           </div>
           <div className="flex flex-wrap items-center gap-3">
-            <button onClick={() => showToast("Import Registry","Uploading CSV manifest","info")} className="flex items-center gap-2 bg-white hover:bg-bg border border-border text-gray-700 px-3.5 py-2 rounded-xl text-xs font-semibold shadow-apple transition-premium cursor-pointer">
-              <DownloadCloud className="w-4 h-4 text-gray-500" /><span>Import CSV</span>
+            <button
+              onClick={exportCSV}
+              disabled={exporting}
+              className="flex items-center gap-2 bg-white hover:bg-bg border border-border text-gray-700 px-3.5 py-2 rounded-xl text-xs font-semibold shadow-apple transition-premium cursor-pointer disabled:opacity-50"
+            >
+              <FileSpreadsheet className="w-4 h-4 text-gray-500" />
+              <span>{exporting ? "Exporting…" : "Export CSV"}</span>
             </button>
-            <button onClick={exportCSV} className="flex items-center gap-2 bg-white hover:bg-bg border border-border text-gray-700 px-3.5 py-2 rounded-xl text-xs font-semibold shadow-apple transition-premium cursor-pointer">
-              <FileSpreadsheet className="w-4 h-4 text-gray-500" /><span>Export Excel</span>
-            </button>
-            <Link href="/destinations/create" className="flex items-center gap-2 bg-primary hover:bg-primary-dark text-white px-4 py-2.5 rounded-xl text-xs font-semibold shadow-premium transition-premium cursor-pointer">
+            <Link
+              href="/destinations/create"
+              className="flex items-center gap-2 bg-primary hover:bg-primary-dark text-white px-4 py-2.5 rounded-xl text-xs font-semibold shadow-premium transition-premium cursor-pointer"
+            >
               <Plus className="w-4 h-4" /><span>Add Destination</span>
             </Link>
           </div>
@@ -89,23 +197,38 @@ export default function DestinationsPage() {
         {/* Filters */}
         <div className="bg-white p-5 rounded-card border border-border shadow-soft grid grid-cols-1 md:grid-cols-5 gap-4">
           <div className="relative md:col-span-2">
-            <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-400 pointer-events-none"><Search className="w-4 h-4" /></span>
-            <input type="text" value={search} onChange={e => setSearch(e.target.value)} placeholder="Search by name, address or tags..." className="w-full bg-bg focus:bg-white text-xs pl-9 pr-4 py-2.5 rounded-xl border border-transparent focus:border-border outline-none transition duration-200 font-medium" />
+            <Search className="absolute inset-y-0 left-3 my-auto w-4 h-4 text-gray-400 pointer-events-none" />
+            <input
+              type="text" value={search} onChange={e => setSearch(e.target.value)}
+              placeholder="Search by name, location, region…"
+              className="w-full bg-bg focus:bg-white text-xs pl-9 pr-4 py-2.5 rounded-xl border border-transparent focus:border-border outline-none transition font-medium"
+            />
           </div>
-          <select value={category} onChange={e => setCategory(e.target.value)} className="w-full bg-bg focus:bg-white text-xs px-3.5 py-2.5 rounded-xl border border-transparent focus:border-border outline-none font-semibold text-gray-700 cursor-pointer">
+          <select value={category} onChange={e => setCategory(e.target.value)}
+            className="w-full bg-bg focus:bg-white text-xs px-3.5 py-2.5 rounded-xl border border-transparent focus:border-border outline-none font-semibold text-gray-700 cursor-pointer">
             <option value="">All Categories</option>
             {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
           </select>
-          <select value={region} onChange={e => setRegion(e.target.value)} className="w-full bg-bg focus:bg-white text-xs px-3.5 py-2.5 rounded-xl border border-transparent focus:border-border outline-none font-semibold text-gray-700 cursor-pointer">
+          <select value={region} onChange={e => setRegion(e.target.value)}
+            className="w-full bg-bg focus:bg-white text-xs px-3.5 py-2.5 rounded-xl border border-transparent focus:border-border outline-none font-semibold text-gray-700 cursor-pointer">
             <option value="">All Regions</option>
             {REGIONS.map(r => <option key={r} value={r}>{r}</option>)}
           </select>
-          <select value={rating} onChange={e => setRating(e.target.value)} className="w-full bg-bg focus:bg-white text-xs px-3.5 py-2.5 rounded-xl border border-transparent focus:border-border outline-none font-semibold text-gray-700 cursor-pointer">
-            <option value="">All Ratings</option>
-            <option value="high">High (4.5+)</option>
-            <option value="mid">Mid (3.5–4.5)</option>
-            <option value="low">Low (below 3.5)</option>
-          </select>
+          <div className="flex gap-2">
+            <select value={rating} onChange={e => setRating(e.target.value)}
+              className="flex-1 bg-bg focus:bg-white text-xs px-3.5 py-2.5 rounded-xl border border-transparent focus:border-border outline-none font-semibold text-gray-700 cursor-pointer">
+              {RATING_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+            </select>
+            {anyFilter && (
+              <button
+                onClick={clearFilters}
+                title="Clear filters"
+                className="px-2.5 py-2 rounded-xl border border-border bg-white hover:bg-red-50 hover:border-red-200 text-gray-400 hover:text-red-500 transition cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            )}
+          </div>
         </div>
 
         {/* Table */}
@@ -125,29 +248,62 @@ export default function DestinationsPage() {
               </thead>
               <tbody className="divide-y divide-border text-xs text-gray-700 font-medium">
                 {loading ? (
-                  <tr><td colSpan={7} className="py-16 text-center text-gray-400 text-sm">Loading destinations…</td></tr>
-                ) : filtered.length === 0 ? (
+                  Array.from({ length: PAGE_SIZE }).map((_, i) => (
+                    <tr key={i} className="animate-pulse">
+                      <td className="py-4 px-6">
+                        <div className="flex items-center gap-4">
+                          <div className="w-12 h-12 rounded-xl bg-bg" />
+                          <div className="space-y-2">
+                            <div className="h-3 w-36 bg-bg rounded" />
+                            <div className="h-2 w-24 bg-bg rounded" />
+                          </div>
+                        </div>
+                      </td>
+                      {[...Array(5)].map((_, j) => (
+                        <td key={j} className="py-4 px-4"><div className="h-3 w-16 bg-bg rounded mx-auto" /></td>
+                      ))}
+                      <td className="py-4 px-6" />
+                    </tr>
+                  ))
+                ) : paged.length === 0 ? (
                   <tr>
                     <td colSpan={7} className="py-16 text-center text-gray-400">
                       <div className="flex flex-col items-center gap-3">
                         <Search className="w-10 h-10" />
-                        <span className="text-sm font-semibold">No destinations found</span>
+                        <span className="text-sm font-semibold">
+                          {anyFilter ? "No destinations match the current filters" : "No destinations found"}
+                        </span>
+                        {anyFilter && (
+                          <button onClick={clearFilters} className="text-xs font-bold text-primary hover:underline cursor-pointer">
+                            Clear filters
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>
-                ) : filtered.map(dest => (
+                ) : paged.map(dest => (
                   <tr key={dest.id} className="hover:bg-bg/40 transition-premium">
                     <td className="py-4 px-6">
                       <div className="flex items-center gap-4">
-                        <Image src={imgFor(dest)} alt={dest.name} width={48} height={48} className="w-12 h-12 rounded-xl object-cover border border-border" />
+                        <Image
+                          src={firstImage(dest.images)} alt={dest.name}
+                          width={48} height={48}
+                          className="w-12 h-12 rounded-xl object-cover border border-border shrink-0"
+                        />
                         <div>
-                          <Link href={`/destinations/${dest.id}`} className="text-sm font-bold text-gray-900 font-display hover:text-primary transition-colors block">{dest.name}</Link>
-                          <span className="text-[10px] text-gray-400 block mt-0.5">{dest.location || dest.sub_region || "Yogyakarta"}</span>
+                          <Link href={`/destinations/${dest.id}`} className="text-sm font-bold text-gray-900 font-display hover:text-primary transition-colors block">
+                            {dest.name}
+                          </Link>
+                          <span className="text-[10px] text-gray-400 block mt-0.5">
+                            {dest.location || dest.sub_region || "Yogyakarta"}
+                          </span>
                         </div>
                       </div>
                     </td>
                     <td className="py-4 px-6">
-                      <span className="bg-primary/10 text-primary text-[10px] font-bold px-2.5 py-0.5 rounded-full uppercase tracking-wider font-display">{dest.category || "N/A"}</span>
+                      <span className="bg-primary/10 text-primary text-[10px] font-bold px-2.5 py-0.5 rounded-full uppercase tracking-wider font-display">
+                        {dest.category || "N/A"}
+                      </span>
                     </td>
                     <td className="py-4 px-6 font-semibold">{dest.sub_region || "N/A"}</td>
                     <td className="py-4 px-4 text-center">
@@ -156,12 +312,19 @@ export default function DestinationsPage() {
                         {dest.rating ? dest.rating.toFixed(1) : "0.0"}
                       </span>
                     </td>
-                    <td className="py-4 px-4 text-center font-bold text-gray-800">{dest.review_count ?? 0}</td>
+                    <td className="py-4 px-4 text-center font-bold text-gray-800">
+                      {(dest.review_count ?? 0).toLocaleString()}
+                    </td>
                     <td className="py-4 px-6 text-center">
-                      <span className="bg-success/10 text-success text-[10px] font-bold px-2.5 py-0.5 rounded-full">Published</span>
+                      <span className="bg-success/10 text-success text-[10px] font-bold px-2.5 py-0.5 rounded-full">
+                        Published
+                      </span>
                     </td>
                     <td className="py-4 px-6 text-right">
-                      <Link href={`/destinations/${dest.id}`} className="p-1.5 rounded-lg border border-border hover:bg-bg text-gray-500 hover:text-text cursor-pointer transition-premium inline-flex">
+                      <Link
+                        href={`/destinations/${dest.id}`}
+                        className="p-1.5 rounded-lg border border-border hover:bg-bg text-gray-500 hover:text-text cursor-pointer transition-premium inline-flex"
+                      >
                         <Edit3 className="w-4 h-4" />
                       </Link>
                     </td>
@@ -170,8 +333,12 @@ export default function DestinationsPage() {
               </tbody>
             </table>
           </div>
-          <div className="p-5 border-t border-border flex items-center justify-between">
-            <span className="text-xs text-gray-500 font-semibold">Showing {filtered.length} destinations</span>
+
+          {/* Pagination footer */}
+          <div className="px-6 py-4">
+            {filtered.length > 0 && (
+              <Pagination meta={meta} onPageChange={setPage} />
+            )}
           </div>
         </div>
       </main>

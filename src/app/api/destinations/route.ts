@@ -9,28 +9,59 @@ async function getApi() {
   return fetchWithAuth(token);
 }
 
-export async function GET() {
+/**
+ * GET /api/destinations
+ *
+ * Accepted query params (forwarded to backend):
+ *   page     – page number (default: 1)
+ *   limit    – items per page (default: 25, max: 100)
+ *   search   – name/location text search
+ *   category – filter by category
+ *   region   – filter by sub_region
+ *
+ * When `all=true` is passed the route fetches every page concurrently and
+ * returns the merged array — useful for CSV export only.
+ */
+export async function GET(req: NextRequest) {
   const api = await getApi();
+  const { searchParams } = req.nextUrl;
 
-  // Fetch all pages to get complete list for admin
-  const firstRes = await api("/destinations?limit=100&page=1");
-  const firstData = firstRes.data as any;
-  const totalPages: number = firstData?.meta?.total_pages ?? 1;
-  let all: any[] = firstData?.data ?? [];
+  // ── Export mode: fetch all pages for CSV ──────────────────────────────────
+  if (searchParams.get("all") === "true") {
+    const firstRes = await api("/destinations?limit=100&page=1");
+    const firstData = firstRes.data as any;
+    const totalPages: number = firstData?.meta?.total_pages ?? 1;
+    let all: unknown[] = firstData?.data ?? [];
 
-  // Fetch remaining pages concurrently
-  if (totalPages > 1) {
-    const pages = Array.from({ length: totalPages - 1 }, (_, i) => i + 2);
-    const results = await Promise.all(
-      pages.map(p => api(`/destinations?limit=100&page=${p}`))
-    );
-    for (const r of results) {
-      const d = r.data as any;
-      if (Array.isArray(d?.data)) all = all.concat(d.data);
+    if (totalPages > 1) {
+      const rest = await Promise.all(
+        Array.from({ length: totalPages - 1 }, (_, i) =>
+          api(`/destinations?limit=100&page=${i + 2}`)
+        )
+      );
+      for (const r of rest) {
+        const d = r.data as any;
+        if (Array.isArray(d?.data)) all = all.concat(d.data);
+      }
     }
+    return NextResponse.json(
+      { status: "success", data: all, meta: { total: all.length, page: 1, limit: all.length, total_pages: 1 } },
+      { status: 200 }
+    );
   }
 
-  return NextResponse.json({ status: "success", data: all, meta: { ...firstData?.meta, total: all.length } }, { status: 200 });
+  // ── Normal paginated mode ─────────────────────────────────────────────────
+  const page  = searchParams.get("page")  ?? "1";
+  const limit = searchParams.get("limit") ?? "25";
+
+  // Build backend query string — only forward supported params
+  const backendParams = new URLSearchParams({ page, limit });
+  // Note: backend doesn't support search/category/region as query params yet,
+  // so filtering is done client-side on the returned page.
+  // When backend adds these params, simply forward them here.
+
+  const { status, data } = await api(`/destinations?${backendParams.toString()}`);
+  return NextResponse.json(data, { status });
 }
 
 export async function POST(req: NextRequest) {

@@ -110,6 +110,7 @@ export interface Event {
   organizer?: string;
   max_attendees?: number;
   video_url?: string;
+  destination_id?: string;
 }
 
 export interface Guide {
@@ -186,10 +187,24 @@ export interface MenuGroup {
 }
 
 // ─── API response wrappers ────────────────────────────────────────────────────
+export interface PaginationMeta {
+  total: number;
+  page: number;
+  limit: number;
+  total_pages: number;
+}
+
 export interface ApiResponse<T = unknown> {
   status: string;
   message?: string;
   data?: T;
+}
+
+export interface ApiListResponse<T = unknown> {
+  status: string;
+  message?: string;
+  data?: T[];
+  meta?: PaginationMeta;
 }
 
 // ─── AI ───────────────────────────────────────────────────────────────────────

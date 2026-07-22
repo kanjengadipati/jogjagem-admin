@@ -26,6 +26,11 @@ const EMPTY_FORM: FormState = {
   category: "", status: "upcoming", ticket_price: "", organizer: "", video_url: "",
 };
 
+function extractYouTubeId(url: string): string {
+  const match = url.match(/(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
+  return match?.[1] ?? "";
+}
+
 function FieldInput({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) {
   return (
     <div className="space-y-1.5">
@@ -125,6 +130,27 @@ export default function EventDetailPage() {
             </div>
             <FieldInput label="Location" value={form.location} onChange={(v) => setField("location", v)} />
             <FieldInput label="Video URL" value={form.video_url} onChange={(v) => setField("video_url", v)} />
+            {form.video_url && (
+              <div className="relative rounded-xl overflow-hidden aspect-video border border-border">
+                {form.video_url.includes("youtube.com") || form.video_url.includes("youtu.be") ? (
+                  <iframe
+                    src={`https://www.youtube.com/embed/${extractYouTubeId(form.video_url)}`}
+                    className="w-full h-full"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                    allowFullScreen
+                  />
+                ) : form.video_url.includes("vimeo.com") ? (
+                  <iframe
+                    src={`https://player.vimeo.com/video/${form.video_url.split("vimeo.com/")[1]?.split("?")[0]}`}
+                    className="w-full h-full"
+                    allow="autoplay; fullscreen"
+                    allowFullScreen
+                  />
+                ) : (
+                  <video src={form.video_url} controls className="w-full h-full object-cover" />
+                )}
+              </div>
+            )}
             <div className="space-y-1.5">
                 <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest font-display block">Description</label>
                 <textarea value={form.description} onChange={(e) => setField("description", e.target.value)} rows={4}

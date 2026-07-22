@@ -7,8 +7,8 @@ import Image from "next/image";
 import Header from "@/components/Header";
 import { useToast } from "@/components/Toast";
 import { parseImages } from "@/lib/images";
-import { ArrowLeft, Sparkles, ImagePlus, Trash2, Loader2 } from "lucide-react";
-import type { Destination } from "@/types";
+import { ArrowLeft, Sparkles, ImagePlus, Trash2, Loader2, Calendar, Link2, Unlink, Search } from "lucide-react";
+import type { Destination, Event } from "@/types";
 
 const CLOUDINARY_CLOUD = "wdsepioa";
 // For signed upload without a preset, we use the API key directly:
@@ -18,7 +18,12 @@ const CLOUDINARY_UPLOAD_URL = `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOU
 const CATEGORIES = ["Temple", "Beach", "Nature", "Heritage", "Cultural", "Culinary", "Shopping"];
 const REGIONS = ["Sleman", "Bantul", "Yogyakarta", "Gunungkidul", "Kulon Progo"];
 
-type Tab = "overview" | "gallery" | "facilities" | "seo";
+function extractYouTubeId(url: string): string {
+  const match = url.match(/(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
+  return match?.[1] ?? "";
+}
+
+type Tab = "overview" | "gallery" | "facilities" | "seo" | "events";
 
 type FormState = {
   name: string;
@@ -97,6 +102,10 @@ export default function DestinationDetailPage() {
   const [tab, setTab] = useState<Tab>("overview");
   const [form, setForm] = useState<FormState>(EMPTY_FORM);
   const [galleryImgs, setGalleryImgs] = useState<string[]>([]);
+  const [allEvents, setAllEvents] = useState<Event[]>([]);
+  const [eventsLoading, setEventsLoading] = useState(false);
+  const [linkingEvent, setLinkingEvent] = useState<string | null>(null);
+  const [eventSearch, setEventSearch] = useState("");
 
   function setField(key: keyof FormState, val: string) {
     setForm((f) => ({ ...f, [key]: val }));
@@ -135,6 +144,83 @@ export default function DestinationDetailPage() {
       .finally(() => setLoading(false));
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
+
+  // ── Fetch all events for relation mapping ──────────────────────────────────
+  async function loadEvents() {
+    setEventsLoading(true);
+    try {
+      const res = await fetch("/api/events?limit=100");
+      const json = await res.json();
+      setAllEvents(json?.data ?? []);
+    } catch {
+      showToast("Error", "Failed to load events", "error");
+    } finally {
+      setEventsLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    loadEvents();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  async function linkEvent(eventId: string) {
+    setLinkingEvent(eventId);
+    try {
+      const res = await fetch(`/api/events/${eventId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ destination_id: id }),
+      });
+      if (res.ok) {
+        setAllEvents((prev) =>
+          prev.map((e) => (e.id === eventId ? { ...e, destination_id: id } : e))
+        );
+        showToast("Linked", "Event linked to this destination", "success");
+      } else {
+        showToast("Error", "Failed to link event", "error");
+      }
+    } catch {
+      showToast("Error", "Network error", "error");
+    } finally {
+      setLinkingEvent(null);
+    }
+  }
+
+  async function unlinkEvent(eventId: string) {
+    setLinkingEvent(eventId);
+    try {
+      const res = await fetch(`/api/events/${eventId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ destination_id: "" }),
+      });
+      if (res.ok) {
+        setAllEvents((prev) =>
+          prev.map((e) => (e.id === eventId ? { ...e, destination_id: "" } : e))
+        );
+        showToast("Unlinked", "Event unlinked from this destination", "success");
+      } else {
+        showToast("Error", "Failed to unlink event", "error");
+      }
+    } catch {
+      showToast("Error", "Network error", "error");
+    } finally {
+      setLinkingEvent(null);
+    }
+  }
+
+  const linkedEvents = allEvents.filter((e) => e.destination_id === id);
+  const unlinkedEvents = allEvents.filter((e) => {
+    if (e.destination_id === id) return false;
+    if (!eventSearch) return true;
+    const q = eventSearch.toLowerCase();
+    return (
+      e.title.toLowerCase().includes(q) ||
+      (e.location ?? "").toLowerCase().includes(q) ||
+      (e.category ?? "").toLowerCase().includes(q)
+    );
+  });
 
   async function save() {
     setSaving(true);
@@ -223,8 +309,12 @@ export default function DestinationDetailPage() {
     : [];
 
   const score = Math.round((dest?.rating ?? 0) * 20);
-  const TABS: Tab[] = ["overview", "gallery", "facilities", "seo"];
-  const tabLabel = (t: Tab) => t === "seo" ? "SEO & AI" : t.charAt(0).toUpperCase() + t.slice(1);
+  const TABS: Tab[] = ["overview", "gallery", "facilities", "seo", "events"];
+  const tabLabel = (t: Tab) => {
+    if (t === "seo") return "SEO & AI";
+    if (t === "events") return `Events (${linkedEvents.length})`;
+    return t.charAt(0).toUpperCase() + t.slice(1);
+  };
 
   if (loading) {
     return (
@@ -348,6 +438,27 @@ export default function DestinationDetailPage() {
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-1 gap-5">
                     <FieldInput label="Video URL" value={form.video_url} onChange={(v) => setField("video_url", v)} />
+                    {form.video_url && (
+                      <div className="relative rounded-xl overflow-hidden aspect-video border border-border">
+                        {form.video_url.includes("youtube.com") || form.video_url.includes("youtu.be") ? (
+                          <iframe
+                            src={`https://www.youtube.com/embed/${extractYouTubeId(form.video_url)}`}
+                            className="w-full h-full"
+                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                            allowFullScreen
+                          />
+                        ) : form.video_url.includes("vimeo.com") ? (
+                          <iframe
+                            src={`https://player.vimeo.com/video/${form.video_url.split("vimeo.com/")[1]?.split("?")[0]}`}
+                            className="w-full h-full"
+                            allow="autoplay; fullscreen"
+                            allowFullScreen
+                          />
+                        ) : (
+                          <video src={form.video_url} controls className="w-full h-full object-cover" />
+                        )}
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
@@ -465,6 +576,124 @@ export default function DestinationDetailPage() {
                     </div>
                   )}
                   <p className="text-[10px] text-gray-400">Used for social media sharing (Facebook, Twitter, WhatsApp). Leave empty to use the first gallery image.</p>
+                </div>
+              </div>
+            )}
+
+            {/* Events */}
+            {tab === "events" && (
+              <div className="space-y-6">
+                {/* Linked Events */}
+                <div className="bg-white p-6 rounded-card border border-border shadow-soft space-y-4">
+                  <div className="flex items-center justify-between">
+                    <h4 className="text-sm font-bold text-gray-800 font-display">
+                      Linked Events ({linkedEvents.length})
+                    </h4>
+                  </div>
+                  {eventsLoading ? (
+                    <div className="flex items-center gap-2 text-gray-400 py-4">
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <span className="text-xs font-semibold">Loading events…</span>
+                    </div>
+                  ) : linkedEvents.length === 0 ? (
+                    <p className="text-xs text-gray-400 py-4">No events linked to this destination yet.</p>
+                  ) : (
+                    <div className="divide-y divide-border">
+                      {linkedEvents.map((ev) => (
+                        <div key={ev.id} className="flex items-center gap-3 py-3">
+                          <div className="w-10 h-10 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0">
+                            {ev.image_url ? (
+                              <img src={ev.image_url} alt="" className="w-full h-full object-cover" />
+                            ) : (
+                              <div className="w-full h-full flex items-center justify-center">
+                                <Calendar className="w-4 h-4 text-gray-300" />
+                              </div>
+                            )}
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <Link href={`/events/${ev.id}`} className="text-xs font-bold text-gray-800 hover:text-primary truncate block">
+                              {ev.title}
+                            </Link>
+                            <span className="text-[10px] text-gray-400 truncate block">
+                              {ev.location || "-"} {ev.start_date ? `· ${ev.start_date}` : ""}
+                            </span>
+                          </div>
+                          <button
+                            onClick={() => unlinkEvent(ev.id)}
+                            disabled={linkingEvent === ev.id}
+                            className="p-1.5 rounded-lg border border-border hover:bg-red-50 hover:border-red-200 text-gray-400 hover:text-red-500 transition cursor-pointer disabled:opacity-50 flex-shrink-0"
+                            title="Unlink event"
+                          >
+                            {linkingEvent === ev.id ? (
+                              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                            ) : (
+                              <Unlink className="w-3.5 h-3.5" />
+                            )}
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Available Events */}
+                <div className="bg-white p-6 rounded-card border border-border shadow-soft space-y-4">
+                  <div className="flex items-center justify-between">
+                    <h4 className="text-sm font-bold text-gray-800 font-display">
+                      Available Events ({unlinkedEvents.length})
+                    </h4>
+                    <div className="relative">
+                      <Search className="absolute inset-y-0 left-2.5 my-auto w-3.5 h-3.5 text-gray-400 pointer-events-none" />
+                      <input
+                        value={eventSearch}
+                        onChange={(e) => setEventSearch(e.target.value)}
+                        placeholder="Search events…"
+                        className="w-48 bg-bg focus:bg-white text-[11px] pl-8 pr-3 py-1.5 rounded-lg border border-transparent focus:border-border outline-none font-medium"
+                      />
+                    </div>
+                  </div>
+                  {eventsLoading ? (
+                    <div className="flex items-center gap-2 text-gray-400 py-4">
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <span className="text-xs font-semibold">Loading events…</span>
+                    </div>
+                  ) : unlinkedEvents.length === 0 ? (
+                    <p className="text-xs text-gray-400 py-4">All events are already linked.</p>
+                  ) : (
+                    <div className="divide-y divide-border max-h-96 overflow-y-auto">
+                      {unlinkedEvents.map((ev) => (
+                        <div key={ev.id} className="flex items-center gap-3 py-3">
+                          <div className="w-10 h-10 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0">
+                            {ev.image_url ? (
+                              <img src={ev.image_url} alt="" className="w-full h-full object-cover" />
+                            ) : (
+                              <div className="w-full h-full flex items-center justify-center">
+                                <Calendar className="w-4 h-4 text-gray-300" />
+                              </div>
+                            )}
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <span className="text-xs font-bold text-gray-800 truncate block">{ev.title}</span>
+                            <span className="text-[10px] text-gray-400 truncate block">
+                              {ev.location || "-"} {ev.start_date ? `· ${ev.start_date}` : ""}
+                            </span>
+                          </div>
+                          <button
+                            onClick={() => linkEvent(ev.id)}
+                            disabled={linkingEvent === ev.id}
+                            className="p-1.5 rounded-lg border border-border hover:bg-primary/5 hover:border-primary/20 text-gray-400 hover:text-primary transition cursor-pointer disabled:opacity-50 flex-shrink-0"
+                            title="Link event to this destination"
+                          >
+                            {linkingEvent === ev.id ? (
+                              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                            ) : (
+                              <Link2 className="w-3.5 h-3.5" />
+                            )}
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
             )}
