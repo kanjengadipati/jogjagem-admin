@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Header from "@/components/Header";
 import { useToast } from "@/components/Toast";
-import { Bot, RefreshCw, CheckCircle2, XCircle, Loader2 } from "lucide-react";
+import { Bot, RefreshCw, CheckCircle2, XCircle, Loader2, MapPin, Calendar } from "lucide-react";
 import { BACKEND_URL } from "@/lib/constants";
 
 interface ScraperResult {
@@ -23,21 +23,27 @@ interface ScrapeResponse {
   };
 }
 
+type ScrapeType = "all" | "destinations" | "events";
+
 export default function ScraperPage() {
   const { showToast } = useToast();
   const [running, setRunning] = useState(false);
+  const [scrapeType, setScrapeType] = useState<ScrapeType | null>(null);
   const [results, setResults] = useState<ScraperResult[] | null>(null);
 
-  async function runScraper() {
+  async function runScraper(type: ScrapeType) {
     setRunning(true);
+    setScrapeType(type);
     setResults(null);
 
     try {
-      const res = await fetch(`${BACKEND_URL}/admin/scrape`);
+      const endpoint = type === "all" ? "/admin/scrape" : `/admin/scrape/${type}`;
+      const res = await fetch(`${BACKEND_URL}${endpoint}`);
       const body: ScrapeResponse = await res.json();
       if (body?.status === "success" && body?.data?.results) {
         setResults(body.data.results);
-        showToast("Scrape Complete", "All scrapers finished", "success");
+        const label = type === "all" ? "All" : type === "destinations" ? "Destinations" : "Events";
+        showToast("Scrape Complete", `${label} scrape finished`, "success");
       } else {
         showToast("Error", "Unexpected response format", "error");
       }
@@ -45,6 +51,7 @@ export default function ScraperPage() {
       showToast("Error", "Failed to run scraper — is the backend running?", "error");
     } finally {
       setRunning(false);
+      setScrapeType(null);
     }
   }
 
@@ -70,19 +77,48 @@ export default function ScraperPage() {
             <p className="text-xs text-gray-500 mt-1">
               Fetch new events and destinations from external sources (InJourney, Jadesta).
             </p>
+            <p className="text-[10px] text-gray-400 mt-1">
+              Destinations: monthly | Events: every 3 days
+            </p>
           </div>
-          <button
-            onClick={runScraper}
-            disabled={running}
-            className="flex items-center gap-2 bg-primary hover:bg-primary-dark disabled:opacity-50 disabled:cursor-not-allowed text-white px-5 py-2.5 rounded-xl text-xs font-semibold shadow-premium transition cursor-pointer"
-          >
-            {running ? (
-              <Loader2 className="w-4 h-4 animate-spin" />
-            ) : (
-              <RefreshCw className="w-4 h-4" />
-            )}
-            <span>{running ? "Running…" : "Run Scraper"}</span>
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => runScraper("destinations")}
+              disabled={running}
+              className="flex items-center gap-2 bg-primary hover:bg-primary-dark disabled:opacity-50 disabled:cursor-not-allowed text-white px-4 py-2.5 rounded-xl text-xs font-semibold shadow-premium transition cursor-pointer"
+            >
+              {running && scrapeType === "destinations" ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <MapPin className="w-4 h-4" />
+              )}
+              <span>Destinations</span>
+            </button>
+            <button
+              onClick={() => runScraper("events")}
+              disabled={running}
+              className="flex items-center gap-2 bg-primary hover:bg-primary-dark disabled:opacity-50 disabled:cursor-not-allowed text-white px-4 py-2.5 rounded-xl text-xs font-semibold shadow-premium transition cursor-pointer"
+            >
+              {running && scrapeType === "events" ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Calendar className="w-4 h-4" />
+              )}
+              <span>Events</span>
+            </button>
+            <button
+              onClick={() => runScraper("all")}
+              disabled={running}
+              className="flex items-center gap-2 bg-gray-800 hover:bg-gray-900 disabled:opacity-50 disabled:cursor-not-allowed text-white px-4 py-2.5 rounded-xl text-xs font-semibold shadow-premium transition cursor-pointer"
+            >
+              {running && scrapeType === "all" ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <RefreshCw className="w-4 h-4" />
+              )}
+              <span>Run All</span>
+            </button>
+          </div>
         </div>
 
         {/* Status summary */}
@@ -172,7 +208,20 @@ export default function ScraperPage() {
           <div className="flex flex-col items-center justify-center py-24 text-gray-400 gap-4">
             <Bot className="w-14 h-14" />
             <span className="text-sm font-semibold">No scraper run yet</span>
-            <p className="text-xs text-gray-400">Click <strong>Run Scraper</strong> to fetch fresh data from external sources.</p>
+            <p className="text-xs text-gray-400">Click a button above to fetch fresh data from external sources.</p>
+            <div className="mt-4 p-4 bg-white rounded-card border border-border shadow-soft text-left max-w-sm">
+              <p className="text-xs font-bold text-gray-700 mb-2">Schedule Info</p>
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <MapPin className="w-3 h-3 text-primary" />
+                  <p className="text-[11px] text-gray-500">Destinations: <span className="font-semibold">1st of every month</span></p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Calendar className="w-3 h-3 text-primary" />
+                  <p className="text-[11px] text-gray-500">Events: <span className="font-semibold">Every 3 days</span></p>
+                </div>
+              </div>
+            </div>
           </div>
         )}
 
@@ -180,7 +229,11 @@ export default function ScraperPage() {
         {running && !results && (
           <div className="flex flex-col items-center justify-center py-24 text-gray-400 gap-3">
             <Loader2 className="w-8 h-8 animate-spin" />
-            <span className="text-sm font-semibold">Scraping in progress…</span>
+            <span className="text-sm font-semibold">
+              {scrapeType === "all" && "Running all scrapers…"}
+              {scrapeType === "destinations" && "Scraping destinations…"}
+              {scrapeType === "events" && "Scraping events…"}
+            </span>
             <p className="text-xs text-gray-400">This may take up to 2 minutes.</p>
           </div>
         )}
