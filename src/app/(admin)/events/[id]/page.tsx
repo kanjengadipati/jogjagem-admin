@@ -5,7 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import Header from "@/components/Header";
 import { useToast } from "@/components/Toast";
-import { ArrowLeft, Loader2 } from "lucide-react";
+import { ArrowLeft, Loader2, Search } from "lucide-react";
 import type { Event } from "@/types";
 
 type FormState = {
@@ -129,7 +129,28 @@ export default function EventDetailPage() {
                 <FieldInput label="End Date" value={form.end_date} onChange={(v) => setField("end_date", v)} />
             </div>
             <FieldInput label="Location" value={form.location} onChange={(v) => setField("location", v)} />
-            <FieldInput label="Video URL" value={form.video_url} onChange={(v) => setField("video_url", v)} />
+            <div className="space-y-1.5">
+              <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1.5">Video URL</label>
+              <div className="flex gap-2">
+                <input
+                  type="url"
+                  value={form.video_url}
+                  onChange={(e) => setField("video_url", e.target.value)}
+                  placeholder="https://www.youtube.com/watch?v=..."
+                  className="flex-1 px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono"
+                />
+                <a
+                  href={`https://www.youtube.com/results?search_query=${encodeURIComponent(form.title + " " + form.location)}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold bg-red-50 text-red-600 border border-red-200 rounded-lg hover:bg-red-100 transition-colors whitespace-nowrap"
+                  title="Search YouTube for this event"
+                >
+                  <Search className="w-3.5 h-3.5" />
+                  Find Video
+                </a>
+              </div>
+            </div>
             {form.video_url && (
               <div className="relative rounded-xl overflow-hidden aspect-video border border-border">
                 {form.video_url.includes("youtube.com") || form.video_url.includes("youtu.be") ? (
