@@ -3,8 +3,9 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useState, useEffect } from "react";
-import { Search, Bell, ChevronDown, Settings, Users, LogOut } from "lucide-react";
+import { Search, Bell, ChevronDown, Settings, Users, LogOut, Menu } from "lucide-react";
 import { ADMIN_USER } from "@/lib/constants";
+import { useSidebar } from "@/contexts/SidebarContext";
 
 interface HeaderProps {
   activeId: string;
@@ -14,6 +15,7 @@ export default function Header({ activeId }: HeaderProps) {
   const [time, setTime] = useState("");
   const [showNotif, setShowNotif] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
+  const { toggleMobileSidebar } = useSidebar();
 
   const today =
     "Today, " +
@@ -40,9 +42,15 @@ export default function Header({ activeId }: HeaderProps) {
   }, []);
 
   return (
-    <header className="h-20 border-b border-border bg-white px-8 flex items-center justify-between sticky top-0 z-20">
+    <header className="h-20 border-b border-border bg-white px-4 md:px-8 flex items-center justify-between sticky top-0 z-20">
       {/* Breadcrumb */}
       <div className="flex items-center gap-4">
+        <button
+          onClick={toggleMobileSidebar}
+          className="md:hidden p-2 rounded-lg border border-border hover:bg-bg text-gray-500"
+        >
+          <Menu className="w-5 h-5" />
+        </button>
         <div className="hidden sm:flex items-center gap-2 text-xs text-gray-400 font-medium font-display">
           <span>Jogjagem</span>
           <ChevronDown className="w-3.5 h-3.5 -rotate-90" />
