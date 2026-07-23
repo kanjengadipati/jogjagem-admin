@@ -196,16 +196,7 @@ export default async function DashboardPage() {
   const [destCount, eventCount, userCount] = await Promise.all([
     fetchCount(api, "/destinations?limit=1"),
     fetchCount(api, "/events?limit=1"),
-    (async () => {
-      try {
-        const res = await api("/auth/admin/users");
-        if (res.status === 200) {
-          const users = (res.data as { data?: unknown[] })?.data;
-          return Array.isArray(users) ? users.length : 0;
-        }
-      } catch {}
-      return 0;
-    })(),
+    fetchCount(api, "/auth/admin/users?limit=1"),
   ]);
 
   /* ---------- fetch preview data ---------- */
@@ -226,7 +217,17 @@ export default async function DashboardPage() {
       : "-";
 
   /* ---------- category breakdown for insight ---------- */
-  const allDests = await fetchData<{ category?: string }>(api, "/destinations?limit=100");
+  const allDests: { category?: string }[] = [];
+  {
+    let p = 1;
+    // eslint-disable-next-line no-constant-condition
+    while (true) {
+      const batch = await fetchData<{ category?: string }>(api, `/destinations?page=${p}&limit=100`);
+      allDests.push(...batch);
+      if (batch.length < 100) break;
+      p++;
+    }
+  }
   const catCount: Record<string, number> = {};
   allDests.forEach((d) => {
     if (d.category) catCount[d.category] = (catCount[d.category] || 0) + 1;

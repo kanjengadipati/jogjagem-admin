@@ -152,9 +152,19 @@ export default function DestinationDetailPage() {
   async function loadEvents() {
     setEventsLoading(true);
     try {
-      const res = await fetch("/api/events?limit=100");
-      const json = await res.json();
-      setAllEvents(json?.data ?? []);
+      const all: Event[] = [];
+      let p = 1;
+      // eslint-disable-next-line no-constant-condition
+      while (true) {
+        const res = await fetch(`/api/events?page=${p}&limit=100`);
+        const json = await res.json();
+        const batch: Event[] = json?.data ?? [];
+        all.push(...batch);
+        const meta = json?.meta;
+        if (!meta || p >= meta.total_pages) break;
+        p++;
+      }
+      setAllEvents(all);
     } catch {
       showToast("Error", "Failed to load events", "error");
     } finally {
