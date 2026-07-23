@@ -1,13 +1,17 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
+import dynamic from "next/dynamic";
 import Header from "@/components/Header";
+import CoverImageUpload from "@/components/CoverImageUpload";
 import { useToast } from "@/components/Toast";
 import {
   FileText, Plus, Pencil, Trash2, Search, Loader2,
   Sparkles, X, Eye, EyeOff, ChevronDown,
 } from "lucide-react";
 import type { Article } from "@/types";
+
+const RichTextEditor = dynamic(() => import("@/components/RichTextEditor"), { ssr: false });
 
 const CATEGORIES = ["panduan", "itinerary", "kuliner", "budaya", "alam", "tips", "lainnya"];
 const STATUS_OPTIONS = ["draft", "published", "archived"];
@@ -17,12 +21,10 @@ const statusColor = (s?: string) =>
   s === "archived"  ? "bg-gray-100 text-gray-400" :
                       "bg-warning/10 text-warning";
 
-// ─── Slugify helper ────────────────────────────────────────────────────────────
 function slugify(text: string) {
   return text.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
 }
 
-// ─── Empty article template ────────────────────────────────────────────────────
 const emptyArticle = (): Partial<Article> => ({
   slug: "", title: "", title_en: "",
   excerpt: "", excerpt_en: "",
@@ -34,10 +36,7 @@ const emptyArticle = (): Partial<Article> => ({
   seo_keywords: "", seo_keywords_en: "",
 });
 
-// ─── ArticleModal ──────────────────────────────────────────────────────────────
-function ArticleModal({
-  article, onClose, onSaved,
-}: {
+function ArticleModal({ article, onClose, onSaved }: {
   article: Partial<Article> | null;
   onClose: () => void;
   onSaved: (a: Article) => void;
@@ -52,10 +51,8 @@ function ArticleModal({
   const set = (key: keyof Article, value: string | number) =>
     setForm(prev => ({ ...prev, [key]: value }));
 
-  // Auto-slug from title
-  const handleTitleChange = (v: string) => {
+  const handleTitleChange = (v: string) =>
     setForm(prev => ({ ...prev, title: v, slug: prev.slug || slugify(v) }));
-  };
 
   async function generateAI(lang: "id" | "en") {
     if (!form.title) { showToast("Validation", "Enter a title first", "error"); return; }
@@ -75,7 +72,6 @@ function ArticleModal({
           seo_description: json.seoDescription ?? prev.seo_description,
           seo_keywords: json.seoKeywords ?? prev.seo_keywords,
         }));
-        setTab("id");
       } else {
         setForm(prev => ({
           ...prev,
@@ -84,8 +80,8 @@ function ArticleModal({
           seo_description_en: json.seoDescription ?? prev.seo_description_en,
           seo_keywords_en: json.seoKeywords ?? prev.seo_keywords_en,
         }));
-        setTab("en");
       }
+      setTab(lang);
       showToast("AI", `Content generated in ${lang === "id" ? "Indonesian" : "English"}`, "success");
     } catch {
       showToast("AI Error", "Failed to generate content", "error");
@@ -99,13 +95,11 @@ function ArticleModal({
     if (!form.slug?.trim()) { showToast("Validation", "Slug is required", "error"); return; }
     setSaving(true);
     try {
-      const payload = { ...form };
       const url = isEdit ? `/api/articles/${form.id}` : "/api/articles";
-      const method = isEdit ? "PUT" : "POST";
       const res = await fetch(url, {
-        method,
+        method: isEdit ? "PUT" : "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
+        body: JSON.stringify({ ...form }),
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json?.message ?? "Save failed");
@@ -120,9 +114,10 @@ function ArticleModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[92vh] flex flex-col overflow-hidden">
-        {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-border">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-5xl max-h-[94vh] flex flex-col overflow-hidden">
+
+        {/* Modal header */}
+        <div className="flex items-center justify-between px-6 py-4 border-b border-border flex-shrink-0">
           <div className="flex items-center gap-2">
             <FileText className="w-5 h-5 text-primary" />
             <span className="font-extrabold font-display text-gray-900 text-lg">
@@ -134,172 +129,187 @@ function ArticleModal({
           </button>
         </div>
 
-        {/* Body */}
-        <div className="flex-1 overflow-y-auto p-6 space-y-5">
-          {/* Base fields */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="md:col-span-2">
-              <label className="block text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1.5">Title (ID)</label>
-              <input value={form.title ?? ""} onChange={e => handleTitleChange(e.target.value)}
-                className="w-full text-sm font-medium px-3.5 py-2.5 rounded-xl border border-border focus:border-primary outline-none bg-bg focus:bg-white transition"
-                placeholder="Judul artikel dalam Bahasa Indonesia" />
-            </div>
-            <div>
-              <label className="block text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1.5">Slug</label>
-              <input value={form.slug ?? ""} onChange={e => set("slug", e.target.value)}
-                className="w-full text-sm font-medium px-3.5 py-2.5 rounded-xl border border-border focus:border-primary outline-none bg-bg focus:bg-white transition font-mono"
-                placeholder="url-friendly-slug" />
-            </div>
-            <div>
-              <label className="block text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1.5">Title (EN)</label>
-              <input value={form.title_en ?? ""} onChange={e => set("title_en", e.target.value)}
-                className="w-full text-sm font-medium px-3.5 py-2.5 rounded-xl border border-border focus:border-primary outline-none bg-bg focus:bg-white transition"
-                placeholder="Article title in English" />
-            </div>
-            <div>
-              <label className="block text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1.5">Category</label>
-              <div className="relative">
-                <select value={form.category ?? "panduan"} onChange={e => set("category", e.target.value)}
-                  className="w-full appearance-none text-sm font-semibold px-3.5 py-2.5 rounded-xl border border-border focus:border-primary outline-none bg-bg focus:bg-white transition cursor-pointer">
-                  {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
-                </select>
-                <ChevronDown className="absolute right-3 top-3 w-4 h-4 text-gray-400 pointer-events-none" />
-              </div>
-            </div>
-            <div>
-              <label className="block text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1.5">Status</label>
-              <div className="relative">
-                <select value={form.status ?? "draft"} onChange={e => set("status", e.target.value)}
-                  className="w-full appearance-none text-sm font-semibold px-3.5 py-2.5 rounded-xl border border-border focus:border-primary outline-none bg-bg focus:bg-white transition cursor-pointer">
-                  {STATUS_OPTIONS.map(s => <option key={s} value={s}>{s}</option>)}
-                </select>
-                <ChevronDown className="absolute right-3 top-3 w-4 h-4 text-gray-400 pointer-events-none" />
-              </div>
-            </div>
-            <div>
-              <label className="block text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1.5">Author</label>
-              <input value={form.author ?? ""} onChange={e => set("author", e.target.value)}
-                className="w-full text-sm font-medium px-3.5 py-2.5 rounded-xl border border-border focus:border-primary outline-none bg-bg focus:bg-white transition"
-                placeholder="Jogjagem Team" />
-            </div>
-            <div>
-              <label className="block text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1.5">Read Time (minutes)</label>
-              <input type="number" min={1} max={60} value={form.read_time_minutes ?? 5} onChange={e => set("read_time_minutes", +e.target.value)}
-                className="w-full text-sm font-medium px-3.5 py-2.5 rounded-xl border border-border focus:border-primary outline-none bg-bg focus:bg-white transition" />
-            </div>
-            <div className="md:col-span-2">
-              <label className="block text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1.5">Cover Image URL</label>
-              <input value={form.cover_image ?? ""} onChange={e => set("cover_image", e.target.value)}
-                className="w-full text-sm font-medium px-3.5 py-2.5 rounded-xl border border-border focus:border-primary outline-none bg-bg focus:bg-white transition"
-                placeholder="https://..." />
-            </div>
-          </div>
+        {/* Modal body — 2 column */}
+        <div className="flex-1 overflow-y-auto">
+          <div className="grid grid-cols-1 lg:grid-cols-[1fr_300px] divide-y lg:divide-y-0 lg:divide-x divide-border min-h-full">
 
-          {/* Language tabs */}
-          <div>
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex gap-1 bg-bg rounded-xl p-1">
-                {(["id", "en", "seo"] as const).map(t => (
-                  <button key={t} onClick={() => setTab(t)}
-                    className={`px-4 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer ${tab === t ? "bg-white shadow text-primary" : "text-gray-400 hover:text-gray-700"}`}>
-                    {t === "seo" ? "SEO" : t.toUpperCase()}
-                  </button>
-                ))}
-              </div>
-              {tab !== "seo" && (
-                <button onClick={() => generateAI(tab)} disabled={aiLoading}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-primary/10 hover:bg-primary/20 text-primary text-xs font-bold transition cursor-pointer disabled:opacity-50">
-                  {aiLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
-                  Generate with AI ({tab.toUpperCase()})
-                </button>
-              )}
-            </div>
-
-            {tab === "id" && (
+            {/* LEFT — editor */}
+            <div className="p-6 space-y-5">
+              {/* Titles */}
               <div className="space-y-3">
                 <div>
-                  <label className="block text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1.5">Excerpt (ID)</label>
-                  <textarea rows={2} value={form.excerpt ?? ""} onChange={e => set("excerpt", e.target.value)}
-                    className="w-full text-sm px-3.5 py-2.5 rounded-xl border border-border focus:border-primary outline-none bg-bg focus:bg-white transition resize-none"
-                    placeholder="Ringkasan singkat artikel..." />
+                  <label className="block text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1.5">Title (ID) *</label>
+                  <input value={form.title ?? ""} onChange={e => handleTitleChange(e.target.value)}
+                    className="w-full text-base font-bold px-3.5 py-2.5 rounded-xl border border-border focus:border-primary outline-none bg-bg focus:bg-white transition"
+                    placeholder="Judul artikel dalam Bahasa Indonesia" />
                 </div>
-                <div>
-                  <label className="block text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1.5">Content (ID) — HTML</label>
-                  <textarea rows={12} value={form.content ?? ""} onChange={e => set("content", e.target.value)}
-                    className="w-full text-xs font-mono px-3.5 py-2.5 rounded-xl border border-border focus:border-primary outline-none bg-bg focus:bg-white transition resize-y"
-                    placeholder="<h2>Judul Bagian</h2>\n<p>Konten artikel...</p>" />
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1.5">Slug *</label>
+                    <input value={form.slug ?? ""} onChange={e => set("slug", e.target.value)}
+                      className="w-full text-sm px-3.5 py-2.5 rounded-xl border border-border focus:border-primary outline-none bg-bg focus:bg-white transition font-mono"
+                      placeholder="url-friendly-slug" />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1.5">Title (EN)</label>
+                    <input value={form.title_en ?? ""} onChange={e => set("title_en", e.target.value)}
+                      className="w-full text-sm px-3.5 py-2.5 rounded-xl border border-border focus:border-primary outline-none bg-bg focus:bg-white transition"
+                      placeholder="Article title in English" />
+                  </div>
                 </div>
               </div>
-            )}
 
-            {tab === "en" && (
-              <div className="space-y-3">
-                <div>
-                  <label className="block text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1.5">Excerpt (EN)</label>
-                  <textarea rows={2} value={form.excerpt_en ?? ""} onChange={e => set("excerpt_en", e.target.value)}
-                    className="w-full text-sm px-3.5 py-2.5 rounded-xl border border-border focus:border-primary outline-none bg-bg focus:bg-white transition resize-none"
-                    placeholder="Short article summary in English..." />
+              {/* Language tabs */}
+              <div>
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex gap-1 bg-bg rounded-xl p-1">
+                    {(["id", "en", "seo"] as const).map(t => (
+                      <button key={t} onClick={() => setTab(t)}
+                        className={`px-4 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer ${tab === t ? "bg-white shadow text-primary" : "text-gray-400 hover:text-gray-700"}`}>
+                        {t === "seo" ? "SEO" : t.toUpperCase()}
+                      </button>
+                    ))}
+                  </div>
+                  {tab !== "seo" && (
+                    <button onClick={() => generateAI(tab)} disabled={aiLoading}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-primary/10 hover:bg-primary/20 text-primary text-xs font-bold transition cursor-pointer disabled:opacity-50">
+                      {aiLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
+                      Generate AI ({tab.toUpperCase()})
+                    </button>
+                  )}
                 </div>
-                <div>
-                  <label className="block text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1.5">Content (EN) — HTML</label>
-                  <textarea rows={12} value={form.content_en ?? ""} onChange={e => set("content_en", e.target.value)}
-                    className="w-full text-xs font-mono px-3.5 py-2.5 rounded-xl border border-border focus:border-primary outline-none bg-bg focus:bg-white transition resize-y"
-                    placeholder="<h2>Section Title</h2>\n<p>Article content...</p>" />
-                </div>
-              </div>
-            )}
 
-            {tab === "seo" && (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1.5">SEO Title (ID)</label>
-                  <input value={form.seo_title ?? ""} onChange={e => set("seo_title", e.target.value)}
-                    className="w-full text-sm px-3.5 py-2.5 rounded-xl border border-border focus:border-primary outline-none bg-bg focus:bg-white transition"
-                    placeholder="SEO title Bahasa Indonesia" />
-                </div>
-                <div>
-                  <label className="block text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1.5">SEO Title (EN)</label>
-                  <input value={form.seo_title_en ?? ""} onChange={e => set("seo_title_en", e.target.value)}
-                    className="w-full text-sm px-3.5 py-2.5 rounded-xl border border-border focus:border-primary outline-none bg-bg focus:bg-white transition"
-                    placeholder="SEO title in English" />
-                </div>
-                <div>
-                  <label className="block text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1.5">SEO Description (ID)</label>
-                  <textarea rows={2} value={form.seo_description ?? ""} onChange={e => set("seo_description", e.target.value)}
-                    className="w-full text-sm px-3.5 py-2.5 rounded-xl border border-border focus:border-primary outline-none bg-bg focus:bg-white transition resize-none"
-                    placeholder="Meta description Bahasa Indonesia..." />
-                </div>
-                <div>
-                  <label className="block text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1.5">SEO Description (EN)</label>
-                  <textarea rows={2} value={form.seo_description_en ?? ""} onChange={e => set("seo_description_en", e.target.value)}
-                    className="w-full text-sm px-3.5 py-2.5 rounded-xl border border-border focus:border-primary outline-none bg-bg focus:bg-white transition resize-none"
-                    placeholder="Meta description in English..." />
-                </div>
-                <div>
-                  <label className="block text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1.5">SEO Keywords (ID)</label>
-                  <input value={form.seo_keywords ?? ""} onChange={e => set("seo_keywords", e.target.value)}
-                    className="w-full text-sm px-3.5 py-2.5 rounded-xl border border-border focus:border-primary outline-none bg-bg focus:bg-white transition"
-                    placeholder="kata kunci, dipisah koma" />
-                </div>
-                <div>
-                  <label className="block text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1.5">SEO Keywords (EN)</label>
-                  <input value={form.seo_keywords_en ?? ""} onChange={e => set("seo_keywords_en", e.target.value)}
-                    className="w-full text-sm px-3.5 py-2.5 rounded-xl border border-border focus:border-primary outline-none bg-bg focus:bg-white transition"
-                    placeholder="keywords, comma separated" />
-                </div>
-                <div className="md:col-span-2">
-                  <label className="block text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1.5">OG Image URL</label>
-                  <input value={form.og_image ?? ""} onChange={e => set("og_image", e.target.value)}
-                    className="w-full text-sm px-3.5 py-2.5 rounded-xl border border-border focus:border-primary outline-none bg-bg focus:bg-white transition"
-                    placeholder="https://... (defaults to cover_image if empty)" />
+                {tab === "id" && (
+                  <div className="space-y-3">
+                    <div>
+                      <label className="block text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1.5">Excerpt (ID)</label>
+                      <textarea rows={2} value={form.excerpt ?? ""} onChange={e => set("excerpt", e.target.value)}
+                        className="w-full text-sm px-3.5 py-2.5 rounded-xl border border-border focus:border-primary outline-none bg-bg focus:bg-white transition resize-none"
+                        placeholder="Ringkasan singkat artikel..." />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1.5">Content (ID)</label>
+                      <RichTextEditor
+                        value={form.content ?? ""}
+                        onChange={v => setForm(prev => ({ ...prev, content: v }))}
+                        placeholder="Mulai menulis konten artikel dalam Bahasa Indonesia..."
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {tab === "en" && (
+                  <div className="space-y-3">
+                    <div>
+                      <label className="block text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1.5">Excerpt (EN)</label>
+                      <textarea rows={2} value={form.excerpt_en ?? ""} onChange={e => set("excerpt_en", e.target.value)}
+                        className="w-full text-sm px-3.5 py-2.5 rounded-xl border border-border focus:border-primary outline-none bg-bg focus:bg-white transition resize-none"
+                        placeholder="Short article summary in English..." />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1.5">Content (EN)</label>
+                      <RichTextEditor
+                        value={form.content_en ?? ""}
+                        onChange={v => setForm(prev => ({ ...prev, content_en: v }))}
+                        placeholder="Start writing article content in English..."
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {tab === "seo" && (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1.5">SEO Title (ID)</label>
+                      <input value={form.seo_title ?? ""} onChange={e => set("seo_title", e.target.value)}
+                        className="w-full text-sm px-3.5 py-2.5 rounded-xl border border-border focus:border-primary outline-none bg-bg focus:bg-white transition"
+                        placeholder="SEO title Bahasa Indonesia" />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1.5">SEO Title (EN)</label>
+                      <input value={form.seo_title_en ?? ""} onChange={e => set("seo_title_en", e.target.value)}
+                        className="w-full text-sm px-3.5 py-2.5 rounded-xl border border-border focus:border-primary outline-none bg-bg focus:bg-white transition"
+                        placeholder="SEO title in English" />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1.5">SEO Description (ID)</label>
+                      <textarea rows={3} value={form.seo_description ?? ""} onChange={e => set("seo_description", e.target.value)}
+                        className="w-full text-sm px-3.5 py-2.5 rounded-xl border border-border focus:border-primary outline-none bg-bg focus:bg-white transition resize-none"
+                        placeholder="Meta description Bahasa Indonesia..." />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1.5">SEO Description (EN)</label>
+                      <textarea rows={3} value={form.seo_description_en ?? ""} onChange={e => set("seo_description_en", e.target.value)}
+                        className="w-full text-sm px-3.5 py-2.5 rounded-xl border border-border focus:border-primary outline-none bg-bg focus:bg-white transition resize-none"
+                        placeholder="Meta description in English..." />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1.5">SEO Keywords (ID)</label>
+                      <input value={form.seo_keywords ?? ""} onChange={e => set("seo_keywords", e.target.value)}
+                        className="w-full text-sm px-3.5 py-2.5 rounded-xl border border-border focus:border-primary outline-none bg-bg focus:bg-white transition"
+                        placeholder="kata kunci, dipisah koma" />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1.5">SEO Keywords (EN)</label>
+                      <input value={form.seo_keywords_en ?? ""} onChange={e => set("seo_keywords_en", e.target.value)}
+                        className="w-full text-sm px-3.5 py-2.5 rounded-xl border border-border focus:border-primary outline-none bg-bg focus:bg-white transition"
+                        placeholder="keywords, comma separated" />
+                    </div>
+                    <div className="md:col-span-2">
+                      <label className="block text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1.5">OG Image URL</label>
+                      <input value={form.og_image ?? ""} onChange={e => set("og_image", e.target.value)}
+                        className="w-full text-sm px-3.5 py-2.5 rounded-xl border border-border focus:border-primary outline-none bg-bg focus:bg-white transition"
+                        placeholder="https://... (defaults to cover_image if empty)" />
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* RIGHT — sidebar */}
+            <div className="p-6 space-y-5 bg-bg/30">
+              <CoverImageUpload
+                value={form.cover_image ?? ""}
+                onChange={url => setForm(prev => ({ ...prev, cover_image: url }))}
+              />
+              <div>
+                <label className="block text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1.5">Category</label>
+                <div className="relative">
+                  <select value={form.category ?? "panduan"} onChange={e => set("category", e.target.value)}
+                    className="w-full appearance-none text-sm font-semibold px-3.5 py-2.5 rounded-xl border border-border focus:border-primary outline-none bg-white transition cursor-pointer">
+                    {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+                  </select>
+                  <ChevronDown className="absolute right-3 top-3 w-4 h-4 text-gray-400 pointer-events-none" />
                 </div>
               </div>
-            )}
+              <div>
+                <label className="block text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1.5">Status</label>
+                <div className="relative">
+                  <select value={form.status ?? "draft"} onChange={e => set("status", e.target.value)}
+                    className="w-full appearance-none text-sm font-semibold px-3.5 py-2.5 rounded-xl border border-border focus:border-primary outline-none bg-white transition cursor-pointer">
+                    {STATUS_OPTIONS.map(s => <option key={s} value={s}>{s}</option>)}
+                  </select>
+                  <ChevronDown className="absolute right-3 top-3 w-4 h-4 text-gray-400 pointer-events-none" />
+                </div>
+              </div>
+              <div>
+                <label className="block text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1.5">Author</label>
+                <input value={form.author ?? ""} onChange={e => set("author", e.target.value)}
+                  className="w-full text-sm px-3.5 py-2.5 rounded-xl border border-border focus:border-primary outline-none bg-white transition"
+                  placeholder="Jogjagem Team" />
+              </div>
+              <div>
+                <label className="block text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1.5">Read Time (minutes)</label>
+                <input type="number" min={1} max={60} value={form.read_time_minutes ?? 5}
+                  onChange={e => set("read_time_minutes", +e.target.value)}
+                  className="w-full text-sm px-3.5 py-2.5 rounded-xl border border-border focus:border-primary outline-none bg-white transition" />
+              </div>
+            </div>
           </div>
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-border bg-bg/40">
+        <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-border bg-bg/40 flex-shrink-0">
           <button onClick={onClose} className="px-4 py-2 rounded-xl text-sm font-semibold text-gray-600 hover:bg-bg transition cursor-pointer">Cancel</button>
           <button onClick={handleSave} disabled={saving}
             className="px-5 py-2 rounded-xl text-sm font-bold bg-primary text-white hover:bg-primary/90 transition cursor-pointer disabled:opacity-60 flex items-center gap-2">
@@ -312,7 +322,6 @@ function ArticleModal({
   );
 }
 
-// ─── Main Page ─────────────────────────────────────────────────────────────────
 export default function ArticlesPage() {
   const { showToast } = useToast();
   const [all, setAll] = useState<Article[]>([]);
@@ -387,14 +396,9 @@ export default function ArticlesPage() {
     <>
       <Header activeId="articles" />
       {modal !== false && (
-        <ArticleModal
-          article={modal}
-          onClose={() => setModal(false)}
-          onSaved={handleSaved}
-        />
+        <ArticleModal article={modal} onClose={() => setModal(false)} onSaved={handleSaved} />
       )}
       <main className="flex-1 overflow-y-auto p-8 space-y-8">
-        {/* Page header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
             <h2 className="text-2xl font-extrabold font-display text-gray-900 tracking-tight">Blog Articles</h2>
