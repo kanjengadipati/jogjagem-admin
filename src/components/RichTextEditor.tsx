@@ -99,7 +99,7 @@ export default function RichTextEditor({
     const url = window.prompt('URL', prev ?? '');
     if (url === null) return;
     if (url === '') {
-      editor.chain().focus().extendMarkToLink({ href: '' }).unsetLink().run();
+      editor.chain().focus().unsetLink().run();
       return;
     }
     editor.chain().focus().setLink({ href: url }).run();
