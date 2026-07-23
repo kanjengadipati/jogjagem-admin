@@ -7,7 +7,7 @@ import Image from "next/image";
 import Header from "@/components/Header";
 import { useToast } from "@/components/Toast";
 import { parseImages } from "@/lib/images";
-import { ArrowLeft, Sparkles, ImagePlus, Trash2, Loader2, Calendar, Link2, Unlink, Search } from "lucide-react";
+import { ArrowLeft, Sparkles, ImagePlus, Trash2, Loader2, Calendar, Link2, Unlink, Search, ExternalLink, Link as LinkIcon } from "lucide-react";
 import type { Destination, Event } from "@/types";
 
 const CLOUDINARY_CLOUD = "wdsepioa";
@@ -102,6 +102,9 @@ export default function DestinationDetailPage() {
   const [tab, setTab] = useState<Tab>("overview");
   const [form, setForm] = useState<FormState>(EMPTY_FORM);
   const [galleryImgs, setGalleryImgs] = useState<string[]>([]);
+  const [urlInput, setUrlInput] = useState("");
+  const [urlPreviewError, setUrlPreviewError] = useState(false);
+  const [urlResolved, setUrlResolved] = useState("");
   const [allEvents, setAllEvents] = useState<Event[]>([]);
   const [eventsLoading, setEventsLoading] = useState(false);
   const [linkingEvent, setLinkingEvent] = useState<string | null>(null);
@@ -163,6 +166,18 @@ export default function DestinationDetailPage() {
     loadEvents();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Auto-resolve Wikipedia file page URLs to direct image URLs for preview
+  useEffect(() => {
+    const trimmed = urlInput.trim();
+    if (!trimmed) { setUrlResolved(""); return; }
+    if (/wikipedia\.org\/wiki\/(Berkas|File):/i.test(trimmed)) {
+      resolveWikipediaImageUrl(trimmed).then(setUrlResolved).catch(() => setUrlResolved(trimmed));
+    } else {
+      setUrlResolved(trimmed);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [urlInput]);
 
   async function linkEvent(eventId: string) {
     setLinkingEvent(eventId);
@@ -284,6 +299,45 @@ export default function DestinationDetailPage() {
 
     setUploading(false);
     if (fileInputRef.current) fileInputRef.current.value = "";
+  }
+
+  /** Convert a Wikipedia file page URL to the direct Wikimedia image URL via the API. */
+  async function resolveWikipediaImageUrl(url: string): Promise<string> {
+    // Matches both /wiki/Berkas:... (id) and /wiki/File:... (en) on any *.wikipedia.org
+    const wikiMatch = url.match(/^https?:\/\/([a-z]+)\.wikipedia\.org\/wiki\/(Berkas|File):(.+)$/i);
+    if (!wikiMatch) return url;
+    const lang = wikiMatch[1];
+    const filename = decodeURIComponent(wikiMatch[3]);
+    const apiUrl = `https://${lang}.wikipedia.org/w/api.php?action=query&titles=File:${encodeURIComponent(filename)}&prop=imageinfo&iiprop=url&format=json&origin=*`;
+    const res = await fetch(apiUrl);
+    if (!res.ok) return url;
+    const data = await res.json();
+    const pages = data?.query?.pages ?? {};
+    const page = Object.values(pages)[0] as { imageinfo?: { url: string }[] };
+    return page?.imageinfo?.[0]?.url ?? url;
+  }
+
+  async function addImageByUrl() {
+    const trimmed = urlInput.trim();
+    if (!trimmed) return;
+    try { new URL(trimmed); } catch { showToast("Invalid URL", "Please enter a valid image URL", "error"); return; }
+
+    // Resolve Wikipedia file pages to direct image URLs
+    let resolved = trimmed;
+    if (/wikipedia\.org\/wiki\/(Berkas|File):/i.test(trimmed)) {
+      try {
+        resolved = await resolveWikipediaImageUrl(trimmed);
+      } catch {
+        // fall through with original URL
+      }
+    }
+
+    if (galleryImgs.includes(resolved)) { showToast("Duplicate", "This image is already in the gallery", "info"); return; }
+    setGalleryImgs((prev) => [...prev, resolved]);
+    setUrlInput("");
+    setUrlPreviewError(false);
+    setUrlResolved("");
+    showToast("Added", "Image added from URL", "success");
   }
 
   function removeImage(index: number) {
@@ -501,7 +555,7 @@ export default function DestinationDetailPage() {
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                   {galleryImgs.map((img, i) => (
                     <div key={i} className="relative rounded-2xl overflow-hidden aspect-square group border border-border">
-                      <Image src={img} alt={`gallery-${i}`} fill className="object-cover" sizes="200px" />
+                      <Image src={img} alt={`gallery-${i}`} fill unoptimized className="object-cover" sizes="200px" />
 
                       {/* Cover badge */}
                       {i === 0 && (
@@ -545,6 +599,99 @@ export default function DestinationDetailPage() {
                 {galleryImgs.length === 0 && !uploading && (
                   <p className="text-xs text-gray-400 text-center py-2">No images yet — click &ldquo;Add Visual Asset&rdquo; to upload.</p>
                 )}
+
+                {/* Find Images / Add by URL */}
+                <div className="border-t border-border pt-4 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest font-display">Add Image from URL</label>
+                    <div className="flex items-center gap-2">
+                      <a
+                        href={`https://unsplash.com/s/photos/${encodeURIComponent(form.name + " Yogyakarta")}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-1.5 px-3 py-1.5 text-[10px] font-bold bg-gray-50 text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-100 transition-colors whitespace-nowrap"
+                        title="Search Unsplash for this destination"
+                      >
+                        <ExternalLink className="w-3 h-3" />
+                        Unsplash
+                      </a>
+                      <a
+                        href={`https://www.pexels.com/search/${encodeURIComponent(form.name + " Yogyakarta")}/`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-1.5 px-3 py-1.5 text-[10px] font-bold bg-gray-50 text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-100 transition-colors whitespace-nowrap"
+                        title="Search Pexels for this destination"
+                      >
+                        <ExternalLink className="w-3 h-3" />
+                        Pexels
+                      </a>
+                      <a
+                        href={`https://www.google.com/search?q=${encodeURIComponent(form.name + " Yogyakarta")}&tbm=isch`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-1.5 px-3 py-1.5 text-[10px] font-bold bg-blue-50 text-blue-600 border border-blue-200 rounded-lg hover:bg-blue-100 transition-colors whitespace-nowrap"
+                        title="Search Google Images for this destination"
+                      >
+                        <Search className="w-3 h-3" />
+                        Find Images
+                      </a>
+                    </div>
+                  </div>
+
+                  <div className="flex gap-2">
+                    <div className="flex-1 flex items-center gap-2 bg-bg rounded-xl border border-transparent focus-within:border-border px-3 py-2">
+                      <LinkIcon className="w-3.5 h-3.5 text-gray-400 shrink-0" />
+                      <input
+                        type="url"
+                        value={urlInput}
+                        onChange={(e) => { setUrlInput(e.target.value); setUrlPreviewError(false); setUrlResolved(""); }}
+                        onKeyDown={(e) => e.key === "Enter" && addImageByUrl()}
+                        placeholder="Paste image URL here…"
+                        className="flex-1 bg-transparent text-xs outline-none font-mono text-gray-700 placeholder:text-gray-400"
+                      />
+                      {urlInput && (
+                        <button
+                          onClick={() => { setUrlInput(""); setUrlPreviewError(false); setUrlResolved(""); }}
+                          className="text-gray-400 hover:text-gray-600 text-xs cursor-pointer"
+                        >✕</button>
+                      )}
+                    </div>
+                    <button
+                      onClick={addImageByUrl}
+                      disabled={!urlInput.trim()}
+                      className="flex items-center gap-1.5 px-4 py-2 text-xs font-bold bg-primary text-white rounded-xl hover:bg-primary-dark disabled:opacity-40 disabled:cursor-not-allowed transition-premium cursor-pointer whitespace-nowrap"
+                    >
+                      <ImagePlus className="w-3.5 h-3.5" />
+                      Add Image
+                    </button>
+                  </div>
+
+                  {/* URL preview */}
+                  {urlInput.trim() && !urlPreviewError && (
+                    <div className="flex items-start gap-3 p-3 bg-bg rounded-xl border border-border">
+                      <div className="relative w-14 h-14 rounded-lg overflow-hidden border border-border shrink-0">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={urlResolved || urlInput.trim()}
+                          alt="preview"
+                          className="w-full h-full object-cover"
+                          onError={() => setUrlPreviewError(true)}
+                        />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-0.5">Preview</p>
+                        <p className="text-[11px] text-gray-600 truncate font-mono">{urlResolved || urlInput.trim()}</p>
+                        {urlResolved && urlResolved !== urlInput.trim() && (
+                          <p className="text-[10px] text-green-600 font-semibold mt-0.5">✓ Wikipedia URL resolved to direct image</p>
+                        )}
+                        <p className="text-[10px] text-gray-400 mt-1">Press Enter or click &ldquo;Add Image&rdquo; to add to gallery</p>
+                      </div>
+                    </div>
+                  )}
+                  {urlInput.trim() && urlPreviewError && (
+                    <p className="text-[11px] text-danger font-semibold">Could not load image preview — check the URL is a direct image link.</p>
+                  )}
+                </div>
               </div>
             )}
 
@@ -736,7 +883,7 @@ export default function DestinationDetailPage() {
               <div className="bg-white p-6 rounded-card border border-border shadow-soft space-y-3">
                 <h4 className="text-xs font-bold text-gray-400 uppercase tracking-widest font-display">Cover Image</h4>
                 <div className="relative rounded-2xl overflow-hidden aspect-video border border-border">
-                  <Image src={galleryImgs[0]} alt="cover" fill className="object-cover" sizes="300px" />
+                  <Image src={galleryImgs[0]} alt="cover" fill unoptimized className="object-cover" sizes="300px" />
                 </div>
                 <p className="text-[10px] text-gray-400">First gallery image is used as cover.</p>
               </div>
