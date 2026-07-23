@@ -91,13 +91,13 @@ export default function Sidebar() {
           <div className="flex items-center gap-2">
             <button
               onClick={() => setCollapsed(!collapsed)}
-              className="hidden md:flex p-1.5 rounded-lg border border-border hover:bg-bg text-gray-500 hover:text-text cursor-pointer transition-premium flex-shrink-0"
+              className="hidden md:flex p-1.5 rounded-lg border border-border hover:bg-primary/10 text-gray-500 hover:text-primary cursor-pointer transition-premium flex-shrink-0"
             >
               {collapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
             </button>
             <button
               onClick={toggleMobileSidebar}
-              className="md:hidden p-1.5 rounded-lg border border-border hover:bg-bg text-gray-500 hover:text-text cursor-pointer transition-premium flex-shrink-0"
+              className="md:hidden p-1.5 rounded-lg border border-border hover:bg-primary/10 text-gray-500 hover:text-primary cursor-pointer transition-premium flex-shrink-0"
             >
               <X className="w-4 h-4" />
             </button>
@@ -126,7 +126,7 @@ export default function Sidebar() {
                       <Link
                         href={item.path}
                         onClick={handleLinkClick}
-                        className={`flex items-center ${collapsed ? "justify-center" : "justify-between"} px-3.5 py-2.5 rounded-xl text-sm font-medium transition-premium group hover:bg-bg text-gray-600 hover:text-text ${
+                        className={`flex items-center ${collapsed ? "justify-center" : "justify-between"} px-3.5 py-2.5 rounded-xl text-sm font-medium transition-premium group hover:bg-primary/10 text-gray-600 hover:text-primary ${
                           isActive ? "active-nav-link shadow-premium" : ""
                         }`}
                       >
