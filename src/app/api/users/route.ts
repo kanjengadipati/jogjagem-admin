@@ -12,6 +12,13 @@ async function getApi() {
 export async function GET() {
   const api = await getApi();
   const { status, data } = await api("/auth/admin/users");
+  // 401 means the token is expired or invalidated — clear the cookie so the
+  // middleware redirects to login on the next request.
+  if (status === 401) {
+    const res = NextResponse.json(data, { status });
+    res.cookies.delete(COOKIE_NAME);
+    return res;
+  }
   return NextResponse.json(data, { status });
 }
 

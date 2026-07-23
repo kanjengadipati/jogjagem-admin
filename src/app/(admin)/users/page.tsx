@@ -11,6 +11,7 @@ export default function UsersPage() {
   const [users, setUsers] = useState<User[]>([]);
   const [roles, setRoles] = useState<Role[]>([]);
   const [loading, setLoading] = useState(true);
+  const [authError, setAuthError] = useState(false);
 
   // Modals
   const [showAdd, setShowAdd] = useState(false);
@@ -22,9 +23,13 @@ export default function UsersPage() {
 
   useEffect(() => {
     Promise.all([
-      fetch("/api/users").then(r => r.json()),
+      fetch("/api/users").then(async r => {
+        if (r.status === 401) { setAuthError(true); return null; }
+        return r.json();
+      }),
       fetch("/api/roles").then(r => r.json()),
     ]).then(([u, r]) => {
+      if (u === null) return; // auth error, handled above
       setUsers(Array.isArray(u?.data) ? u.data : []);
       setRoles(Array.isArray(r?.data) ? r.data : []);
     }).catch(() => showToast("Error", "Failed to load users", "error"))
@@ -124,6 +129,19 @@ export default function UsersPage() {
               <tbody className="divide-y divide-border text-xs text-gray-700 font-medium">
                 {loading ? (
                   <tr><td colSpan={6} className="py-16 text-center text-gray-400">Loading users…</td></tr>
+                ) : authError ? (
+                  <tr>
+                    <td colSpan={6} className="py-16 text-center">
+                      <div className="flex flex-col items-center gap-3">
+                        <Users className="w-10 h-10 text-red-400" />
+                        <span className="text-sm font-semibold text-gray-700">Session expired</span>
+                        <span className="text-xs text-gray-400">Your login session is no longer valid.</span>
+                        <a href="/login" className="mt-2 px-5 py-2.5 bg-primary text-white text-xs font-bold rounded-xl hover:bg-primary-dark transition">
+                          Log in again
+                        </a>
+                      </div>
+                    </td>
+                  </tr>
                 ) : users.length === 0 ? (
                   <tr>
                     <td colSpan={6} className="py-16 text-center text-gray-400">
