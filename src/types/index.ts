@@ -104,6 +104,7 @@ export interface Event {
   start_date?: string;
   end_date?: string;
   image_url?: string;
+  images?: { url: string; credit?: string }[] | string[] | string;
   category?: string;
   status?: string;
   ticket_price?: string;
@@ -111,6 +112,9 @@ export interface Event {
   max_attendees?: number;
   video_url?: string;
   destination_id?: string;
+  highlights?: unknown[];
+  badge?: string;
+  badges?: string[];
 }
 
 export interface Guide {
