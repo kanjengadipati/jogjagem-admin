@@ -42,6 +42,7 @@ export const menuGroups: MenuGroup[] = [
       { name: "AI Recommendations",   icon: "sparkles",              path: "/ai-recommendations", activeId: "ai-recommendations" },
       { name: "Promotions",           icon: "tag",                   path: "/promotions",       activeId: "promotions"       },
       { name: "Scraper",              icon: "scan",                   path: "/scraper",          activeId: "scraper"          },
+      { name: "Image Reports",        icon: "flag",                   path: "/image-reports",    activeId: "image-reports"    },
     ],
   },
   {

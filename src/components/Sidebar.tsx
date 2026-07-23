@@ -10,7 +10,7 @@ import {
   LayoutDashboard, BarChart3, FileText, MapPin, Calendar, Hotel,
   Utensils, Briefcase, Users, ShoppingBag, Car, MessageSquareDashed,
   BookOpen, Sparkles, Tag, UserCog, Shield, Settings, ChevronLeft,
-  ChevronRight, ExternalLink, Bot, X, Scan,
+  ChevronRight, ExternalLink, Bot, X, Scan, Flag,
 } from "lucide-react";
 
 const ICON_MAP: Record<string, React.ElementType> = {
@@ -31,6 +31,7 @@ const ICON_MAP: Record<string, React.ElementType> = {
   "tag": Tag,
   "bot": Bot,
   "scan": Scan,
+  "flag": Flag,
   "user-cog": UserCog,
   "shield": Shield,
   "settings": Settings,
