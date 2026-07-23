@@ -156,9 +156,21 @@ function ArticleModal({ article, onClose, onSaved }: {
                 </div>
               </div>
 
+              {/* AI Generate */}
+              <button
+                onClick={() => generateAI()}
+                disabled={aiLoading || !form.title?.trim()}
+                className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-primary/10 hover:bg-primary/20 border border-primary/20 text-primary font-bold text-sm transition cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                {aiLoading
+                  ? <><Loader2 className="w-4 h-4 animate-spin" /> Generating content...</>
+                  : <><Sparkles className="w-4 h-4" /> Generate Content Using AI</>
+                }
+              </button>
+
               {/* Language tabs */}
               <div>
-                <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center mb-3">
                   <div className="flex gap-1 bg-bg rounded-xl p-1">
                     {(["id", "en", "seo"] as const).map(t => (
                       <button key={t} onClick={() => setTab(t)}
@@ -167,11 +179,6 @@ function ArticleModal({ article, onClose, onSaved }: {
                       </button>
                     ))}
                   </div>
-                  <button onClick={() => generateAI()} disabled={aiLoading}
-                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-primary/10 hover:bg-primary/20 text-primary text-xs font-bold transition cursor-pointer disabled:opacity-50">
-                      {aiLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
-                      Generate AI (ID + EN + SEO)
-                    </button>
                 </div>
 
                 {tab === "id" && (
