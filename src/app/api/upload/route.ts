@@ -1,15 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 
-const CLOUD_NAME = process.env.CLOUDINARY_CLOUD_NAME ?? "wdsepioa";
-const API_KEY    = process.env.CLOUDINARY_API_KEY    ?? "738718397121653";
-const API_SECRET = process.env.CLOUDINARY_API_SECRET ?? "82aR0CVjurkjAm-bVi6bgXFe9jo";
+const CLOUD_NAME = process.env.CLOUDINARY_CLOUD_NAME;
+const API_KEY    = process.env.CLOUDINARY_API_KEY;
+const API_SECRET = process.env.CLOUDINARY_API_SECRET;
 
-/**
- * POST /api/upload
- * Returns a signed Cloudinary signature so the browser can upload directly.
- * The actual file bytes never touch this server.
- */
 export async function POST(req: NextRequest) {
+  if (!CLOUD_NAME || !API_KEY || !API_SECRET) {
+    return NextResponse.json({ error: "Cloudinary not configured" }, { status: 500 });
+  }
+
   const body = await req.json().catch(() => ({}));
   const folder: string = (body as { folder?: string }).folder ?? "explore-jogja";
 
