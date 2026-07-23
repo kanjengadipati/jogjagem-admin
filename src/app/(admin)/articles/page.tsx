@@ -54,35 +54,32 @@ function ArticleModal({ article, onClose, onSaved }: {
   const handleTitleChange = (v: string) =>
     setForm(prev => ({ ...prev, title: v, slug: prev.slug || slugify(v) }));
 
-  async function generateAI(lang: "id" | "en") {
+  async function generateAI() {
     if (!form.title) { showToast("Validation", "Enter a title first", "error"); return; }
     setAiLoading(true);
     try {
       const res = await fetch("/api/ai/generate-article", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ title: form.title, category: form.category, language: lang }),
+        body: JSON.stringify({ title: form.title, category: form.category }),
       });
       const json = await res.json();
-      if (lang === "id") {
-        setForm(prev => ({
-          ...prev,
-          content: json.content ?? prev.content,
-          excerpt: json.excerpt ?? prev.excerpt,
-          seo_description: json.seoDescription ?? prev.seo_description,
-          seo_keywords: json.seoKeywords ?? prev.seo_keywords,
-        }));
-      } else {
-        setForm(prev => ({
-          ...prev,
-          content_en: json.content ?? prev.content_en,
-          excerpt_en: json.excerpt ?? prev.excerpt_en,
-          seo_description_en: json.seoDescription ?? prev.seo_description_en,
-          seo_keywords_en: json.seoKeywords ?? prev.seo_keywords_en,
-        }));
-      }
-      setTab(lang);
-      showToast("AI", `Content generated in ${lang === "id" ? "Indonesian" : "English"}`, "success");
+      setForm(prev => ({
+        ...prev,
+        // Indonesian
+        content:          json.content          ?? prev.content,
+        excerpt:          json.excerpt          ?? prev.excerpt,
+        seo_title:        json.seoTitle         ?? prev.seo_title,
+        seo_description:  json.seoDescription   ?? prev.seo_description,
+        seo_keywords:     json.seoKeywords      ?? prev.seo_keywords,
+        // English
+        content_en:         json.contentEn        ?? prev.content_en,
+        excerpt_en:         json.excerptEn        ?? prev.excerpt_en,
+        seo_title_en:       json.seoTitleEn       ?? prev.seo_title_en,
+        seo_description_en: json.seoDescriptionEn ?? prev.seo_description_en,
+        seo_keywords_en:    json.seoKeywordsEn    ?? prev.seo_keywords_en,
+      }));
+      showToast("AI", "All fields generated — ID, EN & SEO", "success");
     } catch {
       showToast("AI Error", "Failed to generate content", "error");
     } finally {
@@ -170,13 +167,11 @@ function ArticleModal({ article, onClose, onSaved }: {
                       </button>
                     ))}
                   </div>
-                  {tab !== "seo" && (
-                    <button onClick={() => generateAI(tab)} disabled={aiLoading}
+                  <button onClick={() => generateAI()} disabled={aiLoading}
                       className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-primary/10 hover:bg-primary/20 text-primary text-xs font-bold transition cursor-pointer disabled:opacity-50">
                       {aiLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
-                      Generate AI ({tab.toUpperCase()})
+                      Generate AI (ID + EN + SEO)
                     </button>
-                  )}
                 </div>
 
                 {tab === "id" && (
