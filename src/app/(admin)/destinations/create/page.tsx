@@ -19,6 +19,7 @@ export default function CreateDestinationPage() {
     name: "", category: "Temple", sub_region: "Sleman", tagline: "",
     location: "", description: "", story: "", ticket_price: "",
     opening_hours: "", best_time: "", latitude: "", longitude: "",
+    seo_title: "", seo_keywords: "", seo_description: "",
   });
 
   function set(key: string, val: string) { setForm(f => ({ ...f, [key]: val })); }
@@ -34,6 +35,9 @@ export default function CreateDestinationPage() {
       });
       const data = await res.json();
       if (data.description) { set("description", data.description); showToast("AI", "Description generated", "success"); }
+      if (data.seoTitle) set("seo_title", data.seoTitle);
+      if (data.seoDescription) set("seo_description", data.seoDescription);
+      if (data.seoKeywords) set("seo_keywords", data.seoKeywords);
     } catch { showToast("AI Error", "Generation failed", "error"); }
     finally { setAiLoading(false); }
   }

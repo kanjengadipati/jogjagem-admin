@@ -30,7 +30,9 @@ export async function POST(req: NextRequest) {
     // Fallback if BE AI is unavailable
     return NextResponse.json({
       description: `${destinationName} is a breathtaking ${category || "attraction"} located in the scenic region of ${region || "Yogyakarta"}. Known for its stunning views and cultural significance, this destination offers a unique experience for every traveler.`,
-      seoKeywords: `${destinationName}, Jogja Tourism, ${category || "destination"}, ${region || "Yogyakarta"} tour`,
+      seoTitle: `${destinationName} - Explore ${region || "Yogyakarta"} | Jogjagem`,
+      seoDescription: `Discover ${destinationName}, a must-visit ${category || "attraction"} in ${region || "Yogyakarta"}. Plan your trip with opening hours, ticket prices, and travel tips.`,
+      seoKeywords: `${destinationName}, Jogja Tourism, ${category || "destination"}, ${region || "Yogyakarta"} tour, things to do in Yogyakarta`,
     });
   }
 
@@ -46,5 +48,8 @@ export async function POST(req: NextRequest) {
     .filter(Boolean)
     .join(", ");
 
-  return NextResponse.json({ description, seoKeywords });
+  const seoTitle = `${destinationName} - Explore ${region || "Yogyakarta"} | Jogjagem`;
+  const seoDescription = `Discover ${destinationName}, a must-visit ${category || "attraction"} in ${region || "Yogyakarta"}. Plan your trip with opening hours, ticket prices, and travel tips.`;
+
+  return NextResponse.json({ description, seoTitle, seoDescription, seoKeywords });
 }

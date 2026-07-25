@@ -297,6 +297,9 @@ export default function EventDetailPage() {
         setField("description", data.description);
         showToast("AI", "Description generated", "success");
       }
+      if (data.seoTitle) setField("seo_title", data.seoTitle);
+      if (data.seoDescription) setField("seo_description", data.seoDescription);
+      if (data.seoKeywords) setField("seo_keywords", data.seoKeywords);
     } catch {
       showToast("AI Error", "Generation failed", "error");
     } finally {
