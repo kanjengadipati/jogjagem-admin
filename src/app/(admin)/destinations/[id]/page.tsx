@@ -874,6 +874,12 @@ export default function DestinationDetailPage() {
 
           {/* Right sidebar */}
           <div className="space-y-6">
+            <button onClick={save} disabled={saving}
+              className="w-full bg-primary hover:bg-primary-dark disabled:opacity-60 text-white py-3.5 rounded-xl text-sm font-bold shadow-premium transition-premium cursor-pointer flex items-center justify-center gap-2">
+              {saving && <Loader2 className="w-4 h-4 animate-spin" />}
+              {saving ? "Saving…" : "Save Changes"}
+            </button>
+
             <div className="bg-white p-6 rounded-card border border-border shadow-soft space-y-3">
               <h4 className="text-xs font-bold text-gray-400 uppercase tracking-widest font-display">Status</h4>
               {["Published", "Draft"].map((s) => (
@@ -918,12 +924,6 @@ export default function DestinationDetailPage() {
                 <div className="flex justify-between"><span>Lng</span><span>{form.longitude || "N/A"}</span></div>
               </div>
             </div>
-
-            <button onClick={save} disabled={saving}
-              className="w-full bg-primary hover:bg-primary-dark disabled:opacity-60 text-white py-3.5 rounded-xl text-sm font-bold shadow-premium transition-premium cursor-pointer flex items-center justify-center gap-2">
-              {saving && <Loader2 className="w-4 h-4 animate-spin" />}
-              {saving ? "Saving…" : "Save Changes"}
-            </button>
           </div>
         </div>
       </main>
