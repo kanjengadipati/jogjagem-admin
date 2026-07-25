@@ -42,6 +42,12 @@ function matchesCategory(d: Destination, filter: string): boolean {
   if (f === "sunset")    return bt.includes("sore") || bt.includes("sunset");
   if (f === "sunrise")   return bt.includes("sunrise") || bt.includes("fajar") || bt.includes("dawn");
   if (f === "camping")   return bt.includes("camping");
+  if (f === "temple" || f === "candi") {
+    const cat  = (d.category ?? "").toLowerCase();
+    const name = (d.name ?? "").toLowerCase();
+    const tag  = (d.tagline ?? "").toLowerCase();
+    return cat === "temple" || cat === "candi" || name.includes("candi") || name.includes("temple") || tag.includes("candi") || tag.includes("temple");
+  }
 
   // real DB category
   return (d.category ?? "").toLowerCase() === f;
