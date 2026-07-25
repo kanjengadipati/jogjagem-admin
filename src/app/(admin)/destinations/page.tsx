@@ -25,7 +25,8 @@ const RATING_OPTIONS = [
 /* ------------------------------------------------------------------ */
 
 function matchesRegion(subRegion: string | undefined, filter: string): boolean {
-  if (!subRegion || !filter) return true;
+  if (!filter) return true;          // no filter → show all
+  if (!subRegion) return false;      // filter active but no region on record → hide
   const sr = subRegion.toLowerCase();
   const f  = filter.toLowerCase();
   // "Yogyakarta" should match both "Yogyakarta" and "Kota Yogyakarta"
@@ -34,23 +35,28 @@ function matchesRegion(subRegion: string | undefined, filter: string): boolean {
 
 function matchesCategory(d: Destination, filter: string): boolean {
   if (!filter) return true;
-  const f = filter.toLowerCase();
+  const f   = filter.toLowerCase();
+  const cat = (d.category ?? "").toLowerCase();
+  const bt  = (d.best_time ?? "").toLowerCase();
+  const nm  = (d.name ?? "").toLowerCase();
+  const tag = (d.tagline ?? "").toLowerCase();
+  const desc = (d.description ?? "").toLowerCase();
 
-  // virtual categories computed from fields
+  // ── Virtual / computed categories ────────────────────────────────────────
   if (f === "hidden-gem") return (d.rating ?? 0) >= 4.5 && (d.review_count ?? 0) < 2500;
-  const bt = (d.best_time ?? "").toLowerCase();
   if (f === "sunset")    return bt.includes("sore") || bt.includes("sunset");
   if (f === "sunrise")   return bt.includes("sunrise") || bt.includes("fajar") || bt.includes("dawn");
   if (f === "camping")   return bt.includes("camping");
+  if (f === "weekend")   return bt.includes("weekend") || tag.includes("weekend") || desc.includes("weekend");
+  if (f === "family")    return tag.includes("keluarga") || tag.includes("family") || desc.includes("keluarga") || desc.includes("family");
   if (f === "temple" || f === "candi") {
-    const cat  = (d.category ?? "").toLowerCase();
-    const name = (d.name ?? "").toLowerCase();
-    const tag  = (d.tagline ?? "").toLowerCase();
-    return cat === "temple" || cat === "candi" || name.includes("candi") || name.includes("temple") || tag.includes("candi") || tag.includes("temple");
+    return cat === "temple" || cat === "candi" ||
+      nm.includes("candi") || nm.includes("temple") ||
+      tag.includes("candi") || tag.includes("temple");
   }
 
-  // real DB category
-  return (d.category ?? "").toLowerCase() === f;
+  // ── Real DB category (case-insensitive exact match) ───────────────────────
+  return cat === f;
 }
 
 function matchesSearch(d: Destination, q: string): boolean {
