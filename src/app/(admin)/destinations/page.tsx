@@ -11,7 +11,7 @@ import { DownloadCloud, FileSpreadsheet, Plus, Search, Star, Edit3, X } from "lu
 import type { Destination, PaginationMeta } from "@/types";
 
 const PAGE_SIZE = 25;
-const CATEGORIES = ["Temple","Beach","Nature","Heritage","Cultural","Culinary","Shopping","Adventure","hidden-gem","family","weekend"];
+const CATEGORIES = ["Temple","Beach","Nature","Heritage","Cultural","Culinary","Shopping","Adventure","hidden-gem","family","weekend","sunset","sunrise","camping"];
 const REGIONS    = ["Sleman","Bantul","Yogyakarta","Gunungkidul","Kulon Progo"];
 const RATING_OPTIONS = [
   { value: "",     label: "All Ratings" },
@@ -32,9 +32,19 @@ function matchesRegion(subRegion: string | undefined, filter: string): boolean {
   return sr === f || sr.includes(f) || f.includes(sr);
 }
 
-function matchesCategory(cat: string | undefined, filter: string): boolean {
-  if (!cat || !filter) return true;
-  return cat.toLowerCase() === filter.toLowerCase();
+function matchesCategory(d: Destination, filter: string): boolean {
+  if (!filter) return true;
+  const f = filter.toLowerCase();
+
+  // virtual categories computed from fields
+  if (f === "hidden-gem") return (d.rating ?? 0) >= 4.5 && (d.review_count ?? 0) < 2500;
+  const bt = (d.best_time ?? "").toLowerCase();
+  if (f === "sunset")    return bt.includes("sore") || bt.includes("sunset");
+  if (f === "sunrise")   return bt.includes("sunrise") || bt.includes("fajar") || bt.includes("dawn");
+  if (f === "camping")   return bt.includes("camping");
+
+  // real DB category
+  return (d.category ?? "").toLowerCase() === f;
 }
 
 function matchesSearch(d: Destination, q: string): boolean {
@@ -60,7 +70,7 @@ function matchesRating(rating: number | undefined, filter: string): boolean {
 function applyFilters(all: Destination[], search: string, category: string, region: string, rating: string): Destination[] {
   return all.filter(d =>
     matchesSearch(d, search) &&
-    matchesCategory(d.category, category) &&
+    matchesCategory(d, category) &&
     matchesRegion(d.sub_region, region) &&
     matchesRating(d.rating, rating)
   );
