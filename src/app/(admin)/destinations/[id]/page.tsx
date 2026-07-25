@@ -412,11 +412,6 @@ export default function DestinationDetailPage() {
               <h2 className="text-2xl font-extrabold font-display text-gray-900 tracking-tight">{form.name || "Destination"}</h2>
             </div>
           </div>
-          <button onClick={save} disabled={saving}
-            className="bg-primary hover:bg-primary-dark disabled:opacity-60 text-white px-5 py-2.5 rounded-xl text-xs font-semibold shadow-premium transition-premium cursor-pointer flex items-center gap-2">
-            {saving && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
-            {saving ? "Saving…" : "Save Changes"}
-          </button>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
@@ -923,6 +918,12 @@ export default function DestinationDetailPage() {
                 <div className="flex justify-between"><span>Lng</span><span>{form.longitude || "N/A"}</span></div>
               </div>
             </div>
+
+            <button onClick={save} disabled={saving}
+              className="w-full bg-primary hover:bg-primary-dark disabled:opacity-60 text-white py-3.5 rounded-xl text-sm font-bold shadow-premium transition-premium cursor-pointer flex items-center justify-center gap-2">
+              {saving && <Loader2 className="w-4 h-4 animate-spin" />}
+              {saving ? "Saving…" : "Save Changes"}
+            </button>
           </div>
         </div>
       </main>
