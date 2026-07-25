@@ -90,6 +90,8 @@ export default function EventDetailPage() {
   const [event, setEvent]         = useState<Event | null>(null);
   const [loading, setLoading]     = useState(true);
   const [saving, setSaving]       = useState(false);
+  const [deleting, setDeleting]   = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [tab, setTab]             = useState<Tab>("overview");
   const [form, setForm]           = useState<FormState>(EMPTY_FORM);
@@ -256,6 +258,24 @@ export default function EventDetailPage() {
       else showToast("Error", "Save failed", "error");
     } catch { showToast("Error", "Network error", "error"); }
     finally { setSaving(false); }
+  }
+
+  async function handleDelete() {
+    setDeleting(true);
+    try {
+      const res = await fetch(`/api/events/${id}`, { method: "DELETE" });
+      if (res.ok) {
+        showToast("Deleted", "Event deleted successfully", "success");
+        router.push("/events");
+      } else {
+        showToast("Error", "Delete failed", "error");
+      }
+    } catch {
+      showToast("Error", "Network error", "error");
+    } finally {
+      setDeleting(false);
+      setShowDeleteConfirm(false);
+    }
   }
 
   const linkedDest = allDests.find((d) => d.id === linkedDestId) ?? null;
@@ -628,6 +648,12 @@ export default function EventDetailPage() {
               {saving ? "Saving…" : "Save Changes"}
             </button>
 
+            <button onClick={() => setShowDeleteConfirm(true)}
+              className="w-full bg-white hover:bg-red-50 border border-red-200 text-red-600 py-3 rounded-xl text-xs font-bold transition-premium cursor-pointer flex items-center justify-center gap-2">
+              <Trash2 className="w-4 h-4" />
+              Delete Event
+            </button>
+
             <div className="bg-white p-6 rounded-card border border-border shadow-soft space-y-3">
               <h4 className="text-xs font-bold text-gray-400 uppercase tracking-widest font-display">Status</h4>
               {EVENT_STATUSES.map((s) => (
@@ -680,6 +706,34 @@ export default function EventDetailPage() {
 
         </div>
       </main>
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl shadow-xl p-6 max-w-sm w-full mx-4 space-y-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center shrink-0">
+                <Trash2 className="w-5 h-5 text-red-600" />
+              </div>
+              <div>
+                <h3 className="text-sm font-bold text-gray-900">Delete Event?</h3>
+                <p className="text-xs text-gray-500 mt-0.5">This action cannot be undone. All data will be permanently removed.</p>
+              </div>
+            </div>
+            <div className="flex gap-3">
+              <button onClick={() => setShowDeleteConfirm(false)}
+                className="flex-1 py-2.5 rounded-xl border border-border text-xs font-bold text-gray-700 hover:bg-bg transition cursor-pointer">
+                Cancel
+              </button>
+              <button onClick={handleDelete} disabled={deleting}
+                className="flex-1 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 disabled:opacity-60 text-white text-xs font-bold transition cursor-pointer flex items-center justify-center gap-2">
+                {deleting && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+                {deleting ? "Deleting…" : "Yes, Delete"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }
