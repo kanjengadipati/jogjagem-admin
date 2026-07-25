@@ -25,15 +25,20 @@ export interface DestinationImage {
 export interface Destination {
   id: string;
   name: string;
+  name_en?: string;
   category?: string;
   sub_region?: string;
   location?: string;
   description?: string;
+  description_en?: string;
   story?: string;
+  story_en?: string;
   tagline?: string;
+  tagline_en?: string;
   ticket_price?: string;
   opening_hours?: string;
   best_time?: string;
+  best_time_en?: string;
   latitude?: string | number;
   longitude?: string | number;
   rating?: number;

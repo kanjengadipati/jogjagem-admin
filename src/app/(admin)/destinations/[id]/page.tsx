@@ -27,18 +27,23 @@ type Tab = "overview" | "gallery" | "facilities" | "seo" | "events";
 
 type FormState = {
   name: string;
+  name_en: string;
   category: string;
   sub_region: string;
   tagline: string;
+  tagline_en: string;
   location: string;
   description: string;
+  description_en: string;
   story: string;
+  story_en: string;
   ticket_price: string;
   opening_hours: string;
   best_time: string;
+  best_time_en: string;
   latitude: string;
   longitude: string;
-  video_url: string; // Add this
+  video_url: string;
   seo_title: string;
   seo_keywords: string;
   seo_description: string;
@@ -46,8 +51,8 @@ type FormState = {
 };
 
 const EMPTY_FORM: FormState = {
-  name: "", category: "", sub_region: "", tagline: "", location: "",
-  description: "", story: "", ticket_price: "", opening_hours: "", best_time: "",
+  name: "", name_en: "", category: "", sub_region: "", tagline: "", tagline_en: "", location: "",
+  description: "", description_en: "", story: "", story_en: "", ticket_price: "", opening_hours: "", best_time: "", best_time_en: "",
   latitude: "", longitude: "", video_url: "", seo_title: "", seo_keywords: "", seo_description: "", og_image_url: "",
 };
 
@@ -103,6 +108,7 @@ export default function DestinationDetailPage() {
   const [aiLoading, setAiLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [tab, setTab] = useState<Tab>("overview");
+  const [lang, setLang] = useState<"id" | "en">("id");
   const [form, setForm] = useState<FormState>(EMPTY_FORM);
   const [galleryImgs, setGalleryImgs] = useState<string[]>([]);
   const [urlInput, setUrlInput] = useState("");
@@ -126,15 +132,20 @@ export default function DestinationDetailPage() {
         if (data) {
           setForm({
             name: data.name ?? "",
+            name_en: data.name_en ?? "",
             category: data.category ?? "",
             sub_region: data.sub_region ?? "",
             tagline: data.tagline ?? "",
+            tagline_en: data.tagline_en ?? "",
             location: data.location ?? "",
             description: data.description ?? "",
+            description_en: data.description_en ?? "",
             story: data.story ?? "",
+            story_en: data.story_en ?? "",
             ticket_price: data.ticket_price ?? "",
             opening_hours: data.opening_hours ?? "",
             best_time: data.best_time ?? "",
+            best_time_en: data.best_time_en ?? "",
             latitude: String(data.latitude ?? ""),
             longitude: String(data.longitude ?? ""),
             video_url: data.video_url ?? "",
@@ -462,9 +473,21 @@ export default function DestinationDetailPage() {
             {tab === "overview" && (
               <div className="space-y-6">
                 <div className="bg-white p-6 rounded-card border border-border shadow-soft space-y-5">
-                  <h4 className="text-sm font-bold text-gray-800 font-display">General Information</h4>
+                  <div className="flex items-center justify-between">
+                    <h4 className="text-sm font-bold text-gray-800 font-display">General Information</h4>
+                    <div className="flex items-center bg-bg rounded-lg border border-border p-0.5">
+                      <button onClick={() => setLang("id")}
+                        className={`px-3 py-1 text-[11px] font-bold rounded-md transition cursor-pointer ${lang === "id" ? "bg-primary text-white" : "text-gray-500 hover:text-gray-700"}`}>
+                        ID
+                      </button>
+                      <button onClick={() => setLang("en")}
+                        className={`px-3 py-1 text-[11px] font-bold rounded-md transition cursor-pointer ${lang === "en" ? "bg-primary text-white" : "text-gray-500 hover:text-gray-700"}`}>
+                        EN
+                      </button>
+                    </div>
+                  </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                    <FieldInput label="Destination Name" value={form.name} onChange={(v) => setField("name", v)} />
+                    <FieldInput label={lang === "id" ? "Nama Destinasi" : "Destination Name"} value={lang === "id" ? form.name : form.name_en} onChange={(v) => setField(lang === "id" ? "name" : "name_en", v)} />
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-1.5">
                         <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest font-display block">Category</label>
@@ -485,24 +508,28 @@ export default function DestinationDetailPage() {
                     </div>
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                    <FieldInput label="Tagline" value={form.tagline} onChange={(v) => setField("tagline", v)} />
+                    <FieldInput label={lang === "id" ? "Tagline" : "Tagline (EN)"} value={lang === "id" ? form.tagline : form.tagline_en} onChange={(v) => setField(lang === "id" ? "tagline" : "tagline_en", v)} />
                     <FieldInput label="Location / Address" value={form.location} onChange={(v) => setField("location", v)} />
                   </div>
                   <div className="space-y-3">
                     <div className="flex items-center justify-between">
-                      <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest font-display block">Editorial Description</label>
+                      <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest font-display block">
+                        {lang === "id" ? "Deskripsi Editorial" : "Editorial Description (EN)"}
+                      </label>
                       <button onClick={generateAI} disabled={aiLoading}
                         className="flex items-center gap-1.5 text-primary hover:text-primary-dark text-xs font-bold cursor-pointer disabled:opacity-60 transition">
                         {aiLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
                         {aiLoading ? "Generating…" : "AI Generate"}
                       </button>
                     </div>
-                    <textarea value={form.description} onChange={(e) => setField("description", e.target.value)} rows={6}
+                    <textarea value={lang === "id" ? form.description : form.description_en} onChange={(e) => setField(lang === "id" ? "description" : "description_en", e.target.value)} rows={6}
                       className="w-full bg-bg focus:bg-white text-xs p-4 rounded-xl border border-transparent focus:border-border outline-none font-medium leading-relaxed" />
                   </div>
                   <div className="space-y-3">
-                    <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest font-display block">Story / Editorial</label>
-                    <textarea value={form.story} onChange={(e) => setField("story", e.target.value)} rows={4}
+                    <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest font-display block">
+                      {lang === "id" ? "Cerita / Editorial" : "Story / Editorial (EN)"}
+                    </label>
+                    <textarea value={lang === "id" ? form.story : form.story_en} onChange={(e) => setField(lang === "id" ? "story" : "story_en", e.target.value)} rows={4}
                       className="w-full bg-bg focus:bg-white text-xs p-4 rounded-xl border border-transparent focus:border-border outline-none font-medium leading-relaxed" />
                   </div>
                 </div>
@@ -512,7 +539,7 @@ export default function DestinationDetailPage() {
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
                     <FieldInput label="Ticket Price" value={form.ticket_price} onChange={(v) => setField("ticket_price", v)} />
                     <FieldInput label="Opening Hours" value={form.opening_hours} onChange={(v) => setField("opening_hours", v)} />
-                    <FieldInput label="Best Time to Visit" value={form.best_time} onChange={(v) => setField("best_time", v)} />
+                    <FieldInput label={lang === "id" ? "Waktu Terbaik" : "Best Time to Visit (EN)"} value={lang === "id" ? form.best_time : form.best_time_en} onChange={(v) => setField(lang === "id" ? "best_time" : "best_time_en", v)} />
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                     <FieldInput label="Latitude" value={form.latitude} onChange={(v) => setField("latitude", v)} mono />
