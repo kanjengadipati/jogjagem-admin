@@ -9,7 +9,7 @@ import { useToast } from "@/components/Toast";
 import { parseImages } from "@/lib/images";
 import {
   ArrowLeft, ImagePlus, Trash2, Loader2, Search,
-  ExternalLink, Link as LinkIcon, Link2, Unlink, MapPin,
+  ExternalLink, Link as LinkIcon, Link2, Unlink, MapPin, Sparkles,
 } from "lucide-react";
 import type { Event, Destination } from "@/types";
 
@@ -93,6 +93,7 @@ export default function EventDetailPage() {
   const [deleting, setDeleting]   = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [aiLoading, setAiLoading] = useState(false);
   const [tab, setTab]             = useState<Tab>("overview");
   const [form, setForm]           = useState<FormState>(EMPTY_FORM);
   const [galleryImgs, setGalleryImgs] = useState<string[]>([]);
@@ -254,7 +255,7 @@ export default function EventDetailPage() {
         method: "PUT", headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
-      if (res.ok) { showToast("Saved", "Event updated successfully", "success"); router.push("/events"); }
+      if (res.ok) { showToast("Saved", "Event updated successfully", "success"); }
       else showToast("Error", "Save failed", "error");
     } catch { showToast("Error", "Network error", "error"); }
     finally { setSaving(false); }
@@ -275,6 +276,31 @@ export default function EventDetailPage() {
     } finally {
       setDeleting(false);
       setShowDeleteConfirm(false);
+    }
+  }
+
+  async function generateAI() {
+    if (!form.title) { showToast("Required", "Enter a title first", "warning"); return; }
+    setAiLoading(true);
+    try {
+      const res = await fetch("/api/ai/generate-description", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          destinationName: form.title,
+          category: form.category,
+          region: form.location,
+        }),
+      });
+      const data = await res.json();
+      if (data.description) {
+        setField("description", data.description);
+        showToast("AI", "Description generated", "success");
+      }
+    } catch {
+      showToast("AI Error", "Generation failed", "error");
+    } finally {
+      setAiLoading(false);
     }
   }
 
@@ -372,7 +398,21 @@ export default function EventDetailPage() {
                   </div>
                   <FieldInput label="Location / Venue" value={form.location} onChange={(v) => setField("location", v)} />
                   <div className="space-y-1.5">
-                    <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest font-display block">Description</label>
+                    <div className="flex items-center justify-between">
+                      <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest font-display block">Description</label>
+                      <button
+                        type="button"
+                        onClick={generateAI}
+                        disabled={aiLoading}
+                        title="Generate description with AI"
+                        className="flex items-center gap-1 text-[10px] font-bold text-primary hover:text-primary/80 transition cursor-pointer disabled:opacity-50"
+                      >
+                        {aiLoading
+                          ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                          : <Sparkles className="w-3.5 h-3.5" />}
+                        {aiLoading ? "Generating…" : "AI Generate"}
+                      </button>
+                    </div>
                     <textarea value={form.description} onChange={(e) => setField("description", e.target.value)} rows={5}
                       className="w-full bg-bg focus:bg-white text-xs p-4 rounded-xl border border-transparent focus:border-border outline-none font-medium leading-relaxed" />
                   </div>
