@@ -45,15 +45,18 @@ type FormState = {
   longitude: string;
   video_url: string;
   seo_title: string;
+  seo_title_en: string;
   seo_keywords: string;
+  seo_keywords_en: string;
   seo_description: string;
+  seo_description_en: string;
   og_image_url: string;
 };
 
 const EMPTY_FORM: FormState = {
   name: "", name_en: "", category: "", sub_region: "", tagline: "", tagline_en: "", location: "",
   description: "", description_en: "", story: "", story_en: "", ticket_price: "", opening_hours: "", best_time: "", best_time_en: "",
-  latitude: "", longitude: "", video_url: "", seo_title: "", seo_keywords: "", seo_description: "", og_image_url: "",
+  latitude: "", longitude: "", video_url: "", seo_title: "", seo_title_en: "", seo_keywords: "", seo_keywords_en: "", seo_description: "", seo_description_en: "", og_image_url: "",
 };
 
 function FieldInput({ label, value, onChange, mono = false }: {
@@ -150,8 +153,11 @@ export default function DestinationDetailPage() {
             longitude: String(data.longitude ?? ""),
             video_url: data.video_url ?? "",
             seo_title: data.seo_title ?? "",
+            seo_title_en: data.seo_title_en ?? "",
             seo_keywords: data.seo_keywords ?? "",
+            seo_keywords_en: data.seo_keywords_en ?? "",
             seo_description: data.seo_description ?? "",
+            seo_description_en: data.seo_description_en ?? "",
             og_image_url: data.og_image_url ?? "",
           });
           setGalleryImgs(parseImages(data.images));
@@ -313,6 +319,10 @@ export default function DestinationDetailPage() {
       if (data.seoTitle) setField("seo_title", data.seoTitle);
       if (data.seoDescription) setField("seo_description", data.seoDescription);
       if (data.seoKeywords) setField("seo_keywords", data.seoKeywords);
+      if (data.descriptionEn) setField("description_en", data.descriptionEn);
+      if (data.seoTitleEn) setField("seo_title_en", data.seoTitleEn);
+      if (data.seoDescriptionEn) setField("seo_description_en", data.seoDescriptionEn);
+      if (data.seoKeywordsEn) setField("seo_keywords_en", data.seoKeywordsEn);
     } catch {
       showToast("AI Error", "Generation failed", "error");
     } finally {
@@ -780,13 +790,24 @@ export default function DestinationDetailPage() {
                   </button>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                  <FieldInput label="Meta Title" value={form.seo_title} onChange={(v) => setField("seo_title", v)} />
-                  <FieldInput label="Meta Keywords" value={form.seo_keywords} onChange={(v) => setField("seo_keywords", v)} />
+                  <FieldInput label="Meta Title (ID)" value={form.seo_title} onChange={(v) => setField("seo_title", v)} />
+                  <FieldInput label="Meta Title (EN)" value={form.seo_title_en} onChange={(v) => setField("seo_title_en", v)} />
                 </div>
-                <div className="space-y-1.5">
-                  <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block">Meta Description</label>
-                  <textarea value={form.seo_description} onChange={(e) => setField("seo_description", e.target.value)} rows={3}
-                    className="w-full bg-bg focus:bg-white text-xs p-4 rounded-xl border border-transparent focus:border-border outline-none font-medium" />
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                  <FieldInput label="Meta Keywords (ID)" value={form.seo_keywords} onChange={(v) => setField("seo_keywords", v)} />
+                  <FieldInput label="Meta Keywords (EN)" value={form.seo_keywords_en} onChange={(v) => setField("seo_keywords_en", v)} />
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block">Meta Description (ID)</label>
+                    <textarea value={form.seo_description} onChange={(e) => setField("seo_description", e.target.value)} rows={3}
+                      className="w-full bg-bg focus:bg-white text-xs p-4 rounded-xl border border-transparent focus:border-border outline-none font-medium" />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block">Meta Description (EN)</label>
+                    <textarea value={form.seo_description_en} onChange={(e) => setField("seo_description_en", e.target.value)} rows={3}
+                      className="w-full bg-bg focus:bg-white text-xs p-4 rounded-xl border border-transparent focus:border-border outline-none font-medium" />
+                  </div>
                 </div>
                 <div className="space-y-1.5">
                   <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block">OG Image URL</label>

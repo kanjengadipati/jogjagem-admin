@@ -46,8 +46,11 @@ export interface Destination {
   images?: DestinationImage[] | string[] | string;
   facilities?: string[] | string;
   seo_title?: string;
+  seo_title_en?: string;
   seo_keywords?: string;
+  seo_keywords_en?: string;
   seo_description?: string;
+  seo_description_en?: string;
   og_image_url?: string;
   video_url?: string;
 }

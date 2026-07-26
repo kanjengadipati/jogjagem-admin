@@ -30,9 +30,13 @@ export async function POST(req: NextRequest) {
     // Fallback if BE AI is unavailable
     return NextResponse.json({
       description: `${destinationName} is a breathtaking ${category || "attraction"} located in the scenic region of ${region || "Yogyakarta"}. Known for its stunning views and cultural significance, this destination offers a unique experience for every traveler.`,
-      seoTitle: `${destinationName} - Explore ${region || "Yogyakarta"} | Jogjagem`,
-      seoDescription: `Discover ${destinationName}, a must-visit ${category || "attraction"} in ${region || "Yogyakarta"}. Plan your trip with opening hours, ticket prices, and travel tips.`,
-      seoKeywords: `${destinationName}, Jogja Tourism, ${category || "destination"}, ${region || "Yogyakarta"} tour, things to do in Yogyakarta`,
+      seoTitle: `${destinationName} - Jelajahi ${region || "Yogyakarta"} | Jogjagem`,
+      seoDescription: `Kunjungi ${destinationName}, ${category || "tempat wisata"} wajib di ${region || "Yogyakarta"}. Rencanakan perjalanan Anda dengan jam buka, harga tiket, dan tips wisata.`,
+      seoKeywords: `${destinationName}, Wisata Jogja, ${category || "destinasi"}, tur ${region || "Yogyakarta"}, tempat wisata di Yogyakarta`,
+      descriptionEn: `${destinationName} is a breathtaking ${category || "attraction"} located in the scenic region of ${region || "Yogyakarta"}. Known for its stunning views and cultural significance, this destination offers a unique experience for every traveler.`,
+      seoTitleEn: `${destinationName} - Explore ${region || "Yogyakarta"} | Jogjagem`,
+      seoDescriptionEn: `Discover ${destinationName}, a must-visit ${category || "attraction"} in ${region || "Yogyakarta"}. Plan your trip with opening hours, ticket prices, and travel tips.`,
+      seoKeywordsEn: `${destinationName}, Jogja Tourism, ${category || "destination"}, ${region || "Yogyakarta"} tour, things to do in Yogyakarta`,
     });
   }
 
@@ -44,12 +48,19 @@ export async function POST(req: NextRequest) {
     `${destinationName} is a remarkable destination in Yogyakarta offering unforgettable experiences for every traveler.`;
 
   const featStr = Array.isArray(features) ? features.join(", ") : (features ?? "");
-  const seoKeywords = [destinationName, "Jogja Tourism", category, region, featStr]
+  const seoKeywords = [destinationName, "Wisata Jogja", category, region, featStr]
     .filter(Boolean)
     .join(", ");
 
-  const seoTitle = `${destinationName} - Explore ${region || "Yogyakarta"} | Jogjagem`;
-  const seoDescription = `Discover ${destinationName}, a must-visit ${category || "attraction"} in ${region || "Yogyakarta"}. Plan your trip with opening hours, ticket prices, and travel tips.`;
+  const seoTitle = `${destinationName} - Jelajahi ${region || "Yogyakarta"} | Jogjagem`;
+  const seoDescription = `Kunjungi ${destinationName}, ${category || "tempat wisata"} wajib di ${region || "Yogyakarta"}. Rencanakan perjalanan Anda dengan jam buka, harga tiket, dan tips wisata.`;
 
-  return NextResponse.json({ description, seoTitle, seoDescription, seoKeywords });
+  const seoKeywordsEn = [destinationName, "Jogja Tourism", category, region, featStr]
+    .filter(Boolean)
+    .join(", ");
+
+  const seoTitleEn = `${destinationName} - Explore ${region || "Yogyakarta"} | Jogjagem`;
+  const seoDescriptionEn = `Discover ${destinationName}, a must-visit ${category || "attraction"} in ${region || "Yogyakarta"}. Plan your trip with opening hours, ticket prices, and travel tips.`;
+
+  return NextResponse.json({ description, seoTitle, seoDescription, seoKeywords, descriptionEn: description, seoTitleEn, seoDescriptionEn, seoKeywordsEn });
 }
