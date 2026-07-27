@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import Image from "next/image";
 import Header from "@/components/Header";
 import { useToast } from "@/components/Toast";
-import { Briefcase, CheckCircle, Clock, Search, Star, Loader2, MapPin, Phone, Globe, Trash2, Edit3 } from "lucide-react";
+import { Briefcase, CheckCircle, Clock, Search, Star, Loader2, MapPin, Phone, Globe, Trash2, Edit3, Megaphone } from "lucide-react";
 import type { Partner } from "@/types";
 
 export default function PartnersPage() {
@@ -48,6 +48,72 @@ export default function PartnersPage() {
       showToast("Deleted", "Partner removed", "success");
     } else {
       showToast("Error", "Delete failed", "error");
+    }
+  }
+
+  async function toggleSponsor(partner: Partner) {
+    const nextSponsored = !partner.is_sponsored;
+
+    let priceAmount = partner.sponsor_price ?? 0;
+    if (nextSponsored) {
+      const input = prompt(
+        `Flat fee for sponsoring "${partner.name}" (IDR, per active period)?`,
+        priceAmount ? String(priceAmount) : ""
+      );
+      if (input === null) return;
+      priceAmount = Number(input) || 0;
+    }
+
+    const res = await fetch(`/api/partners/${partner.id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        is_sponsored: nextSponsored,
+        sponsor_tier: nextSponsored ? 1 : 0,
+        sponsor_price: nextSponsored ? priceAmount : 0,
+        sponsor_price_currency: "IDR",
+        sponsor_payment_status: "pending",
+      }),
+    });
+
+    if (res.ok) {
+      setAll(prev =>
+        prev.map(p =>
+          p.id === partner.id
+            ? {
+                ...p,
+                is_sponsored: nextSponsored,
+                sponsor_tier: nextSponsored ? 1 : 0,
+                sponsor_price: nextSponsored ? priceAmount : 0,
+                sponsor_price_currency: "IDR",
+                sponsor_payment_status: "pending",
+              }
+            : p
+        )
+      );
+      showToast(
+        nextSponsored ? "Sponsored" : "Unsponsored",
+        `"${partner.name}" is now ${nextSponsored ? "a featured sponsored partner" : "organic"}`,
+        "success"
+      );
+    } else {
+      showToast("Error", "Failed to update sponsorship", "error");
+    }
+  }
+
+  async function cyclePartnerPaymentStatus(partner: Partner) {
+    const next = partner.sponsor_payment_status === "paid" ? "pending" : "paid";
+    const res = await fetch(`/api/partners/${partner.id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ sponsor_payment_status: next }),
+    });
+
+    if (res.ok) {
+      setAll(prev => prev.map(p => (p.id === partner.id ? { ...p, sponsor_payment_status: next } : p)));
+      showToast("Updated", `Payment marked as ${next}`, "success");
+    } else {
+      showToast("Error", "Failed to update payment status", "error");
     }
   }
 
@@ -134,6 +200,11 @@ export default function PartnersPage() {
                       {p.category}
                     </span>
                   )}
+                  {p.is_sponsored && (
+                    <span className="absolute bottom-3 left-3 flex items-center gap-1 text-[10px] font-bold text-white bg-secondary px-2.5 py-0.5 rounded-lg shadow-sm">
+                      <Megaphone className="w-3 h-3" /> Sponsored
+                    </span>
+                  )}
                   {/* Rating badge */}
                   <span className="absolute top-3 right-3 flex items-center gap-1 bg-black/50 text-white text-[10px] font-bold px-2 py-0.5 rounded-full backdrop-blur-sm">
                     {p.rating && p.rating > 0 ? (
@@ -195,8 +266,8 @@ export default function PartnersPage() {
                     )}
                   </div>
 
-                  {/* Status badge */}
-                  <div>
+                  {/* Status badge + sponsor toggle */}
+                  <div className="flex items-center justify-between gap-2">
                     {p.rating && p.rating > 0 ? (
                       <span className="flex items-center gap-1 bg-success/10 text-success text-[10px] font-bold px-2.5 py-1 rounded-full w-fit">
                         <CheckCircle className="w-3 h-3" /> Active Partner
@@ -206,7 +277,35 @@ export default function PartnersPage() {
                         <Clock className="w-3 h-3" /> Pending Verification
                       </span>
                     )}
+                    <button
+                      onClick={() => toggleSponsor(p)}
+                      className={`flex items-center gap-1 text-[10px] font-bold px-2.5 py-1 rounded-full w-fit transition cursor-pointer ${
+                        p.is_sponsored
+                          ? "bg-secondary/10 text-secondary hover:bg-secondary/20"
+                          : "bg-gray-100 text-gray-500 hover:bg-gray-200"
+                      }`}
+                    >
+                      <Megaphone className="w-3 h-3" /> {p.is_sponsored ? "Unsponsor" : "Sponsor"}
+                    </button>
                   </div>
+
+                  {p.is_sponsored && !!p.sponsor_price && (
+                    <div className="flex items-center justify-between border-t border-stone-100/60 pt-2">
+                      <span className="text-xs font-bold text-gray-800">
+                        {p.sponsor_price_currency ?? "IDR"} {p.sponsor_price.toLocaleString("id-ID")}
+                      </span>
+                      <button
+                        onClick={() => cyclePartnerPaymentStatus(p)}
+                        className={`text-[10px] font-bold px-2 py-0.5 rounded-full capitalize cursor-pointer transition ${
+                          p.sponsor_payment_status === "paid"
+                            ? "bg-success/10 text-success"
+                            : "bg-warning/10 text-warning"
+                        }`}
+                      >
+                        {p.sponsor_payment_status ?? "pending"}
+                      </button>
+                    </div>
+                  )}
                 </div>
               </div>
             ))}

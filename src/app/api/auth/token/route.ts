@@ -13,7 +13,18 @@ export async function GET(req: NextRequest) {
     return NextResponse.redirect(new URL("/login", req.url));
   }
 
-  const response = NextResponse.redirect(new URL("/dashboard", req.url));
+  let role: string | undefined;
+  try {
+    const payload = JSON.parse(
+      Buffer.from(token.split(".")[1], "base64url").toString("utf-8")
+    );
+    role = payload?.role;
+  } catch {
+    // Ignore and default
+  }
+
+  const redirectUrl = role === "partner" ? "/listings" : "/dashboard";
+  const response = NextResponse.redirect(new URL(redirectUrl, req.url));
   response.cookies.set(COOKIE_NAME, token, {
     httpOnly: true,
     maxAge: 24 * 60 * 60,

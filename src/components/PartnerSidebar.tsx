@@ -5,46 +5,23 @@ import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
 import { useSidebar } from "@/contexts/SidebarContext";
-import { menuGroups } from "@/lib/constants";
+import { partnerMenuGroups } from "@/lib/constants";
 import {
-  LayoutDashboard, BarChart3, FileText, MapPin, Calendar, Hotel,
-  Utensils, Briefcase, Users, ShoppingBag, Car, MessageSquareDashed,
-  BookOpen, Sparkles, Tag, UserCog, Shield, Settings, ChevronLeft,
-  ChevronRight, ExternalLink, Bot, X, Scan, Flag, Megaphone,
+  Briefcase,
+  Tag,
+  MessageSquare,
+  ChevronLeft,
+  ChevronRight,
+  X,
 } from "lucide-react";
 
 const ICON_MAP: Record<string, React.ElementType> = {
-  "layout-dashboard": LayoutDashboard,
-  "bar-chart-3": BarChart3,
-  "file-text": FileText,
-  "map-pin": MapPin,
-  "calendar": Calendar,
-  "hotel": Hotel,
-  "utensils": Utensils,
   "briefcase": Briefcase,
-  "users": Users,
-  "shopping-bag": ShoppingBag,
-  "car": Car,
-  "message-square-dashed": MessageSquareDashed,
-  "book-open": BookOpen,
-  "sparkles": Sparkles,
   "tag": Tag,
-  "megaphone": Megaphone,
-  "bot": Bot,
-  "scan": Scan,
-  "flag": Flag,
-  "user-cog": UserCog,
-  "shield": Shield,
-  "settings": Settings,
+  "message-square": MessageSquare,
 };
 
-const BADGE_COLORS: Record<string, string> = {
-  danger:  "bg-danger/10 text-danger",
-  warning: "bg-warning/10 text-warning",
-  primary: "bg-primary/10 text-primary",
-};
-
-export default function Sidebar() {
+export default function PartnerSidebar() {
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(false);
   const { isMobileOpen, toggleMobileSidebar } = useSidebar();
@@ -78,7 +55,7 @@ export default function Sidebar() {
                   JOGJAGEM
                 </h1>
                 <span className="text-[10px] font-semibold text-secondary tracking-widest uppercase">
-                  Ecosystem Admin
+                  Partner Portal
                 </span>
               </div>
             </div>
@@ -107,7 +84,7 @@ export default function Sidebar() {
 
         {/* Nav */}
         <div className="flex-1 overflow-y-auto px-4 py-6 space-y-7">
-          {menuGroups.map((group) => (
+          {partnerMenuGroups.map((group) => (
             <div key={group.title}>
               {!collapsed && (
                 <h3 className="text-[11px] font-bold tracking-wider text-gray-400 uppercase px-3 mb-2.5">
@@ -116,11 +93,10 @@ export default function Sidebar() {
               )}
               <ul className="space-y-1">
                 {group.items.map((item) => {
-                  const Icon = ICON_MAP[item.icon] ?? Shield;
+                  const Icon = ICON_MAP[item.icon] ?? Briefcase;
                   const isActive =
                     pathname === item.path ||
-                    (item.path !== "/dashboard" && pathname.startsWith(item.path));
-                  const badgeClass = BADGE_COLORS[item.badgeColor ?? ""] ?? "";
+                    (item.path !== "/listings" && pathname.startsWith(item.path));
 
                   return (
                     <li key={item.path}>
@@ -137,11 +113,6 @@ export default function Sidebar() {
                             <span className="font-display">{item.name}</span>
                           )}
                         </div>
-                        {!collapsed && item.badge && (
-                          <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${badgeClass}`}>
-                            {item.badge}
-                          </span>
-                        )}
                       </Link>
                     </li>
                   );

@@ -26,7 +26,7 @@ export default function LoginForm() {
       const data = await res.json().catch(() => ({}));
 
       if (res.ok && data.ok) {
-        window.location.href = "/dashboard";
+        window.location.href = data.redirectUrl || "/dashboard";
         return;
       }
 

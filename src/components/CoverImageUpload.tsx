@@ -7,9 +7,18 @@ import { Upload, X, Loader2, ImageIcon, Link2 } from 'lucide-react';
 interface CoverImageUploadProps {
   value: string;
   onChange: (url: string) => void;
+  label?: string;
+  folder?: string;
+  aspectClassName?: string;
 }
 
-export default function CoverImageUpload({ value, onChange }: CoverImageUploadProps) {
+export default function CoverImageUpload({
+  value,
+  onChange,
+  label = 'Cover Image',
+  folder = 'explore-jogja/articles',
+  aspectClassName = 'aspect-[16/7]',
+}: CoverImageUploadProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState('');
@@ -34,7 +43,7 @@ export default function CoverImageUpload({ value, onChange }: CoverImageUploadPr
       const sigRes = await fetch('/api/upload', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ folder: 'explore-jogja/articles' }),
+        body: JSON.stringify({ folder }),
       });
       const sig = await sigRes.json() as {
         signature: string;
@@ -90,7 +99,7 @@ export default function CoverImageUpload({ value, onChange }: CoverImageUploadPr
   return (
     <div className="space-y-2">
       <label className="block text-[10px] font-bold uppercase tracking-widest text-gray-400">
-        Cover Image
+        {label}
       </label>
 
       {/* Tab switch */}
@@ -123,7 +132,7 @@ export default function CoverImageUpload({ value, onChange }: CoverImageUploadPr
         >
           {value ? (
             /* Preview */
-            <div className="relative w-full aspect-[16/7] rounded-xl overflow-hidden">
+            <div className={`relative w-full ${aspectClassName} rounded-xl overflow-hidden`}>
               <Image
                 src={value}
                 alt="Cover preview"
@@ -206,7 +215,7 @@ export default function CoverImageUpload({ value, onChange }: CoverImageUploadPr
 
       {/* URL preview for tab=url */}
       {tab === 'url' && value && (
-        <div className="relative w-full aspect-[16/7] rounded-xl overflow-hidden border border-border">
+        <div className={`relative w-full ${aspectClassName} rounded-xl overflow-hidden border border-border`}>
           <Image
             src={value}
             alt="Cover preview"

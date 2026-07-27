@@ -35,14 +35,16 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Invalid token received from server" }, { status: 500 });
     }
 
-    if (role !== "admin" && role !== "superadmin") {
+    if (role !== "admin" && role !== "superadmin" && role !== "partner") {
       return NextResponse.json(
-        { error: "Access denied. Admin privileges required." },
+        { error: "Access denied. Valid privileges required." },
         { status: 403 }
       );
     }
 
-    const response = NextResponse.json({ ok: true });
+    // Redirect or indicate dashboard/listings based on role
+    const redirectUrl = role === "partner" ? "/listings" : "/dashboard";
+    const response = NextResponse.json({ ok: true, redirectUrl });
     response.cookies.set(COOKIE_NAME, data.data.access_token, {
       httpOnly: true,
       maxAge: 24 * 60 * 60,

@@ -27,6 +27,33 @@ export function middleware(req: NextRequest) {
     return NextResponse.redirect(url);
   }
 
+  // Role-based routing
+  try {
+    const payload = JSON.parse(
+      Buffer.from(token.split(".")[1], "base64url").toString("utf-8")
+    );
+    const role = payload?.role;
+
+    if (role === 'partner') {
+      // Allow access to partner portal and API
+      if (!req.nextUrl.pathname.startsWith('/partner') && 
+          !req.nextUrl.pathname.startsWith('/api/partners/me') &&
+          !req.nextUrl.pathname.startsWith('/api/auth')) {
+        return NextResponse.redirect(new URL('/partner/listings', req.url));
+      }
+    } else {
+      // Admin/Superadmin: restrict access to partner portal
+      if (req.nextUrl.pathname.startsWith('/partner')) {
+        return NextResponse.redirect(new URL('/dashboard', req.url));
+      }
+    }
+  } catch {
+    // If token is invalid, redirect to login
+    const url = req.nextUrl.clone();
+    url.pathname = "/login";
+    return NextResponse.redirect(url);
+  }
+
   return NextResponse.next();
 }
 

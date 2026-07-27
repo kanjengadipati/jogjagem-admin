@@ -28,7 +28,8 @@ export const menuGroups: MenuGroup[] = [
       { name: "Events",       icon: "calendar",      path: "/events",          activeId: "events"          },
       { name: "Hotels",       icon: "hotel",         path: "/hotels",          activeId: "hotels"          },
       { name: "Restaurants",  icon: "utensils",      path: "/restaurants",     activeId: "restaurants"     },
-      { name: "Partners",     icon: "briefcase",     path: "/partners",        activeId: "partners", badge: "New", badgeColor: "primary" },
+      { name: "Partners",     icon: "briefcase",     path: "/partners",        activeId: "partners" },
+      { name: "Partner Applications", icon: "clipboard-list", path: "/partners/pending", activeId: "partners-pending", badge: "New", badgeColor: "warning" },
       { name: "Guides",       icon: "users",         path: "/guides",          activeId: "guides"          },
       { name: "Souvenirs",    icon: "shopping-bag",  path: "/souvenirs",       activeId: "souvenirs"       },
       { name: "Rentals",      icon: "car",           path: "/rentals",         activeId: "rentals"         },
@@ -42,6 +43,7 @@ export const menuGroups: MenuGroup[] = [
       { name: "Blog Articles",        icon: "file-text",             path: "/articles",         activeId: "articles"         },
       { name: "AI Recommendations",   icon: "sparkles",              path: "/ai-recommendations", activeId: "ai-recommendations" },
       { name: "Promotions",           icon: "tag",                   path: "/promotions",       activeId: "promotions"       },
+      { name: "Ad Campaigns",         icon: "megaphone",             path: "/ad-campaigns",     activeId: "ad-campaigns", badge: "New", badgeColor: "primary" },
       { name: "Scraper",              icon: "scan",                   path: "/scraper",          activeId: "scraper"          },
       { name: "Image Reports",        icon: "flag",                   path: "/image-reports",    activeId: "image-reports"    },
     ],
@@ -52,6 +54,17 @@ export const menuGroups: MenuGroup[] = [
       { name: "User Management", icon: "user-cog", path: "/users",    activeId: "users"    },
       { name: "Role Management", icon: "shield",   path: "/roles",    activeId: "roles"    },
       { name: "Settings",        icon: "settings", path: "/settings", activeId: "settings" },
+    ],
+  },
+];
+
+export const partnerMenuGroups: MenuGroup[] = [
+  {
+    title: "Partner Portal",
+    items: [
+      { name: "My Listings", icon: "briefcase", path: "/partner/listings", activeId: "listings" },
+      { name: "Promotions", icon: "tag", path: "/partner/promotions", activeId: "promotions" },
+      { name: "Reviews", icon: "message-square", path: "/partner/reviews", activeId: "reviews" },
     ],
   },
 ];
