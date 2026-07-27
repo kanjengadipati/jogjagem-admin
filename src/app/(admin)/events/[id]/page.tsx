@@ -18,6 +18,13 @@ const CLOUDINARY_API_KEY = "738718397121653";
 const CLOUDINARY_UPLOAD_URL = `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD}/image/upload`;
 
 const EVENT_CATEGORIES = ["Festival","Cultural","Music","Food","Sport","Art","Exhibition","Workshop","Tour","Other"];
+
+function normalizeEventCategory(val: string): string {
+  if (!val) return "";
+  const lower = val.toLowerCase();
+  const found = EVENT_CATEGORIES.find((c) => c.toLowerCase() === lower);
+  return found ?? val;
+}
 const EVENT_STATUSES   = ["upcoming","active","popular","limited","completed","cancelled"];
 
 type Tab = "overview" | "gallery" | "seo" | "destination";
@@ -132,7 +139,7 @@ export default function EventDetailPage() {
           setForm({
             title: data.title ?? "", description: data.description ?? "",
             location: data.location ?? "", start_date: data.start_date ?? "",
-            end_date: data.end_date ?? "", category: data.category ?? "",
+            end_date: data.end_date ?? "", category: normalizeEventCategory(data.category ?? ""),
             status: data.status ?? "upcoming", ticket_price: data.ticket_price ?? "",
             organizer: data.organizer ?? "", video_url: data.video_url ?? "",
             max_attendees: String(data.max_attendees ?? ""),

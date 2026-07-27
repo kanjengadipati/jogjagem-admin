@@ -16,6 +16,13 @@ const CLOUDINARY_API_KEY = "738718397121653";
 const CLOUDINARY_UPLOAD_URL = `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD}/image/upload`;
 
 const CATEGORIES = ["Temple", "Beach", "Nature", "Heritage", "Cultural", "Culinary", "Shopping"];
+
+function normalizeCategory(val: string): string {
+  if (!val) return "";
+  const lower = val.toLowerCase();
+  const found = CATEGORIES.find((c) => c.toLowerCase() === lower);
+  return found ?? val;
+}
 const REGIONS = ["Sleman", "Bantul", "Yogyakarta", "Gunungkidul", "Kulon Progo"];
 
 function extractYouTubeId(url: string): string {
@@ -136,7 +143,7 @@ export default function DestinationDetailPage() {
           setForm({
             name: data.name ?? "",
             name_en: data.name_en ?? "",
-            category: data.category ?? "",
+            category: normalizeCategory(data.category ?? ""),
             sub_region: data.sub_region ?? "",
             tagline: data.tagline ?? "",
             tagline_en: data.tagline_en ?? "",
