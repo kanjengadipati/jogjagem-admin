@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Image from "next/image";
-import Header from "@/components/Header";
+import PartnerHeader from "@/components/PartnerHeader";
 import { useToast } from "@/components/Toast";
 import { 
   Briefcase, 
@@ -99,7 +99,7 @@ export default function PartnerListingsPage() {
 
   return (
     <>
-      <Header activeId="listings" />
+      <PartnerHeader />
       <main className="flex-1 overflow-y-auto p-8 space-y-8">
 
         {/* Page header */}

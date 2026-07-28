@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Header from "@/components/Header";
+import PartnerHeader from "@/components/PartnerHeader";
 import { useToast } from "@/components/Toast";
 import { 
   Tag, 
@@ -94,7 +94,7 @@ export default function PartnerPromotionsPage() {
 
   return (
     <>
-      <Header activeId="promotions" />
+      <PartnerHeader />
       <main className="flex-1 overflow-y-auto p-8 space-y-8">
 
         {/* Page header */}

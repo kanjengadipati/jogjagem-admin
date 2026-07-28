@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Header from "@/components/Header";
+import PartnerHeader from "@/components/PartnerHeader";
 import { useToast } from "@/components/Toast";
 import { MessageSquare, Search, Loader2, Star, User, Calendar, Reply } from "lucide-react";
 import type { Partner } from "@/types";
@@ -93,7 +93,7 @@ export default function PartnerReviewsPage() {
 
   return (
     <>
-      <Header activeId="reviews" />
+      <PartnerHeader />
       <main className="flex-1 overflow-y-auto p-8 space-y-8">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>

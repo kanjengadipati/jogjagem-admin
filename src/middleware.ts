@@ -43,6 +43,7 @@ export function middleware(req: NextRequest) {
     // Allow access to partner portal and API
     if (!isPartnerPortal &&
         !req.nextUrl.pathname.startsWith('/api/partners/me') &&
+        !req.nextUrl.pathname.startsWith('/api/me') &&
         !req.nextUrl.pathname.startsWith('/api/auth')) {
       return NextResponse.redirect(new URL('/partner', req.url));
     }

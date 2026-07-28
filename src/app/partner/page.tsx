@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import Header from "@/components/Header";
+import PartnerHeader from "@/components/PartnerHeader";
 import { useToast } from "@/components/Toast";
 import {
   Briefcase,
@@ -166,7 +166,7 @@ export default function PartnerOverviewPage() {
 
   return (
     <>
-      <Header activeId="dashboard" />
+      <PartnerHeader />
       <main className="flex-1 overflow-y-auto">
 
         {/* ── Hero Banner ── */}

@@ -3,10 +3,21 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useState, useEffect } from "react";
-import { Search, Bell, ChevronDown, Settings, Users, LogOut, Menu } from "lucide-react";
+import { Search, ChevronDown, Settings, Users, LogOut, Menu } from "lucide-react";
 import { useSidebar } from "@/contexts/SidebarContext";
 import { COOKIE_NAME } from "@/lib/constants";
-import { decodeJwtPayload } from "@/lib/jwt";
+import NotificationBell from "@/components/NotificationBell";
+
+/** Decode JWT payload di browser (tanpa Buffer Node.js) */
+function parseJwt(token: string): Record<string, unknown> | null {
+  try {
+    const base64 = token.split('.')[1];
+    if (!base64) return null;
+    return JSON.parse(atob(base64.replace(/-/g, '+').replace(/_/g, '/')));
+  } catch {
+    return null;
+  }
+}
 
 interface HeaderProps {
   activeId: string;
@@ -21,7 +32,6 @@ const FALLBACK_USER = {
 
 export default function Header({ activeId }: HeaderProps) {
   const [time, setTime] = useState("");
-  const [showNotif, setShowNotif] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
   const { toggleMobileSidebar } = useSidebar();
   const [user, setUser] = useState(FALLBACK_USER);
@@ -33,16 +43,26 @@ export default function Header({ activeId }: HeaderProps) {
       ?.split("=")[1];
     if (!cookieVal) return;
 
-    const payload = decodeJwtPayload(cookieVal);
-    if (!payload?.user_id) return;
+    // Parse JWT di browser dengan atob() (browser-safe, bukan Buffer)
+    const payload = parseJwt(cookieVal);
+    if (!payload) return;
 
-    fetch(`/api/users/${payload.user_id}`)
+    const userId = payload.user_id ?? payload.sub;
+    // Gunakan nama dari JWT claim langsung sebagai tampilan segera
+    const nameFromJwt = typeof payload.name === 'string' ? payload.name : null;
+    if (nameFromJwt) {
+      setUser((prev) => ({ ...prev, name: nameFromJwt }));
+    }
+
+    if (!userId) return;
+
+    fetch(`/api/users/${userId}`)
       .then((r) => r.json())
       .then((res: { status?: string; data?: { name?: string; email?: string; role?: string; avatar_url?: string } }) => {
         if (res.status !== "success" || !res.data) return;
         const d = res.data;
         setUser({
-          name: d.name || "Admin",
+          name: d.name || nameFromJwt || "Admin",
           email: d.email || "",
           role: d.role === "superadmin" ? "Super Admin" : "Admin",
           avatar: d.avatar_url || FALLBACK_USER.avatar,
@@ -118,42 +138,7 @@ export default function Header({ activeId }: HeaderProps) {
         </div>
 
         {/* Notifications */}
-        <div className="relative">
-          <button
-            onClick={() => { setShowNotif(!showNotif); setShowProfile(false); }}
-            className="p-2.5 rounded-xl border border-border hover:bg-bg text-gray-500 hover:text-text cursor-pointer transition-premium relative"
-          >
-            <Bell className="w-4 h-4" />
-            <span className="absolute top-1 right-1 w-2.5 h-2.5 rounded-full bg-danger border-2 border-white" />
-          </button>
-          {showNotif && (
-            <div className="absolute right-0 mt-3 w-80 rounded-2xl bg-white border border-border shadow-soft p-4 flex flex-col gap-3 z-50">
-              <div className="flex items-center justify-between border-b border-border pb-3">
-                <h4 className="text-xs font-bold text-gray-800 font-display">System Notifications</h4>
-                <span className="bg-danger/10 text-danger text-[9px] font-bold px-1.5 py-0.5 rounded-full">3 New</span>
-              </div>
-              <div className="flex flex-col gap-3 max-h-64 overflow-y-auto">
-                {[
-                  { color: "danger",  title: "Review pending moderation",       sub: "Sarah Johnson flagged for spam (Score: 82%)",           time: "2 mins ago"  },
-                  { color: "warning", title: "New Tourism Partner Registration", sub: "Heha Ocean View requests listing verification",         time: "1 hour ago"  },
-                  { color: "success", title: "AI Insights Compiled",             sub: "Weekly tourism reports ready for review",               time: "Yesterday"   },
-                ].map((n) => (
-                  <div key={n.title} className="flex gap-3 items-start hover:bg-bg p-1.5 rounded-xl transition-premium cursor-pointer">
-                    <span className={`w-2.5 h-2.5 rounded-full bg-${n.color} mt-1.5 flex-shrink-0`} />
-                    <div>
-                      <p className="text-xs font-semibold text-gray-800 leading-tight">{n.title}</p>
-                      <p className="text-[10px] text-gray-500">{n.sub}</p>
-                      <span className="text-[9px] text-gray-400">{n.time}</span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-              <Link href="/reviews" className="text-center text-xs font-bold text-primary hover:text-primary-dark mt-2 pt-2 border-t border-border block">
-                View All Operations
-              </Link>
-            </div>
-          )}
-        </div>
+        <NotificationBell />
 
         {/* Profile */}
         <div className="relative">
@@ -181,13 +166,25 @@ export default function Header({ activeId }: HeaderProps) {
                 <p className="text-xs font-bold text-gray-800">{user.name}</p>
                 <p className="text-[10px] text-gray-500">{user.email}</p>
               </div>
-              <Link href="/settings" className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs text-gray-600 hover:bg-bg hover:text-text transition-premium mt-1">
+            <Link
+                href="/settings"
+                onClick={() => setShowProfile(false)}
+                className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs text-gray-600 hover:bg-bg hover:text-text transition-premium mt-1"
+              >
                 <Settings className="w-4 h-4" /><span>Account Settings</span>
               </Link>
-              <Link href="/users" className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs text-gray-600 hover:bg-bg hover:text-text transition-premium">
+              <Link
+                href="/users"
+                onClick={() => setShowProfile(false)}
+                className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs text-gray-600 hover:bg-bg hover:text-text transition-premium"
+              >
                 <Users className="w-4 h-4" /><span>Team Directory</span>
               </Link>
-              <Link href="/logout" className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs text-danger hover:bg-danger/10 transition-premium mt-1">
+              <Link
+                href="/logout"
+                onClick={() => setShowProfile(false)}
+                className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs text-danger hover:bg-danger/10 transition-premium mt-1"
+              >
                 <LogOut className="w-4 h-4" /><span>Log Out</span>
               </Link>
             </div>
