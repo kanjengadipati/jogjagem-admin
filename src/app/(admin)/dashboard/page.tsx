@@ -21,6 +21,8 @@ import {
   Layers,
   Zap,
   BarChart3,
+  Briefcase,
+  Clock,
 } from "lucide-react";
 
 /* ------------------------------------------------------------------ */
@@ -95,6 +97,7 @@ function QuickActions() {
     { label: "Kelola Pengguna", icon: Users, path: "/users" },
     { label: "Hotels", icon: Layers, path: "/hotels" },
     { label: "Promosi", icon: Zap, path: "/promotions" },
+    { label: "Approval Mitra", icon: Briefcase, path: "/partners/pending" },
   ];
 
   return (
@@ -199,6 +202,18 @@ export default async function DashboardPage() {
     fetchCount(api, "/auth/admin/users?limit=1"),
   ]);
 
+  /* ---------- fetch partner counts ---------- */
+  const partnersRes = await api("/auth/admin/partners");
+  const partnersPayload = partnersRes.data as { data?: { status?: string }[] } | { status?: string }[] | null;
+  const allPartners: { status?: string }[] = Array.isArray(partnersPayload)
+    ? partnersPayload
+    : Array.isArray((partnersPayload as { data?: { status?: string }[] })?.data)
+    ? (partnersPayload as { data: { status?: string }[] }).data
+    : [];
+  const partnerTotal = allPartners.length;
+  const partnerPending = allPartners.filter((p) => p.status === "pending").length;
+  const partnerApproved = allPartners.filter((p) => p.status === "approved").length;
+
   /* ---------- fetch preview data ---------- */
   const [previewDests, previewEvents, healthRes] = await Promise.all([
     fetchData<Destination & { review_count?: number; rating?: number }>(api, "/destinations?limit=4"),
@@ -271,6 +286,13 @@ export default async function DashboardPage() {
           <StatCard icon={Database} label="Backend" value={backendConnected ? "Online" : "Offline"} color={backendConnected ? "#10b981" : "#ef4444"} bgColor={backendConnected ? "#ecfdf5" : "#fef2f2"} borderColor={backendConnected ? "#10b981" : "#ef4444"} />
         </div>
 
+        {/* Partner Stats Grid */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+          <StatCard icon={Briefcase} label="Total Mitra" value={partnerTotal} color="#d97706" bgColor="#fffbeb" borderColor="#d97706" />
+          <StatCard icon={Clock} label="Mitra Pending" value={partnerPending} color="#f59e0b" bgColor="#fef3c7" borderColor="#f59e0b" />
+          <StatCard icon={Briefcase} label="Mitra Aktif" value={partnerApproved} color="#10b981" bgColor="#ecfdf5" borderColor="#10b981" />
+        </div>
+
         {/* Insights Row */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Real-time Stats */}
@@ -310,6 +332,15 @@ export default async function DashboardPage() {
                 </div>
                 <span className="text-sm font-extrabold text-gray-900">{upcomingCount}</span>
               </div>
+              {partnerPending > 0 && (
+                <Link href="/partners/pending" className="flex items-center justify-between p-3 rounded-xl bg-amber-50 border border-amber-200 hover:bg-amber-100 transition-colors">
+                  <div className="flex items-center gap-2">
+                    <Clock className="w-4 h-4 text-amber-500" />
+                    <span className="text-xs font-bold text-amber-700 font-display">Mitra Menunggu Review</span>
+                  </div>
+                  <span className="text-sm font-extrabold text-amber-700">{partnerPending}</span>
+                </Link>
+              )}
             </div>
           </div>
 
