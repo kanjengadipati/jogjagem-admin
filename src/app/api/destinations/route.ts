@@ -28,7 +28,7 @@ export async function GET(req: NextRequest) {
 
   // ── Export mode: fetch all pages for CSV ──────────────────────────────────
   if (searchParams.get("all") === "true") {
-    const firstRes = await api("/destinations?limit=100&page=1");
+    const firstRes = await api("/destinations?limit=100&page=1&status=all");
     const firstData = firstRes.data as any;
     const totalPages: number = firstData?.meta?.total_pages ?? 1;
     let all: unknown[] = firstData?.data ?? [];
@@ -36,7 +36,7 @@ export async function GET(req: NextRequest) {
     if (totalPages > 1) {
       const rest = await Promise.all(
         Array.from({ length: totalPages - 1 }, (_, i) =>
-          api(`/destinations?limit=100&page=${i + 2}`)
+          api(`/destinations?limit=100&page=${i + 2}&status=all`)
         )
       );
       for (const r of rest) {
@@ -54,8 +54,8 @@ export async function GET(req: NextRequest) {
   const page  = searchParams.get("page")  ?? "1";
   const limit = searchParams.get("limit") ?? "25";
 
-  // Build backend query string — only forward supported params
-  const backendParams = new URLSearchParams({ page, limit });
+  // Admin needs to see all statuses (including drafts)
+  const backendParams = new URLSearchParams({ page, limit, status: "all" });
   // Note: backend doesn't support search/category/region as query params yet,
   // so filtering is done client-side on the returned page.
   // When backend adds these params, simply forward them here.

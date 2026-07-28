@@ -58,12 +58,14 @@ type FormState = {
   seo_description: string;
   seo_description_en: string;
   og_image_url: string;
+  status: string;
 };
 
 const EMPTY_FORM: FormState = {
   name: "", name_en: "", category: "", sub_region: "", tagline: "", tagline_en: "", location: "",
   description: "", description_en: "", story: "", story_en: "", ticket_price: "", opening_hours: "", best_time: "", best_time_en: "",
   latitude: "", longitude: "", video_url: "", seo_title: "", seo_title_en: "", seo_keywords: "", seo_keywords_en: "", seo_description: "", seo_description_en: "", og_image_url: "",
+  status: "published",
 };
 
 function FieldInput({ label, value, onChange, mono = false }: {
@@ -166,6 +168,7 @@ export default function DestinationDetailPage() {
             seo_description: data.seo_description ?? "",
             seo_description_en: data.seo_description_en ?? "",
             og_image_url: data.og_image_url ?? "",
+            status: data.status ?? "published",
           });
           setGalleryImgs(parseImages(data.images));
         }
@@ -966,10 +969,10 @@ export default function DestinationDetailPage() {
 
             <div className="bg-white p-6 rounded-card border border-border shadow-soft space-y-3">
               <h4 className="text-xs font-bold text-gray-400 uppercase tracking-widest font-display">Status</h4>
-              {["Published", "Draft"].map((s) => (
-                <label key={s} className={`flex items-center justify-between p-3 rounded-xl border cursor-pointer ${s === "Published" ? "border-primary/20 bg-primary/5" : "border-border hover:bg-bg"}`}>
-                  <span className={`text-xs font-bold ${s === "Published" ? "text-primary" : "text-gray-800"}`}>{s}</span>
-                  <input type="radio" name="pub-status" defaultChecked={s === "Published"} value={s} className="text-primary focus:ring-primary w-4 h-4" />
+              {(["published", "draft"] as const).map((s) => (
+                <label key={s} className={`flex items-center justify-between p-3 rounded-xl border cursor-pointer transition ${form.status === s ? "border-primary/20 bg-primary/5" : "border-border hover:bg-bg"}`}>
+                  <span className={`text-xs font-bold ${form.status === s ? "text-primary" : "text-gray-800"}`}>{s === "published" ? "Published" : "Draft"}</span>
+                  <input type="radio" name="pub-status" checked={form.status === s} onChange={() => setField("status", s)} className="text-primary focus:ring-primary w-4 h-4" />
                 </label>
               ))}
             </div>

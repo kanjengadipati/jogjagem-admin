@@ -20,6 +20,7 @@ export default function CreateDestinationPage() {
     location: "", description: "", story: "", ticket_price: "",
     opening_hours: "", best_time: "", latitude: "", longitude: "",
     seo_title: "", seo_title_en: "", seo_keywords: "", seo_keywords_en: "", seo_description: "", seo_description_en: "",
+    status: "draft",
   });
 
   function set(key: string, val: string) { setForm(f => ({ ...f, [key]: val })); }
@@ -147,6 +148,15 @@ export default function CreateDestinationPage() {
           </div>
 
           <div className="space-y-6">
+            <div className="bg-white p-6 rounded-card border border-border shadow-soft space-y-4">
+              <h4 className="text-xs font-bold text-gray-400 uppercase tracking-widest font-display">Status</h4>
+              {(["draft", "published"] as const).map((s) => (
+                <label key={s} className={`flex items-center justify-between p-3 rounded-xl border cursor-pointer transition ${form.status === s ? "border-primary/20 bg-primary/5" : "border-border hover:bg-bg"}`}>
+                  <span className={`text-xs font-bold ${form.status === s ? "text-primary" : "text-gray-800"}`}>{s === "published" ? "Published" : "Draft"}</span>
+                  <input type="radio" name="pub-status" checked={form.status === s} onChange={() => set("status", s)} className="text-primary focus:ring-primary w-4 h-4" />
+                </label>
+              ))}
+            </div>
             <div className="bg-white p-6 rounded-card border border-border shadow-soft space-y-4">
               <h4 className="text-xs font-bold text-gray-400 uppercase tracking-widest font-display">Publish</h4>
               <button type="submit" disabled={saving || !form.name} className="w-full bg-primary hover:bg-primary-dark disabled:opacity-60 text-white py-3 rounded-xl text-xs font-semibold shadow-premium transition-premium cursor-pointer">

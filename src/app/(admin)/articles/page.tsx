@@ -336,7 +336,7 @@ export default function ArticlesPage() {
 
   const load = useCallback(() => {
     setLoading(true);
-    fetch("/api/articles?status=all")
+    fetch("/api/articles?status=")
       .then(r => r.json())
       .then(d => { const list = d?.data ?? []; setAll(list); setFiltered(list); })
       .catch(() => showToast("Error", "Failed to load articles", "error"))

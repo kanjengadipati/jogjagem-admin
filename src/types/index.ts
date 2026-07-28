@@ -53,6 +53,7 @@ export interface Destination {
   seo_description_en?: string;
   og_image_url?: string;
   video_url?: string;
+  status?: string;
 }
 
 export interface Partner {

@@ -338,8 +338,8 @@ export default function DestinationsPage() {
                       {(dest.review_count ?? 0).toLocaleString()}
                     </td>
                     <td className="py-4 px-6 text-center">
-                      <span className="bg-success/10 text-success text-[10px] font-bold px-2.5 py-0.5 rounded-full">
-                        Published
+                      <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full ${dest.status === "published" ? "bg-success/10 text-success" : dest.status === "draft" ? "bg-warning/10 text-warning" : "bg-gray-100 text-gray-500"}`}>
+                        {dest.status ?? "published"}
                       </span>
                     </td>
                     <td className="py-4 px-6 text-right">
