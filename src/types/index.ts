@@ -1,4 +1,6 @@
 // ─── Auth ─────────────────────────────────────────────────────────────────────
+export type AdminRole = "admin" | "superadmin";
+
 export interface AdminUser {
   name: string;
   role: string;
@@ -262,6 +264,7 @@ export interface NavItem {
   activeId: string;
   badge?: string;
   badgeColor?: string;
+  roles?: AdminRole[];
 }
 
 export interface MenuGroup {

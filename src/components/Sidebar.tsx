@@ -5,7 +5,8 @@ import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
 import { useSidebar } from "@/contexts/SidebarContext";
-import { menuGroups } from "@/lib/constants";
+import { getMenuGroupsForRole } from "@/lib/constants";
+import type { AdminRole } from "@/types";
 import {
   LayoutDashboard, BarChart3, FileText, MapPin, Calendar, Hotel,
   Utensils, Briefcase, Users, ShoppingBag, Car, MessageSquareDashed,
@@ -47,10 +48,11 @@ const BADGE_COLORS: Record<string, string> = {
   primary: "bg-primary/10 text-primary",
 };
 
-export default function Sidebar() {
+export default function Sidebar({ role }: { role: AdminRole }) {
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(false);
   const { isMobileOpen, toggleMobileSidebar } = useSidebar();
+  const menuGroups = getMenuGroupsForRole(role);
   const activePath =
     menuGroups
       .flatMap(group => group.items)

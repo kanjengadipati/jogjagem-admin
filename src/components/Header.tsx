@@ -4,18 +4,52 @@ import Image from "next/image";
 import Link from "next/link";
 import { useState, useEffect } from "react";
 import { Search, Bell, ChevronDown, Settings, Users, LogOut, Menu } from "lucide-react";
-import { ADMIN_USER } from "@/lib/constants";
 import { useSidebar } from "@/contexts/SidebarContext";
+import { COOKIE_NAME } from "@/lib/constants";
+import { decodeJwtPayload } from "@/lib/jwt";
 
 interface HeaderProps {
   activeId: string;
 }
+
+const FALLBACK_USER = {
+  name: "Admin",
+  email: "",
+  role: "Admin",
+  avatar: "https://unavatar.io/gravatar/elbhrecat@gmail.com",
+};
 
 export default function Header({ activeId }: HeaderProps) {
   const [time, setTime] = useState("");
   const [showNotif, setShowNotif] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
   const { toggleMobileSidebar } = useSidebar();
+  const [user, setUser] = useState(FALLBACK_USER);
+
+  useEffect(() => {
+    const cookieVal = document.cookie
+      .split("; ")
+      .find((c) => c.startsWith(COOKIE_NAME + "="))
+      ?.split("=")[1];
+    if (!cookieVal) return;
+
+    const payload = decodeJwtPayload(cookieVal);
+    if (!payload?.user_id) return;
+
+    fetch(`/api/users/${payload.user_id}`)
+      .then((r) => r.json())
+      .then((res: { status?: string; data?: { name?: string; email?: string; role?: string; avatar_url?: string } }) => {
+        if (res.status !== "success" || !res.data) return;
+        const d = res.data;
+        setUser({
+          name: d.name || "Admin",
+          email: d.email || "",
+          role: d.role === "superadmin" ? "Super Admin" : "Admin",
+          avatar: d.avatar_url || FALLBACK_USER.avatar,
+        });
+      })
+      .catch(() => {});
+  }, []);
 
   const today =
     "Today, " +
@@ -128,7 +162,7 @@ export default function Header({ activeId }: HeaderProps) {
             className="flex items-center gap-3 p-1.5 pr-3 rounded-xl border border-border hover:bg-bg cursor-pointer transition-premium"
           >
             <Image
-              src={ADMIN_USER.avatar}
+              src={user.avatar}
               alt="Profile"
               width={32}
               height={32}
@@ -136,16 +170,16 @@ export default function Header({ activeId }: HeaderProps) {
               referrerPolicy="no-referrer"
             />
             <div className="hidden sm:flex flex-col text-left">
-              <span className="text-xs font-bold text-gray-800 font-display leading-none mb-0.5">{ADMIN_USER.name}</span>
-              <span className="text-[10px] text-gray-500">{ADMIN_USER.role}</span>
+              <span className="text-xs font-bold text-gray-800 font-display leading-none mb-0.5">{user.name}</span>
+              <span className="text-[10px] text-gray-500">{user.role}</span>
             </div>
             <ChevronDown className="w-3.5 h-3.5 text-gray-400 hidden sm:block" />
           </button>
           {showProfile && (
             <div className="absolute right-0 mt-3 w-56 rounded-2xl bg-white border border-border shadow-soft p-2 flex flex-col z-50">
               <div className="p-3 border-b border-border">
-                <p className="text-xs font-bold text-gray-800">{ADMIN_USER.name}</p>
-                <p className="text-[10px] text-gray-500">{ADMIN_USER.email}</p>
+                <p className="text-xs font-bold text-gray-800">{user.name}</p>
+                <p className="text-[10px] text-gray-500">{user.email}</p>
               </div>
               <Link href="/settings" className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs text-gray-600 hover:bg-bg hover:text-text transition-premium mt-1">
                 <Settings className="w-4 h-4" /><span>Account Settings</span>

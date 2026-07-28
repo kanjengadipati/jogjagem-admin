@@ -1,4 +1,4 @@
-import type { MenuGroup, AdminUser } from "@/types";
+import type { MenuGroup, AdminUser, AdminRole } from "@/types";
 
 export const BACKEND_URL =
   process.env.NEXT_PUBLIC_API_BASE || "http://localhost:8081";
@@ -52,8 +52,8 @@ export const menuGroups: MenuGroup[] = [
   {
     title: "Administration",
     items: [
-      { name: "User Management", icon: "user-cog", path: "/users",    activeId: "users"    },
-      { name: "Role Management", icon: "shield",   path: "/roles",    activeId: "roles"    },
+      { name: "User Management", icon: "user-cog", path: "/users",    activeId: "users",    roles: ["superadmin"] },
+      { name: "Role Management", icon: "shield",   path: "/roles",    activeId: "roles",    roles: ["superadmin"] },
       { name: "Settings",        icon: "settings", path: "/settings", activeId: "settings" },
     ],
   },
@@ -69,3 +69,28 @@ export const partnerMenuGroups: MenuGroup[] = [
     ],
   },
 ];
+
+export function getMenuGroupsForRole(role: AdminRole): MenuGroup[] {
+  return menuGroups
+    .map((group) => ({
+      ...group,
+      items: group.items.filter(
+        (item) => !item.roles || item.roles.includes(role)
+      ),
+    }))
+    .filter((group) => group.items.length > 0);
+}
+
+const ROLE_LABELS: Record<AdminRole, string> = {
+  admin: "Admin",
+  superadmin: "Super Admin",
+};
+
+export function getAdminUser(role: AdminRole): AdminUser {
+  return {
+    name: "Admin Jogjagem",
+    role: ROLE_LABELS[role],
+    email: "admin@explorejogja.com",
+    avatar: "https://unavatar.io/gravatar/elbhrecat@gmail.com",
+  };
+}

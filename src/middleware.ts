@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { COOKIE_NAME } from "@/lib/constants";
+import { decodeJwtPayload } from "@/lib/jwt";
 
 // Routes that do NOT require authentication
 const PUBLIC_PATHS = ["/login", "/logout", "/api/auth"];
@@ -29,30 +30,27 @@ export function middleware(req: NextRequest) {
   }
 
   // Role-based routing
-  try {
-    const payload = JSON.parse(
-      Buffer.from(token.split(".")[1], "base64url").toString("utf-8")
-    );
-    const role = payload?.role;
-
-    if (role === 'partner') {
-      // Allow access to partner portal and API
-      if (!isPartnerPortal &&
-          !req.nextUrl.pathname.startsWith('/api/partners/me') &&
-          !req.nextUrl.pathname.startsWith('/api/auth')) {
-        return NextResponse.redirect(new URL('/partner/listings', req.url));
-      }
-    } else {
-      // Admin/Superadmin: restrict access to partner portal
-      if (isPartnerPortal) {
-        return NextResponse.redirect(new URL('/dashboard', req.url));
-      }
-    }
-  } catch {
-    // If token is invalid, redirect to login
+  const payload = decodeJwtPayload(token);
+  if (!payload) {
     const url = req.nextUrl.clone();
     url.pathname = "/login";
     return NextResponse.redirect(url);
+  }
+
+  const role = payload.role;
+
+  if (role === 'partner') {
+    // Allow access to partner portal and API
+    if (!isPartnerPortal &&
+        !req.nextUrl.pathname.startsWith('/api/partners/me') &&
+        !req.nextUrl.pathname.startsWith('/api/auth')) {
+      return NextResponse.redirect(new URL('/partner/listings', req.url));
+    }
+  } else {
+    // Admin/Superadmin: restrict access to partner portal
+    if (isPartnerPortal) {
+      return NextResponse.redirect(new URL('/dashboard', req.url));
+    }
   }
 
   return NextResponse.next();
