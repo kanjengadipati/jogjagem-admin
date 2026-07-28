@@ -170,21 +170,25 @@ export default function PartnerOverviewPage() {
       <main className="flex-1 overflow-y-auto">
 
         {/* ── Hero Banner ── */}
-        <div className="relative h-56 md:h-64 overflow-hidden">
+        <div className="relative h-72 md:h-80 overflow-hidden">
           <Image
-            src="https://images.unsplash.com/photo-1596402184320-417e7178b2cd?w=1600&q=80"
+            src="https://images.unsplash.com/photo-1707378174003-418d6262d355?fm=jpg&q=60&w=3000&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8Mnx8dHVndSUyMGpvZ2phfGVufDB8fDB8fHww"
             alt="Tugu Jogja"
             fill
             className="object-cover"
             priority
           />
-          <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-black/40 to-transparent" />
+          <div className="absolute inset-0 bg-gradient-to-r from-[#0f100c]/90 via-[#0f100c]/40 to-transparent" />
+          <div className="absolute inset-0 bg-gradient-to-t from-[#0f100c]/60 via-transparent to-[#0f100c]/30" />
           <div className="absolute inset-0 flex items-end p-8">
             <div>
-              <h2 className="text-2xl md:text-3xl font-extrabold font-display text-white tracking-tight drop-shadow-lg">
+              <p className="text-xs font-mono text-gold-400 uppercase tracking-widest mb-1.5">
+                Jogjagem Partner
+              </p>
+              <h2 className="font-display text-3xl md:text-4xl font-bold leading-[1.05] tracking-tight">
                 Sugeng Rawuh, Partner!
               </h2>
-              <p className="text-sm text-white/80 mt-1 max-w-lg drop-shadow">
+              <p className="text-sm text-white/75 leading-relaxed max-w-lg font-light mt-2">
                 Kelola bisnis pariwisata Anda di Jogjagem dari satu tempat.
               </p>
             </div>
