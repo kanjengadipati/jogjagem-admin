@@ -5,6 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import Header from "@/components/Header";
 import { useToast } from "@/components/Toast";
+import { SnapCheckoutButton } from "@/components/SnapCheckoutButton";
 import { Briefcase, CheckCircle, Clock, Search, Star, Loader2, MapPin, Phone, Globe, Trash2, Edit3, Megaphone } from "lucide-react";
 import type { Partner } from "@/types";
 
@@ -45,6 +46,8 @@ export default function PartnersPage() {
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState("");
   const [loading, setLoading] = useState(true);
+  // Status pembayaran nyata per partner (dari Midtrans via backend)
+  const [paymentBySubject, setPaymentBySubject] = useState<Record<string, string>>({})
 
   useEffect(() => {
     fetch("/api/partners")
@@ -58,6 +61,23 @@ export default function PartnersPage() {
       .finally(() => setLoading(false));
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Setelah partner list ter-load, fetch status transaksi sponsorship per partner
+  useEffect(() => {
+    const sponsored = all.filter((p) => p.is_sponsored && !!p.sponsor_price);
+    if (sponsored.length === 0) return;
+    sponsored.forEach((p) => {
+      fetch(`/api/payments?subject_type=partner_sponsorship&subject_external_id=${p.id}`)
+        .then((r) => r.json())
+        .then((d) => {
+          const latest = d?.data?.[0];
+          if (latest?.status) {
+            setPaymentBySubject((prev) => ({ ...prev, [p.id]: latest.status }));
+          }
+        })
+        .catch(() => {});
+    });
+  }, [all]);
 
   useEffect(() => {
     let list = all;
@@ -132,21 +152,7 @@ export default function PartnersPage() {
     }
   }
 
-  async function cyclePartnerPaymentStatus(partner: Partner) {
-    const next = partner.sponsor_payment_status === "paid" ? "pending" : "paid";
-    const res = await fetch(`/api/partners/${partner.id}`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ sponsor_payment_status: next }),
-    });
-
-    if (res.ok) {
-      setAll(prev => prev.map(p => (p.id === partner.id ? { ...p, sponsor_payment_status: next } : p)));
-      showToast("Updated", `Payment marked as ${next}`, "success");
-    } else {
-      showToast("Error", "Failed to update payment status", "error");
-    }
-  }
+  // cyclePartnerPaymentStatus dihapus — sekarang pakai Midtrans Snap (SnapCheckoutButton)
 
   const categories = Array.from(new Set(all.map((p) => p.category).filter(Boolean))) as string[];
 
@@ -331,16 +337,28 @@ export default function PartnersPage() {
                       <span className="text-xs font-bold text-gray-800">
                         {p.sponsor_price_currency ?? "IDR"} {p.sponsor_price.toLocaleString("id-ID")}
                       </span>
-                      <button
-                        onClick={() => cyclePartnerPaymentStatus(p)}
-                        className={`text-[10px] font-bold px-2 py-0.5 rounded-full capitalize cursor-pointer transition ${
-                          p.sponsor_payment_status === "paid"
-                            ? "bg-success/10 text-success"
-                            : "bg-warning/10 text-warning"
-                        }`}
-                      >
-                        {p.sponsor_payment_status ?? "pending"}
-                      </button>
+                      {/* Kalau sudah paid → badge statis. Belum paid → tombol Generate Invoice */}
+                      {(paymentBySubject[p.id] ?? p.sponsor_payment_status) === "paid" ? (
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-success/10 text-success">
+                          paid
+                        </span>
+                      ) : (
+                        <SnapCheckoutButton
+                          subjectType="partner_sponsorship"
+                          subjectExternalId={p.id}
+                          amount={p.sponsor_price ?? 0}
+                          itemName={`Partner Sponsorship: ${p.name}`}
+                          customerName={p.name}
+                          onPaid={() => {
+                            setPaymentBySubject((prev) => ({ ...prev, [p.id]: "paid" }));
+                            showToast(
+                              "Invoice dikirim",
+                              "Status akan diperbarui setelah webhook Midtrans dikonfirmasi",
+                              "info"
+                            );
+                          }}
+                        />
+                      )}
                     </div>
                   )}
                 </div>

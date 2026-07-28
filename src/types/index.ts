@@ -305,6 +305,23 @@ export interface DescriptionResult {
   seoKeywords: string;
 }
 
+// ─── Payments ────────────────────────────────────────────────────────────────
+export interface PaymentTransaction {
+  id: string;
+  order_id: string;
+  subject_type: "ad_campaign" | "partner_sponsorship";
+  subject_external_id: string;
+  amount: number;
+  currency: string;
+  status: "pending" | "paid" | "expired" | "failed" | "refunded";
+  midtrans_token?: string;
+  payment_type?: string;
+  transaction_id?: string;
+  paid_at?: string;
+  expires_at?: string;
+  created_at?: string;
+}
+
 // ─── Site Config ─────────────────────────────────────────────────────────────
 export interface SiteSeoConfig {
   site_title: string;

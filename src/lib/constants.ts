@@ -44,6 +44,7 @@ export const menuGroups: MenuGroup[] = [
       { name: "AI Recommendations",   icon: "sparkles",              path: "/ai-recommendations", activeId: "ai-recommendations" },
       { name: "Promotions",           icon: "tag",                   path: "/promotions",       activeId: "promotions"       },
       { name: "Ad Campaigns",         icon: "megaphone",             path: "/ad-campaigns",     activeId: "ad-campaigns", badge: "New", badgeColor: "primary" },
+      { name: "Payments",             icon: "receipt",               path: "/payments",         activeId: "payments" },
       { name: "House Ads",            icon: "panel-top",             path: "/house-ads",        activeId: "house-ads" },
       { name: "Scraper",              icon: "scan",                   path: "/scraper",          activeId: "scraper"          },
       { name: "Image Reports",        icon: "flag",                   path: "/image-reports",    activeId: "image-reports"    },

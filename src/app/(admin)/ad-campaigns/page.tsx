@@ -5,6 +5,7 @@ import Link from "next/link";
 import Image from "next/image";
 import Header from "@/components/Header";
 import { useToast } from "@/components/Toast";
+import { SnapCheckoutButton } from "@/components/SnapCheckoutButton";
 import { Megaphone, Search, Loader2, Trash2, Plus, Calendar, MousePointerClick, Eye, Power } from "lucide-react";
 import type { AdCampaign } from "@/types";
 
@@ -40,6 +41,8 @@ export default function AdCampaignsPage() {
   const [placementFilter, setPlacementFilter] = useState("");
   const [paymentFilter, setPaymentFilter] = useState("");
   const [loading, setLoading] = useState(true);
+  // Status pembayaran nyata per campaign (dari Midtrans via backend)
+  const [paymentBySubject, setPaymentBySubject] = useState<Record<string, string>>({});
 
   function load() {
     setLoading(true);
@@ -58,6 +61,23 @@ export default function AdCampaignsPage() {
     load();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Setelah campaign list ter-load, fetch status transaksi per campaign dari backend
+  useEffect(() => {
+    if (all.length === 0) return;
+    all.forEach((c) => {
+      fetch(`/api/payments?subject_type=ad_campaign&subject_external_id=${c.id}`)
+        .then((r) => r.json())
+        .then((d) => {
+          // Backend mengembalikan transaksi terbaru pertama (ORDER BY id DESC)
+          const latest = d?.data?.[0];
+          if (latest?.status) {
+            setPaymentBySubject((prev) => ({ ...prev, [c.id]: latest.status }));
+          }
+        })
+        .catch(() => {});
+    });
+  }, [all]);
 
   useEffect(() => {
     let list = all;
@@ -104,23 +124,7 @@ export default function AdCampaignsPage() {
     }
   }
 
-  async function cyclePaymentStatus(campaign: AdCampaign) {
-    const next = campaign.payment_status === "paid" ? "pending" : "paid";
-    const res = await fetch(`/api/ad-campaigns/${campaign.id}`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ payment_status: next }),
-    });
-
-    if (res.ok) {
-      setAll((prev) =>
-        prev.map((c) => (c.id === campaign.id ? { ...c, payment_status: next } : c))
-      );
-      showToast("Updated", `Payment marked as ${next}`, "success");
-    } else {
-      showToast("Error", "Failed to update payment status", "error");
-    }
-  }
+  // cyclePaymentStatus dihapus — sekarang pakai Midtrans Snap (SnapCheckoutButton)
 
   const placements = Array.from(new Set(all.map((c) => c.placement).filter(Boolean)));
 
@@ -228,18 +232,32 @@ export default function AdCampaignsPage() {
                   )}
 
                   {formatPrice(c.price_amount, c.price_currency) && (
-                    <div className="flex items-center justify-between">
+                    <div className="flex items-center justify-between gap-2">
                       <span className="text-sm font-bold text-gray-800">
                         {formatPrice(c.price_amount, c.price_currency)}
                       </span>
-                      <button
-                        onClick={() => cyclePaymentStatus(c)}
-                        className={`text-[10px] font-bold px-2 py-0.5 rounded-full capitalize cursor-pointer transition ${
-                          PAYMENT_STATUS_STYLES[c.payment_status ?? "pending"] ?? "bg-gray-100 text-gray-500"
-                        }`}
-                      >
-                        {PAYMENT_STATUS_LABELS[c.payment_status ?? "pending"] ?? c.payment_status ?? "Payment pending"}
-                      </button>
+                      {/* Kalau sudah paid → badge statis. Belum paid → tombol Generate Invoice */}
+                      {(paymentBySubject[c.id] ?? c.payment_status) === "paid" ? (
+                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${PAYMENT_STATUS_STYLES.paid}`}>
+                          {PAYMENT_STATUS_LABELS.paid}
+                        </span>
+                      ) : (
+                        <SnapCheckoutButton
+                          subjectType="ad_campaign"
+                          subjectExternalId={c.id}
+                          amount={c.price_amount ?? 0}
+                          itemName={`Ad Campaign: ${c.partner_name}`}
+                          customerName={c.partner_name}
+                          onPaid={() => {
+                            setPaymentBySubject((prev) => ({ ...prev, [c.id]: "paid" }));
+                            showToast(
+                              "Invoice dikirim",
+                              "Status akan diperbarui setelah webhook Midtrans dikonfirmasi",
+                              "info"
+                            );
+                          }}
+                        />
+                      )}
                     </div>
                   )}
 
