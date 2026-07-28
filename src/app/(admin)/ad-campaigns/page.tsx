@@ -21,6 +21,12 @@ const PAYMENT_STATUS_STYLES: Record<string, string> = {
   overdue: "bg-danger/10 text-danger",
 };
 
+const PAYMENT_STATUS_LABELS: Record<string, string> = {
+  paid: "Payment paid",
+  pending: "Payment pending",
+  overdue: "Payment overdue",
+};
+
 function formatPrice(amount?: number, currency?: string) {
   if (!amount) return null;
   return `${currency ?? "IDR"} ${amount.toLocaleString("id-ID")}`;
@@ -32,6 +38,7 @@ export default function AdCampaignsPage() {
   const [filtered, setFiltered] = useState<AdCampaign[]>([]);
   const [search, setSearch] = useState("");
   const [placementFilter, setPlacementFilter] = useState("");
+  const [paymentFilter, setPaymentFilter] = useState("");
   const [loading, setLoading] = useState(true);
 
   function load() {
@@ -62,8 +69,9 @@ export default function AdCampaignsPage() {
       );
     }
     if (placementFilter) list = list.filter((c) => c.placement === placementFilter);
+    if (paymentFilter) list = list.filter((c) => (c.payment_status ?? "pending") === paymentFilter);
     setFiltered(list);
-  }, [all, search, placementFilter]);
+  }, [all, search, placementFilter, paymentFilter]);
 
   async function deleteCampaign(id: string) {
     if (!confirm("Delete this ad campaign?")) return;
@@ -135,7 +143,7 @@ export default function AdCampaignsPage() {
           </Link>
         </div>
 
-        <div className="bg-white p-5 rounded-card border border-border shadow-soft grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="bg-white p-5 rounded-card border border-border shadow-soft grid grid-cols-1 md:grid-cols-4 gap-4">
           <div className="relative md:col-span-2">
             <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-400 pointer-events-none">
               <Search className="w-4 h-4" />
@@ -157,6 +165,16 @@ export default function AdCampaignsPage() {
             {placements.map((p) => (
               <option key={p} value={p}>{PLACEMENT_LABELS[p] ?? p}</option>
             ))}
+          </select>
+          <select
+            value={paymentFilter}
+            onChange={(e) => setPaymentFilter(e.target.value)}
+            className="w-full bg-bg focus:bg-white text-xs px-3.5 py-2.5 rounded-xl border border-transparent focus:border-border outline-none font-semibold text-gray-700 cursor-pointer"
+          >
+            <option value="">All Payment Status</option>
+            <option value="pending">Payment Pending</option>
+            <option value="paid">Payment Paid</option>
+            <option value="overdue">Payment Overdue</option>
           </select>
         </div>
 
@@ -220,7 +238,7 @@ export default function AdCampaignsPage() {
                           PAYMENT_STATUS_STYLES[c.payment_status ?? "pending"] ?? "bg-gray-100 text-gray-500"
                         }`}
                       >
-                        {c.payment_status ?? "pending"}
+                        {PAYMENT_STATUS_LABELS[c.payment_status ?? "pending"] ?? c.payment_status ?? "Payment pending"}
                       </button>
                     </div>
                   )}

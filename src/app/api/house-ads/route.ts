@@ -11,14 +11,14 @@ async function getApi() {
 
 export async function GET() {
   const api = await getApi();
-  const { status, data } = await api("/auth/admin/partners");
+  const { status, data } = await api("/ads/house-ads");
   return NextResponse.json(data, { status });
 }
 
 export async function POST(req: NextRequest) {
   const api = await getApi();
   const body = await req.json().catch(() => ({}));
-  const { status, data } = await api("/partners", {
+  const { status, data } = await api("/ads/house-ads", {
     method: "POST",
     body: JSON.stringify(body),
   });

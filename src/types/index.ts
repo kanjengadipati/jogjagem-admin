@@ -106,6 +106,17 @@ export interface AdCampaign {
   payment_status?: string;
 }
 
+export interface HouseAd {
+  id: string;
+  placement: string;
+  headline: string;
+  subline?: string;
+  cta_label: string;
+  image_url?: string;
+  target_url: string;
+  is_enabled?: boolean;
+}
+
 export interface Hotel {
   id: string;
   name: string;

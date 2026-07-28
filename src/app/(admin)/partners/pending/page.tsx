@@ -24,18 +24,40 @@ export default function PartnerApplicationsPage() {
   const [filtered, setFiltered] = useState<Partner[]>([]);
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [processingId, setProcessingId] = useState<string | null>(null);
 
   useEffect(() => {
-    fetch("/api/partners/pending")
-      .then((r) => r.json())
-      .then((d) => {
-        const list: Partner[] = d?.data ?? [];
+    async function loadApplications() {
+      setLoading(true);
+      setLoadError(null);
+
+      try {
+        const res = await fetch("/api/partners/pending");
+        const data = await res.json().catch(() => ({}));
+
+        if (!res.ok) {
+          const message = data?.message || data?.error || `Failed to load partner applications (${res.status})`;
+          setLoadError(message);
+          setApplications([]);
+          setFiltered([]);
+          showToast("Error", message, "error");
+          return;
+        }
+
+        const list: Partner[] = Array.isArray(data?.data) ? data.data : [];
         setApplications(list);
         setFiltered(list);
-      })
-      .catch(() => showToast("Error", "Failed to load partner applications", "error"))
-      .finally(() => setLoading(false));
+      } catch {
+        const message = "Failed to load partner applications";
+        setLoadError(message);
+        showToast("Error", message, "error");
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    loadApplications();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -126,7 +148,7 @@ export default function PartnerApplicationsPage() {
 
   return (
     <>
-      <Header activeId="partners-pending" />
+      <Header activeId="partner-approval" />
       <main className="flex-1 overflow-y-auto p-8 space-y-8">
 
         {/* Page header */}
@@ -159,10 +181,21 @@ export default function PartnerApplicationsPage() {
             <Loader2 className="w-5 h-5 animate-spin" />
             <span className="text-sm font-semibold">Loading applications...</span>
           </div>
+        ) : loadError ? (
+          <div className="flex flex-col items-center justify-center py-24 text-danger gap-3">
+            <AlertTriangle className="w-10 h-10" />
+            <span className="text-sm font-semibold">{loadError}</span>
+            <span className="max-w-md text-center text-xs text-gray-400">
+              Check that the backend is running, the admin token is valid, and this role has the partner approval permissions.
+            </span>
+          </div>
         ) : filtered.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-24 text-gray-400 gap-3">
             <CheckCircle className="w-10 h-10" />
             <span className="text-sm font-semibold">No pending applications</span>
+            <span className="max-w-md text-center text-xs text-gray-400">
+              Only partner listings with status "pending" appear here.
+            </span>
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">

@@ -2,10 +2,41 @@
 
 import { useEffect, useState } from "react";
 import Image from "next/image";
+import Link from "next/link";
 import Header from "@/components/Header";
 import { useToast } from "@/components/Toast";
 import { Briefcase, CheckCircle, Clock, Search, Star, Loader2, MapPin, Phone, Globe, Trash2, Edit3, Megaphone } from "lucide-react";
 import type { Partner } from "@/types";
+
+function getPartnerStatusBadge(status?: string) {
+  switch (status) {
+    case "approved":
+      return {
+        label: "Approved",
+        className: "bg-success/10 text-success",
+        icon: CheckCircle,
+      };
+    case "rejected":
+      return {
+        label: "Rejected",
+        className: "bg-danger/10 text-danger",
+        icon: Clock,
+      };
+    case "suspended":
+      return {
+        label: "Suspended",
+        className: "bg-gray-200 text-gray-600",
+        icon: Clock,
+      };
+    case "pending":
+    default:
+      return {
+        label: "Pending Verification",
+        className: "bg-warning/10 text-warning",
+        icon: Clock,
+      };
+  }
+}
 
 export default function PartnersPage() {
   const { showToast } = useToast();
@@ -130,9 +161,17 @@ export default function PartnersPage() {
             <h2 className="text-2xl font-extrabold font-display text-gray-900 tracking-tight">Tourism Partners</h2>
             <p className="text-xs text-gray-500 mt-1">Manage business partnerships, verification statuses, and listing agreements.</p>
           </div>
-          <button className="flex items-center gap-2 bg-primary hover:bg-primary-dark text-white px-4 py-2.5 rounded-xl text-xs font-semibold shadow-premium transition cursor-pointer">
-            <Briefcase className="w-4 h-4" /><span>Add Partner</span>
-          </button>
+          <div className="flex flex-wrap items-center gap-2">
+            <Link
+              href="/partner-approval"
+              className="flex items-center gap-2 border border-warning/30 bg-warning/10 text-warning hover:bg-warning/15 px-4 py-2.5 rounded-xl text-xs font-semibold transition cursor-pointer"
+            >
+              <Clock className="w-4 h-4" /><span>Review Pending</span>
+            </Link>
+            <button className="flex items-center gap-2 bg-primary hover:bg-primary-dark text-white px-4 py-2.5 rounded-xl text-xs font-semibold shadow-premium transition cursor-pointer">
+              <Briefcase className="w-4 h-4" /><span>Add Partner</span>
+            </button>
+          </div>
         </div>
 
         {/* Filters */}
@@ -174,11 +213,15 @@ export default function PartnersPage() {
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filtered.map((p) => (
-              <div
-                key={p.id}
-                className="bg-white rounded-card border border-border shadow-soft overflow-hidden hover:border-primary/20 hover:shadow-premium transition-premium flex flex-col"
-              >
+            {filtered.map((p) => {
+              const statusBadge = getPartnerStatusBadge(p.status);
+              const StatusIcon = statusBadge.icon;
+
+              return (
+                <div
+                  key={p.id}
+                  className="bg-white rounded-card border border-border shadow-soft overflow-hidden hover:border-primary/20 hover:shadow-premium transition-premium flex flex-col"
+                >
                 {/* Hero image */}
                 <div className="relative h-44 bg-gray-100 flex-shrink-0">
                   {p.image ? (
@@ -268,15 +311,9 @@ export default function PartnersPage() {
 
                   {/* Status badge + sponsor toggle */}
                   <div className="flex items-center justify-between gap-2">
-                    {p.rating && p.rating > 0 ? (
-                      <span className="flex items-center gap-1 bg-success/10 text-success text-[10px] font-bold px-2.5 py-1 rounded-full w-fit">
-                        <CheckCircle className="w-3 h-3" /> Active Partner
-                      </span>
-                    ) : (
-                      <span className="flex items-center gap-1 bg-warning/10 text-warning text-[10px] font-bold px-2.5 py-1 rounded-full w-fit">
-                        <Clock className="w-3 h-3" /> Pending Verification
-                      </span>
-                    )}
+                    <span className={`flex items-center gap-1 text-[10px] font-bold px-2.5 py-1 rounded-full w-fit ${statusBadge.className}`}>
+                      <StatusIcon className="w-3 h-3" /> {statusBadge.label}
+                    </span>
                     <button
                       onClick={() => toggleSponsor(p)}
                       className={`flex items-center gap-1 text-[10px] font-bold px-2.5 py-1 rounded-full w-fit transition cursor-pointer ${
@@ -308,7 +345,8 @@ export default function PartnersPage() {
                   )}
                 </div>
               </div>
-            ))}
+            );
+            })}
           </div>
         )}
 

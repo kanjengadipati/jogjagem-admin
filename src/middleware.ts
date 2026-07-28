@@ -6,6 +6,7 @@ const PUBLIC_PATHS = ["/login", "/logout", "/api/auth"];
 
 export function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
+  const isPartnerPortal = pathname === "/partner" || pathname.startsWith("/partner/");
 
   // Allow public routes and static assets
   if (
@@ -36,14 +37,14 @@ export function middleware(req: NextRequest) {
 
     if (role === 'partner') {
       // Allow access to partner portal and API
-      if (!req.nextUrl.pathname.startsWith('/partner') && 
+      if (!isPartnerPortal &&
           !req.nextUrl.pathname.startsWith('/api/partners/me') &&
           !req.nextUrl.pathname.startsWith('/api/auth')) {
         return NextResponse.redirect(new URL('/partner/listings', req.url));
       }
     } else {
       // Admin/Superadmin: restrict access to partner portal
-      if (req.nextUrl.pathname.startsWith('/partner')) {
+      if (isPartnerPortal) {
         return NextResponse.redirect(new URL('/dashboard', req.url));
       }
     }

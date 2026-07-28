@@ -11,6 +11,7 @@ import {
   Utensils, Briefcase, Users, ShoppingBag, Car, MessageSquareDashed,
   BookOpen, Sparkles, Tag, UserCog, Shield, Settings, ChevronLeft,
   ChevronRight, ExternalLink, Bot, X, Scan, Flag, Megaphone,
+  ClipboardList, PanelTop,
 } from "lucide-react";
 
 const ICON_MAP: Record<string, React.ElementType> = {
@@ -22,6 +23,7 @@ const ICON_MAP: Record<string, React.ElementType> = {
   "hotel": Hotel,
   "utensils": Utensils,
   "briefcase": Briefcase,
+  "clipboard-list": ClipboardList,
   "users": Users,
   "shopping-bag": ShoppingBag,
   "car": Car,
@@ -30,6 +32,7 @@ const ICON_MAP: Record<string, React.ElementType> = {
   "sparkles": Sparkles,
   "tag": Tag,
   "megaphone": Megaphone,
+  "panel-top": PanelTop,
   "bot": Bot,
   "scan": Scan,
   "flag": Flag,
@@ -48,6 +51,11 @@ export default function Sidebar() {
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(false);
   const { isMobileOpen, toggleMobileSidebar } = useSidebar();
+  const activePath =
+    menuGroups
+      .flatMap(group => group.items)
+      .filter(item => pathname === item.path || pathname.startsWith(`${item.path}/`))
+      .sort((a, b) => b.path.length - a.path.length)[0]?.path ?? "";
 
   const handleLinkClick = () => {
     if (isMobileOpen) toggleMobileSidebar();
@@ -117,9 +125,7 @@ export default function Sidebar() {
               <ul className="space-y-1">
                 {group.items.map((item) => {
                   const Icon = ICON_MAP[item.icon] ?? Shield;
-                  const isActive =
-                    pathname === item.path ||
-                    (item.path !== "/dashboard" && pathname.startsWith(item.path));
+                  const isActive = activePath === item.path;
                   const badgeClass = BADGE_COLORS[item.badgeColor ?? ""] ?? "";
 
                   return (
