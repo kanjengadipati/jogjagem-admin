@@ -17,7 +17,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
   if (existingToken) {
     const payload = decodeJwtPayload(existingToken);
     const role = payload?.role;
-    redirect(role === "partner" ? "/partner/listings" : "/dashboard");
+    redirect(role === "partner" ? "/partner" : "/dashboard");
   }
 
   // Token passed via redirect from main portal — hand off to Route Handler to set cookie

@@ -44,7 +44,7 @@ export function middleware(req: NextRequest) {
     if (!isPartnerPortal &&
         !req.nextUrl.pathname.startsWith('/api/partners/me') &&
         !req.nextUrl.pathname.startsWith('/api/auth')) {
-      return NextResponse.redirect(new URL('/partner/listings', req.url));
+      return NextResponse.redirect(new URL('/partner', req.url));
     }
   } else {
     // Admin/Superadmin: restrict access to partner portal

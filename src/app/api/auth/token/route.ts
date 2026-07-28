@@ -17,7 +17,7 @@ export async function GET(req: NextRequest) {
   const payload = decodeJwtPayload(token);
   const role = payload?.role;
 
-  const redirectUrl = role === "partner" ? "/partner/listings" : "/dashboard";
+  const redirectUrl = role === "partner" ? "/partner" : "/dashboard";
   const response = NextResponse.redirect(new URL(redirectUrl, req.url));
   response.cookies.set(COOKIE_NAME, token, {
     httpOnly: true,

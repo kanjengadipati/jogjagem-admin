@@ -43,7 +43,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Redirect or indicate dashboard/listings based on role
-    const redirectUrl = role === "partner" ? "/partner/listings" : "/dashboard";
+    const redirectUrl = role === "partner" ? "/partner" : "/dashboard";
     const response = NextResponse.json({ ok: true, redirectUrl });
     response.cookies.set(COOKIE_NAME, data.data.access_token, {
       httpOnly: true,

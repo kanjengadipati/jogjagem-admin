@@ -63,6 +63,7 @@ export const partnerMenuGroups: MenuGroup[] = [
   {
     title: "Partner Portal",
     items: [
+      { name: "Dashboard", icon: "layout-dashboard", path: "/partner", activeId: "dashboard" },
       { name: "My Listings", icon: "briefcase", path: "/partner/listings", activeId: "listings" },
       { name: "Promotions", icon: "tag", path: "/partner/promotions", activeId: "promotions" },
       { name: "Reviews", icon: "message-square", path: "/partner/reviews", activeId: "reviews" },

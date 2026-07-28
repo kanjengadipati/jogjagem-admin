@@ -10,12 +10,14 @@ import {
   Briefcase,
   Tag,
   MessageSquare,
+  LayoutDashboard,
   ChevronLeft,
   ChevronRight,
   X,
 } from "lucide-react";
 
 const ICON_MAP: Record<string, React.ElementType> = {
+  "layout-dashboard": LayoutDashboard,
   "briefcase": Briefcase,
   "tag": Tag,
   "message-square": MessageSquare,
