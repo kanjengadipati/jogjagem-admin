@@ -112,7 +112,42 @@ export default function LoginForm() {
 
         {/* Email Form */}
         <form onSubmit={handleEmailLogin} className="space-y-5 relative z-10">
-          {/* ... inputs ... */}
+          <div className="space-y-1.5">
+            <label className="text-[11px] font-bold text-gray-400 tracking-wider uppercase font-display block">
+              Operator Email
+            </label>
+            <div className="relative">
+              <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center text-gray-400 pointer-events-none">
+                <Mail className="w-4 h-4" />
+              </span>
+              <input
+                type="email"
+                name="email"
+                required
+                className="w-full bg-bg focus:bg-white text-xs pl-10 pr-4 py-3.5 rounded-xl border border-transparent focus:border-border outline-none transition duration-200 font-medium"
+                placeholder="useradmin@email.com"
+              />
+            </div>
+          </div>
+
+          <div className="space-y-1.5">
+            <label className="text-[11px] font-bold text-gray-400 tracking-wider uppercase font-display block">
+              Secure Password
+            </label>
+            <div className="relative">
+              <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center text-gray-400 pointer-events-none">
+                <Lock className="w-4 h-4" />
+              </span>
+              <input
+                type="password"
+                name="password"
+                required
+                className="w-full bg-bg focus:bg-white text-xs pl-10 pr-4 py-3.5 rounded-xl border border-transparent focus:border-border outline-none transition duration-200 font-medium"
+                placeholder="Password"
+              />
+            </div>
+          </div>
+
           <button
             type="submit"
             disabled={loading}
