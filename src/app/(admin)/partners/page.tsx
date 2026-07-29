@@ -12,30 +12,16 @@ import type { Partner } from "@/types";
 function getPartnerStatusBadge(status?: string) {
   switch (status) {
     case "approved":
-      return {
-        label: "Approved",
-        className: "bg-success/10 text-success",
-        icon: CheckCircle,
-      };
+      return { label: "Approved", className: "bg-success/10 text-success", icon: CheckCircle };
     case "rejected":
-      return {
-        label: "Rejected",
-        className: "bg-danger/10 text-danger",
-        icon: Clock,
-      };
+      return { label: "Rejected", className: "bg-danger/10 text-danger", icon: Clock };
     case "suspended":
-      return {
-        label: "Suspended",
-        className: "bg-gray-200 text-gray-600",
-        icon: Clock,
-      };
+      return { label: "Suspended", className: "bg-gray-200 text-gray-600", icon: Clock };
+    case "draft":
+      return { label: "Draft (not submitted)", className: "bg-stone-100 text-stone-500", icon: Clock };
     case "pending":
     default:
-      return {
-        label: "Pending Verification",
-        className: "bg-warning/10 text-warning",
-        icon: Clock,
-      };
+      return { label: "Pending Verification", className: "bg-warning/10 text-warning", icon: Clock };
   }
 }
 
