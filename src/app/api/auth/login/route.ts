@@ -45,11 +45,15 @@ export async function POST(req: NextRequest) {
     // Redirect or indicate dashboard/listings based on role
     const redirectUrl = role === "partner" ? "/partner" : "/dashboard";
     const response = NextResponse.json({ ok: true, redirectUrl });
+    const domain = process.env.NODE_ENV === "production"
+      ? (process.env.NEXT_PUBLIC_COOKIE_DOMAIN || ".jogjagem.com")
+      : undefined;
     response.cookies.set(COOKIE_NAME, data.data.access_token, {
       httpOnly: true,
       maxAge: 24 * 60 * 60,
       sameSite: "lax",
       path: "/",
+      domain,
     });
     return response;
   } catch {

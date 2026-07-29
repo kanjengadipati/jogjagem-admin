@@ -42,12 +42,17 @@ export async function POST(req: NextRequest) {
 
     const response = NextResponse.json({ status: 'success', redirectUrl });
 
+    const domain = process.env.NODE_ENV === "production"
+      ? (process.env.NEXT_PUBLIC_COOKIE_DOMAIN || ".jogjagem.com")
+      : undefined;
+
     // Set cookie
     response.cookies.set(COOKIE_NAME, data.data.access_token, {
       httpOnly: true,
       maxAge: 24 * 60 * 60,
       sameSite: "lax",
       path: "/",
+      domain,
     });
 
     return response;

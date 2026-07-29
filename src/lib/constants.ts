@@ -3,7 +3,7 @@ import type { MenuGroup, AdminUser, AdminRole } from "@/types";
 export const BACKEND_URL =
   process.env.NEXT_PUBLIC_API_BASE || "http://localhost:8081";
 
-export const COOKIE_NAME = "admin_token";
+export const COOKIE_NAME = "jogjagem_session";
 
 export const ADMIN_USER: AdminUser = {
   name: "Admin Jogjagem",
