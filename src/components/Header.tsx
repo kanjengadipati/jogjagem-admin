@@ -143,7 +143,7 @@ export default function Header({ activeId }: HeaderProps) {
         {/* Profile */}
         <div className="relative">
           <button
-            onClick={() => { setShowProfile(!showProfile); setShowNotif(false); }}
+            onClick={() => setShowProfile(!showProfile)}
             className="flex items-center gap-3 p-1.5 pr-3 rounded-xl border border-border hover:bg-bg cursor-pointer transition-premium"
           >
             <Image
