@@ -23,7 +23,7 @@ function normalizeCategory(val: string): string {
   const found = CATEGORIES.find((c) => c.toLowerCase() === lower);
   return found ?? val;
 }
-const REGIONS = ["Sleman", "Bantul", "Yogyakarta", "Gunungkidul", "Kulon Progo"];
+const REGIONS = ["Sleman", "Bantul", "Yogyakarta", "Gunungkidul", "Kulon Progo", "Near Yogyakarta"];
 
 function extractYouTubeId(url: string): string {
   const match = url.match(/(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
@@ -316,7 +316,17 @@ export default function DestinationDetailPage() {
     }
   }
 
+  function normalizeCategory(val: string): string {
+    const lower = val.toLowerCase();
+    return CATEGORIES.find((c) => c.toLowerCase() === lower) ?? val;
+  }
+  function normalizeRegion(val: string): string {
+    const lower = val.toLowerCase();
+    return REGIONS.find((r) => r.toLowerCase() === lower) ?? val;
+  }
+
   async function generateAI() {
+    if (!form.name) { showToast("Required", "Enter a destination name first", "warning"); return; }
     setAiLoading(true);
     try {
       const res = await fetch("/api/ai/generate-description", {
@@ -325,14 +335,39 @@ export default function DestinationDetailPage() {
         body: JSON.stringify({ destinationName: form.name, category: form.category, region: form.sub_region }),
       });
       const data = await res.json();
-      if (data.description) { setField("description", data.description); showToast("AI", "Description generated", "success"); }
-      if (data.seoTitle) setField("seo_title", data.seoTitle);
-      if (data.seoDescription) setField("seo_description", data.seoDescription);
-      if (data.seoKeywords) setField("seo_keywords", data.seoKeywords);
-      if (data.descriptionEn) setField("description_en", data.descriptionEn);
-      if (data.seoTitleEn) setField("seo_title_en", data.seoTitleEn);
-      if (data.seoDescriptionEn) setField("seo_description_en", data.seoDescriptionEn);
-      if (data.seoKeywordsEn) setField("seo_keywords_en", data.seoKeywordsEn);
+
+      let filled = 0;
+      if (data.name) { setField("name", data.name); filled++; }
+      if (data.name_en) { setField("name_en", data.name_en); filled++; }
+      if (data.category) {
+        const norm = normalizeCategory(data.category);
+        if (CATEGORIES.includes(norm)) { setField("category", norm); filled++; }
+      }
+      if (data.sub_region) {
+        const norm = normalizeRegion(data.sub_region);
+        if (REGIONS.includes(norm)) { setField("sub_region", norm); filled++; }
+      }
+      if (data.tagline) { setField("tagline", data.tagline); filled++; }
+      if (data.tagline_en) { setField("tagline_en", data.tagline_en); filled++; }
+      if (data.location) { setField("location", data.location); filled++; }
+      if (data.description) { setField("description", data.description); filled++; }
+      if (data.description_en) { setField("description_en", data.description_en); filled++; }
+      if (data.story) { setField("story", data.story); filled++; }
+      if (data.story_en) { setField("story_en", data.story_en); filled++; }
+      if (data.ticket_price) { setField("ticket_price", data.ticket_price); filled++; }
+      if (data.opening_hours) { setField("opening_hours", data.opening_hours); filled++; }
+      if (data.best_time) { setField("best_time", data.best_time); filled++; }
+      if (data.best_time_en) { setField("best_time_en", data.best_time_en); filled++; }
+      if (data.latitude) { setField("latitude", data.latitude); filled++; }
+      if (data.longitude) { setField("longitude", data.longitude); filled++; }
+      if (data.seoTitle) { setField("seo_title", data.seoTitle); filled++; }
+      if (data.seoTitleEn) { setField("seo_title_en", data.seoTitleEn); filled++; }
+      if (data.seoDescription) { setField("seo_description", data.seoDescription); filled++; }
+      if (data.seoDescriptionEn) { setField("seo_description_en", data.seoDescriptionEn); filled++; }
+      if (data.seoKeywords) { setField("seo_keywords", data.seoKeywords); filled++; }
+      if (data.seoKeywordsEn) { setField("seo_keywords_en", data.seoKeywordsEn); filled++; }
+
+      showToast("AI", `${filled} fields generated`, "success");
     } catch {
       showToast("AI Error", "Generation failed", "error");
     } finally {
@@ -466,6 +501,9 @@ export default function DestinationDetailPage() {
               <h2 className="text-2xl font-extrabold font-display text-gray-900 tracking-tight">{form.name || "Destination"}</h2>
             </div>
           </div>
+          <button type="button" onClick={generateAI} disabled={aiLoading} className="flex items-center gap-2 bg-primary hover:bg-primary-dark disabled:opacity-60 text-white px-4 py-2.5 rounded-xl text-xs font-semibold shadow-premium transition-premium cursor-pointer">
+            <Sparkles className="w-4 h-4" />{aiLoading ? "Generating..." : "AI Generate"}
+          </button>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
@@ -532,16 +570,9 @@ export default function DestinationDetailPage() {
                     <FieldInput label="Location / Address" value={form.location} onChange={(v) => setField("location", v)} />
                   </div>
                   <div className="space-y-3">
-                    <div className="flex items-center justify-between">
-                      <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest font-display block">
-                        {lang === "id" ? "Deskripsi Editorial" : "Editorial Description (EN)"}
-                      </label>
-                      <button onClick={generateAI} disabled={aiLoading}
-                        className="flex items-center gap-1.5 text-primary hover:text-primary-dark text-xs font-bold cursor-pointer disabled:opacity-60 transition">
-                        {aiLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
-                        {aiLoading ? "Generating…" : "AI Generate"}
-                      </button>
-                    </div>
+                    <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest font-display block">
+                      {lang === "id" ? "Deskripsi Editorial" : "Editorial Description (EN)"}
+                    </label>
                     <textarea value={lang === "id" ? form.description : form.description_en} onChange={(e) => setField(lang === "id" ? "description" : "description_en", e.target.value)} rows={6}
                       className="w-full bg-bg focus:bg-white text-xs p-4 rounded-xl border border-transparent focus:border-border outline-none font-medium leading-relaxed" />
                   </div>
@@ -792,13 +823,7 @@ export default function DestinationDetailPage() {
             {/* SEO */}
             {tab === "seo" && (
               <div className="bg-white p-6 rounded-card border border-border shadow-soft space-y-5">
-                <div className="flex items-center justify-between">
-                  <h4 className="text-sm font-bold text-gray-800 font-display">SEO & AI Translation</h4>
-                  <button onClick={generateAI} disabled={aiLoading}
-                    className="flex items-center gap-1.5 text-primary text-xs font-bold cursor-pointer disabled:opacity-60">
-                    <Sparkles className="w-4 h-4" />Generate SEO Tags
-                  </button>
-                </div>
+                <h4 className="text-sm font-bold text-gray-800 font-display">SEO & AI Translation</h4>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                   <FieldInput label="Meta Title (ID)" value={form.seo_title} onChange={(v) => setField("seo_title", v)} />
                   <FieldInput label="Meta Title (EN)" value={form.seo_title_en} onChange={(v) => setField("seo_title_en", v)} />

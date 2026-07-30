@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Image from "next/image";
 import PartnerHeader from "@/components/PartnerHeader";
 import { useToast } from "@/components/Toast";
+import ListingFormModal from "@/components/ListingFormModal";
 import { 
   Briefcase, 
   CheckCircle, 
@@ -26,8 +27,10 @@ export default function PartnerListingsPage() {
   const [filtered, setFiltered] = useState<Partner[]>([]);
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
+  const [formOpen, setFormOpen] = useState(false);
+  const [editingListing, setEditingListing] = useState<Partner | null>(null);
 
-  useEffect(() => {
+  function loadListings() {
     fetch("/api/partners/me")
       .then((r) => r.json())
       .then((d) => {
@@ -37,6 +40,10 @@ export default function PartnerListingsPage() {
       })
       .catch(() => showToast("Error", "Failed to load your listings", "error"))
       .finally(() => setLoading(false));
+  }
+
+  useEffect(() => {
+    loadListings();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -108,7 +115,7 @@ export default function PartnerListingsPage() {
             <h2 className="text-2xl font-extrabold font-display text-gray-900 tracking-tight">My Listings</h2>
             <p className="text-xs text-gray-500 mt-1">Manage your business listings and promotions.</p>
           </div>
-          <button className="flex items-center gap-2 bg-primary hover:bg-primary-dark text-white px-4 py-2.5 rounded-xl text-xs font-semibold shadow-premium transition cursor-pointer">
+          <button onClick={() => { setEditingListing(null); setFormOpen(true); }} className="flex items-center gap-2 bg-primary hover:bg-primary-dark text-white px-4 py-2.5 rounded-xl text-xs font-semibold shadow-premium transition cursor-pointer">
             <Plus className="w-4 h-4" /><span>Add New Listing</span>
           </button>
         </div>
@@ -179,7 +186,7 @@ export default function PartnerListingsPage() {
                     {/* Name */}
                     <h4 className="text-sm font-bold text-gray-900 font-display leading-snug">{p.name}</h4>
                     <div className="flex gap-1">
-                        <button className="p-1 hover:bg-bg rounded"><Edit3 className="w-3.5 h-3.5 text-gray-400" /></button>
+                        <button onClick={() => { setEditingListing(p); setFormOpen(true); }} className="p-1 hover:bg-bg rounded cursor-pointer"><Edit3 className="w-3.5 h-3.5 text-gray-400" /></button>
                         <button onClick={() => deleteListing(p.id)} className="p-1 hover:bg-red-50 rounded"><Trash2 className="w-3.5 h-3.5 text-danger" /></button>
                     </div>
                   </div>
@@ -235,6 +242,13 @@ export default function PartnerListingsPage() {
           </div>
         )}
       </main>
+
+      <ListingFormModal
+        open={formOpen}
+        onClose={() => { setFormOpen(false); setEditingListing(null); }}
+        listing={editingListing}
+        onSaved={() => { setFormOpen(false); setEditingListing(null); loadListings(); }}
+      />
     </>
   );
 }
