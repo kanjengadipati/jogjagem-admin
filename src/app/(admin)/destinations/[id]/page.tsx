@@ -51,6 +51,8 @@ type FormState = {
   latitude: string;
   longitude: string;
   video_url: string;
+  rating: string;
+  review_count: string;
   seo_title: string;
   seo_title_en: string;
   seo_keywords: string;
@@ -64,7 +66,7 @@ type FormState = {
 const EMPTY_FORM: FormState = {
   name: "", name_en: "", category: "", sub_region: "", tagline: "", tagline_en: "", location: "",
   description: "", description_en: "", story: "", story_en: "", ticket_price: "", opening_hours: "", best_time: "", best_time_en: "",
-  latitude: "", longitude: "", video_url: "", seo_title: "", seo_title_en: "", seo_keywords: "", seo_keywords_en: "", seo_description: "", seo_description_en: "", og_image_url: "",
+  latitude: "", longitude: "", video_url: "", rating: "", review_count: "", seo_title: "", seo_title_en: "", seo_keywords: "", seo_keywords_en: "", seo_description: "", seo_description_en: "", og_image_url: "",
   status: "published",
 };
 
@@ -360,6 +362,8 @@ export default function DestinationDetailPage() {
       if (data.best_time_en) { setField("best_time_en", data.best_time_en); filled++; }
       if (data.latitude) { setField("latitude", data.latitude); filled++; }
       if (data.longitude) { setField("longitude", data.longitude); filled++; }
+      if (data.rating) { setField("rating", String(data.rating)); filled++; }
+      if (data.review_count) { setField("review_count", String(data.review_count)); filled++; }
       if (data.seoTitle) { setField("seo_title", data.seoTitle); filled++; }
       if (data.seoTitleEn) { setField("seo_title_en", data.seoTitleEn); filled++; }
       if (data.seoDescription) { setField("seo_description", data.seoDescription); filled++; }
@@ -603,6 +607,10 @@ export default function DestinationDetailPage() {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                     <FieldInput label="Latitude" value={form.latitude} onChange={(v) => setField("latitude", v)} mono />
                     <FieldInput label="Longitude" value={form.longitude} onChange={(v) => setField("longitude", v)} mono />
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                    <FieldInput label="Rating" value={form.rating} onChange={(v) => setField("rating", v)} />
+                    <FieldInput label="Review Count" value={form.review_count} onChange={(v) => setField("review_count", v)} />
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-1 gap-5">
                     <div>

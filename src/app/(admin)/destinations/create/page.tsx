@@ -18,7 +18,7 @@ export default function CreateDestinationPage() {
   const [form, setForm] = useState({
     name: "", name_en: "", category: "Temple", sub_region: "Sleman", tagline: "", tagline_en: "",
     location: "", description: "", description_en: "", story: "", story_en: "", ticket_price: "",
-    opening_hours: "", best_time: "", best_time_en: "", latitude: "", longitude: "",
+    opening_hours: "", best_time: "", best_time_en: "",     latitude: "", longitude: "", rating: "", review_count: "",
     seo_title: "", seo_title_en: "", seo_keywords: "", seo_keywords_en: "", seo_description: "", seo_description_en: "",
     status: "draft",
   });
@@ -69,6 +69,8 @@ export default function CreateDestinationPage() {
       if (data.best_time_en) { set("best_time_en", data.best_time_en); filled++; }
       if (data.latitude) { set("latitude", data.latitude); filled++; }
       if (data.longitude) { set("longitude", data.longitude); filled++; }
+      if (data.rating) { set("rating", String(data.rating)); filled++; }
+      if (data.review_count) { set("review_count", String(data.review_count)); filled++; }
       if (data.seoTitle) { set("seo_title", data.seoTitle); filled++; }
       if (data.seoTitleEn) { set("seo_title_en", data.seoTitleEn); filled++; }
       if (data.seoDescription) { set("seo_description", data.seoDescription); filled++; }
@@ -179,6 +181,10 @@ export default function CreateDestinationPage() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                 {field("Latitude", "latitude")}
                 {field("Longitude", "longitude")}
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                {field("Rating", "rating")}
+                {field("Review Count", "review_count")}
               </div>
             </div>
           </div>
