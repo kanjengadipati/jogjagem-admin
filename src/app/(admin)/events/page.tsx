@@ -86,6 +86,7 @@ export default function EventsPage() {
         if (!meta || p >= meta.total_pages) break;
         p++;
       }
+      pages.sort((a, b) => (b.updated_at || '').localeCompare(a.updated_at || ''));
       setAllItems(pages);
     } catch {
       showToast("Error", "Failed to load events", "error");

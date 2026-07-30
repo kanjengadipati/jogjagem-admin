@@ -56,6 +56,8 @@ export interface Destination {
   og_image_url?: string;
   video_url?: string;
   status?: string;
+  created_at?: string;
+  updated_at?: string;
 }
 
 export interface Partner {
@@ -171,6 +173,8 @@ export interface Event {
   highlights?: unknown[];
   badge?: string;
   badges?: string[];
+  created_at?: string;
+  updated_at?: string;
 }
 
 export interface Guide {
