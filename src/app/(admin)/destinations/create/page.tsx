@@ -132,7 +132,7 @@ export default function CreateDestinationPage() {
           </div>
         </div>
 
-        <form onSubmit={submit} className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <form onSubmit={submit} className="grid grid-cols-1 lg:grid-cols-3 gap-8 relative">
           <div className="lg:col-span-2 space-y-6">
             <div className="bg-white p-6 rounded-card border border-border shadow-soft space-y-5">
               <h4 className="text-sm font-bold text-gray-800 font-display">Basic Information</h4>
@@ -203,6 +203,14 @@ export default function CreateDestinationPage() {
               </Link>
             </div>
           </div>
+          {aiLoading && (
+            <div className="absolute inset-0 z-10 flex items-center justify-center bg-white/60 rounded-card">
+              <div className="flex flex-col items-center gap-3">
+                <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+                <span className="text-xs font-semibold text-gray-500">AI is researching and generating content...</span>
+              </div>
+            </div>
+          )}
         </form>
       </main>
     </>

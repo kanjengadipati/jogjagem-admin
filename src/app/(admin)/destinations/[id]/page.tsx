@@ -506,7 +506,15 @@ export default function DestinationDetailPage() {
           </button>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-8 relative">
+          {aiLoading && (
+            <div className="absolute inset-0 z-10 flex items-center justify-center bg-white/60 rounded-card">
+              <div className="flex flex-col items-center gap-3">
+                <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+                <span className="text-xs font-semibold text-gray-500">AI is researching and generating content...</span>
+              </div>
+            </div>
+          )}
           {/* Left */}
           <div className="lg:col-span-3 space-y-6">
 
