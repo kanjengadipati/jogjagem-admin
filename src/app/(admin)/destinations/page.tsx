@@ -12,7 +12,7 @@ import type { Destination, PaginationMeta } from "@/types";
 
 const PAGE_SIZE = 25;
 const CATEGORIES = ["Temple","Beach","Nature","Heritage","Cultural","Culinary","Shopping","Adventure","hidden-gem","family","weekend","sunset","sunrise","camping"];
-const REGIONS    = ["Sleman","Bantul","Yogyakarta","Gunungkidul","Kulon Progo"];
+const REGIONS    = ["Sleman","Bantul","Yogyakarta","Gunungkidul","Kulon Progo","Near Yogyakarta"];
 const RATING_OPTIONS = [
   { value: "",     label: "All Ratings" },
   { value: "high", label: "High (4.5+)" },
