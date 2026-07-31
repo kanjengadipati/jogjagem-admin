@@ -1,0 +1,171 @@
+"use client";
+
+import React, { useState, useRef } from "react";
+import { Upload, X, Loader2, Image as ImageIcon } from "lucide-react";
+
+interface OgImageUploaderProps {
+  value: string;
+  onChange: (url: string) => void;
+}
+
+export default function OgImageUploader({ value, onChange }: OgImageUploaderProps) {
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Kompresi gambar di client-side menggunakan HTML5 Canvas
+  const compressImage = (file: File): Promise<Blob> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = (e) => {
+        const img = new Image();
+        img.src = e.target?.result as string;
+        img.onload = () => {
+          const canvas = document.createElement("canvas");
+          let width = img.width;
+          let height = img.height;
+
+          // Target ideal OG Image: 1200x630
+          const MAX_WIDTH = 1200;
+          const MAX_HEIGHT = 630;
+
+          if (width > MAX_WIDTH || height > MAX_HEIGHT) {
+            const ratio = Math.min(MAX_WIDTH / width, MAX_HEIGHT / height);
+            width = Math.round(width * ratio);
+            height = Math.round(height * ratio);
+          }
+
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext("2d");
+          if (!ctx) {
+            reject(new Error("Failed to get canvas context"));
+            return;
+          }
+
+          ctx.drawImage(img, 0, 0, width, height);
+
+          // Convert ke JPEG dengan kualitas 0.8 (dikompres padat)
+          canvas.toBlob(
+            (blob) => {
+              if (blob) {
+                resolve(blob);
+              } else {
+                reject(new Error("Canvas toBlob failed"));
+              }
+            },
+            "image/jpeg",
+            0.8
+          );
+        };
+        img.onerror = () => reject(new Error("Failed to load image"));
+      };
+      reader.onerror = () => reject(new Error("FileReader error"));
+    });
+  };
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    try {
+      setLoading(true);
+      setError("");
+
+      // 1. Kompres gambar
+      const compressedBlob = await compressImage(file);
+      const compressedFile = new File([compressedBlob], file.name.replace(/\.[^/.]+$/, "") + ".jpg", {
+        type: "image/jpeg",
+      });
+
+      // 2. Upload file ke local storage endpoint
+      const formData = new FormData();
+      formData.append("file", compressedFile);
+
+      const res = await fetch("/api/upload/og-local", {
+        method: "POST",
+        body: formData,
+      });
+
+      const data = await res.json();
+      if (!res.ok || data.error) {
+        throw new Error(data.error || "Upload failed");
+      }
+
+      onChange(data.url);
+    } catch (err: any) {
+      setError(err.message || "Failed to upload image");
+    } finally {
+      setLoading(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+    }
+  };
+
+  return (
+    <div className="space-y-3">
+      <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block">
+        OG Image (Manual Local Upload & Compressed)
+      </label>
+
+      {value ? (
+        <div className="relative rounded-xl overflow-hidden aspect-video border border-border group bg-black/5">
+          <img src={value} alt="OG Image Preview" className="w-full h-full object-cover" />
+          <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+            <button
+              type="button"
+              onClick={() => onChange("")}
+              className="p-2 rounded-full bg-red-600 text-white hover:bg-red-700 transition-colors"
+              title="Remove Image"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+      ) : (
+        <div
+          onClick={() => fileInputRef.current?.click()}
+          className="border-2 border-dashed border-border hover:border-gray-400 bg-bg hover:bg-white rounded-xl p-6 flex flex-col items-center justify-center cursor-pointer transition-all text-center group"
+        >
+          {loading ? (
+            <div className="flex flex-col items-center gap-2 text-gray-500">
+              <Loader2 className="w-6 h-6 animate-spin text-accent" />
+              <span className="text-xs font-semibold">Compressing & Uploading locally...</span>
+            </div>
+          ) : (
+            <>
+              <div className="w-10 h-10 rounded-full bg-gray-100 group-hover:bg-accent/10 flex items-center justify-center mb-2 transition-colors">
+                <Upload className="w-5 h-5 text-gray-500 group-hover:text-accent" />
+              </div>
+              <p className="text-xs font-semibold text-gray-700">Click to upload & compress OG Image</p>
+              <p className="text-[10px] text-gray-400 mt-1">Automatically resized to 1200x630 JPEG (Max 80% quality)</p>
+            </>
+          )}
+        </div>
+      )}
+
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        onChange={handleFileChange}
+        className="hidden"
+      />
+
+      <div className="flex items-center gap-2">
+        <span className="text-[10px] text-gray-400 shrink-0">Or enter external URL:</span>
+        <input
+          type="text"
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder="https://..."
+          className="w-full bg-bg focus:bg-white text-xs px-3 py-1.5 rounded-lg border border-transparent focus:border-border outline-none font-medium text-gray-600"
+        />
+      </div>
+
+      {error && <p className="text-xs text-red-500">{error}</p>}
+    </div>
+  );
+}

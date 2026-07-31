@@ -6,6 +6,7 @@ import Link from "next/link";
 import Image from "next/image";
 import Header from "@/components/Header";
 import { useToast } from "@/components/Toast";
+import OgImageUploader from "@/components/OgImageUploader";
 import { parseImages } from "@/lib/images";
 import { ArrowLeft, Sparkles, ImagePlus, Trash2, Loader2, Calendar, Link2, Unlink, Search, ExternalLink, Link as LinkIcon } from "lucide-react";
 import type { Destination, Event } from "@/types";
@@ -163,6 +164,8 @@ export default function DestinationDetailPage() {
             latitude: String(data.latitude ?? ""),
             longitude: String(data.longitude ?? ""),
             video_url: data.video_url ?? "",
+            rating: String((data as any).rating ?? ""),
+            review_count: String((data as any).google_review_count ?? (data as any).review_count ?? ""),
             seo_title: data.seo_title ?? "",
             seo_title_en: data.seo_title_en ?? "",
             seo_keywords: data.seo_keywords ?? "",
@@ -860,18 +863,7 @@ export default function DestinationDetailPage() {
                       className="w-full bg-bg focus:bg-white text-xs p-4 rounded-xl border border-transparent focus:border-border outline-none font-medium" />
                   </div>
                 </div>
-                <div className="space-y-1.5">
-                  <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block">OG Image URL</label>
-                  <input type="text" value={form.og_image_url} onChange={(e) => setField("og_image_url", e.target.value)}
-                    placeholder="Leave empty to use first gallery image"
-                    className="w-full bg-bg focus:bg-white text-xs p-4 rounded-xl border border-transparent focus:border-border outline-none font-medium" />
-                  {form.og_image_url && (
-                    <div className="relative rounded-xl overflow-hidden aspect-video border border-border mt-2">
-                      <img src={form.og_image_url} alt="OG Preview" className="w-full h-full object-cover" />
-                    </div>
-                  )}
-                  <p className="text-[10px] text-gray-400">Used for social media sharing (Facebook, Twitter, WhatsApp). Leave empty to use the first gallery image.</p>
-                </div>
+                <OgImageUploader value={form.og_image_url} onChange={(v) => setField("og_image_url", v)} />
               </div>
             )}
 
