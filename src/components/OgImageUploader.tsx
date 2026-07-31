@@ -56,12 +56,22 @@ export default function OgImageUploader({ value, onChange }: OgImageUploaderProp
               }
             },
             "image/jpeg",
-            0.8
+            0.75
           );
         };
         img.onerror = () => reject(new Error("Failed to load image"));
       };
       reader.onerror = () => reject(new Error("FileReader error"));
+    });
+  };
+
+  // Convert blob to Data URL (base64)
+  const blobToDataURL = (blob: Blob): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve(reader.result as string);
+      reader.onerror = reject;
+      reader.readAsDataURL(blob);
     });
   };
 
@@ -73,29 +83,15 @@ export default function OgImageUploader({ value, onChange }: OgImageUploaderProp
       setLoading(true);
       setError("");
 
-      // 1. Kompres gambar
+      // 1. Kompres gambar (1200x630, JPEG 75% quality agar sangat ringan < 50KB)
       const compressedBlob = await compressImage(file);
-      const compressedFile = new File([compressedBlob], file.name.replace(/\.[^/.]+$/, "") + ".jpg", {
-        type: "image/jpeg",
-      });
 
-      // 2. Upload file ke local storage endpoint
-      const formData = new FormData();
-      formData.append("file", compressedFile);
+      // 2. Convert langsung ke Base64 Data URL
+      const dataUrl = await blobToDataURL(compressedBlob);
 
-      const res = await fetch("/api/upload/og-local", {
-        method: "POST",
-        body: formData,
-      });
-
-      const data = await res.json();
-      if (!res.ok || data.error) {
-        throw new Error(data.error || "Upload failed");
-      }
-
-      onChange(data.url);
+      onChange(dataUrl);
     } catch (err: any) {
-      setError(err.message || "Failed to upload image");
+      setError(err.message || "Failed to process image");
     } finally {
       setLoading(false);
       if (fileInputRef.current) {
