@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useRef } from "react";
-import { Upload, X, Loader2, Image as ImageIcon } from "lucide-react";
+import { Upload, X, Loader2, Download } from "lucide-react";
 
 interface OgImageUploaderProps {
   value: string;
@@ -11,6 +11,7 @@ interface OgImageUploaderProps {
 export default function OgImageUploader({ value, onChange }: OgImageUploaderProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [urlLoading, setUrlLoading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Kompresi gambar di client-side menggunakan HTML5 Canvas
@@ -100,10 +101,41 @@ export default function OgImageUploader({ value, onChange }: OgImageUploaderProp
     }
   };
 
+  // Download gambar dari URL publik di server, kompres 1200x630 JPEG, simpan sebagai Base64
+  const handleDownloadFromUrl = async () => {
+    const trimmed = value.trim();
+    if (!trimmed) return;
+
+    try {
+      setUrlLoading(true);
+      setError("");
+
+      const res = await fetch("/api/og-from-url", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url: trimmed }),
+      });
+      const data = await res.json().catch(() => ({}));
+
+      if (!res.ok) {
+        throw new Error(data?.error || "Failed to download image");
+      }
+
+      onChange(data.dataUrl as string);
+    } catch (err: any) {
+      setError(err.message || "Failed to download image");
+    } finally {
+      setUrlLoading(false);
+    }
+  };
+
+  const isUrl = value.startsWith("http://") || value.startsWith("https://");
+  const isDataUrl = value.startsWith("data:image");
+
   return (
     <div className="space-y-3">
       <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block">
-        OG Image (Manual Local Upload & Compressed)
+        OG Image (Compressed 1200x630 JPEG)
       </label>
 
       {value ? (
@@ -159,7 +191,24 @@ export default function OgImageUploader({ value, onChange }: OgImageUploaderProp
           placeholder="https://..."
           className="w-full bg-bg focus:bg-white text-xs px-3 py-1.5 rounded-lg border border-transparent focus:border-border outline-none font-medium text-gray-600"
         />
+        {isUrl && (
+          <button
+            type="button"
+            onClick={handleDownloadFromUrl}
+            disabled={urlLoading}
+            className="shrink-0 flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg bg-accent text-white hover:opacity-90 transition-opacity disabled:opacity-50"
+            title="Download, compress, and store as Base64 like manual upload"
+          >
+            {urlLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Download className="w-3.5 h-3.5" />}
+            {urlLoading ? "Downloading..." : "Download & compress"}
+          </button>
+        )}
       </div>
+      {isDataUrl && (
+        <p className="text-[10px] text-emerald-600 font-medium">
+          Stored as compressed Base64 (1200x630 JPEG) — same as manual upload.
+        </p>
+      )}
 
       {error && <p className="text-xs text-red-500">{error}</p>}
     </div>
