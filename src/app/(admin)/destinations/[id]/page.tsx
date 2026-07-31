@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
@@ -8,6 +8,7 @@ import Header from "@/components/Header";
 import { useToast } from "@/components/Toast";
 import OgImageUploader from "@/components/OgImageUploader";
 import { parseImages } from "@/lib/images";
+import { computeContentScore } from "@/lib/content-score";
 import { ArrowLeft, Sparkles, ImagePlus, Trash2, Loader2, Calendar, Link2, Unlink, Search, ExternalLink, Link as LinkIcon } from "lucide-react";
 import type { Destination, Event } from "@/types";
 
@@ -468,7 +469,7 @@ export default function DestinationDetailPage() {
       : JSON.parse((dest.facilities as string) || "[]")
     : [];
 
-  const score = Math.round((dest?.rating ?? 0) * 20);
+  const contentScore = useMemo(() => computeContentScore(dest), [dest]);
   const TABS: Tab[] = ["overview", "gallery", "facilities", "seo", "events"];
   const tabLabel = (t: Tab) => {
     if (t === "seo") return "SEO & AI";
@@ -1021,19 +1022,39 @@ export default function DestinationDetailPage() {
             )}
 
             <div className="bg-white p-6 rounded-card border border-border shadow-soft space-y-4">
-              <h4 className="text-xs font-bold text-gray-400 uppercase tracking-widest font-display">AI Quality Score</h4>
+              <h4 className="text-xs font-bold text-gray-400 uppercase tracking-widest font-display">Content Quality Score</h4>
               <div className="flex items-center gap-4">
-                <div className={`w-16 h-16 rounded-full border-4 flex items-center justify-center font-mono font-extrabold text-xl ${score >= 80 ? "border-success text-success" : score >= 60 ? "border-warning text-warning" : "border-danger text-danger"}`}>
-                  {score}
+                <div className={`w-16 h-16 rounded-full border-4 flex items-center justify-center font-mono font-extrabold text-xl ${contentScore.total >= 80 ? "border-success text-success" : contentScore.total >= 60 ? "border-warning text-warning" : "border-danger text-danger"}`}>
+                  {contentScore.total}
                 </div>
                 <div>
-                  <span className="text-xs font-bold text-gray-800 block">{score >= 80 ? "EXCELLENT" : score >= 60 ? "GOOD" : "NEEDS WORK"}</span>
-                  <span className="text-[10px] text-gray-400">Rating: {(dest?.rating ?? 0).toFixed(1)}/5.0</span>
+                  <span className="text-xs font-bold text-gray-800 block">{contentScore.verdict}</span>
+                  <span className="text-[10px] text-gray-400">Kelengkapan konten halaman ini</span>
                 </div>
               </div>
+
+              <div className="space-y-2.5">
+                {contentScore.categories.map((cat) => {
+                  const pct = cat.max > 0 ? Math.round((cat.score / cat.max) * 100) : 0;
+                  const bar = pct >= 80 ? "bg-success" : pct >= 60 ? "bg-warning" : "bg-danger";
+                  return (
+                    <div key={cat.key} title={cat.items.map((it) => `${it.label} — ${it.points}/${it.max}${it.detail ? ` (${it.detail})` : ""}`).join("\n")}>
+                      <div className="flex items-center justify-between text-[10px] mb-1">
+                        <span className="font-semibold text-gray-600">{cat.label}</span>
+                        <span className="font-mono text-gray-400">{cat.score}/{cat.max}</span>
+                      </div>
+                      <div className="h-1.5 rounded-full bg-gray-100 overflow-hidden">
+                        <div className={`h-full rounded-full ${bar}`} style={{ width: `${pct}%` }} />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
               <div className="border-t border-border pt-4">
-                <span className="text-[10px] font-bold text-gray-400 uppercase block">Reviews</span>
-                <span className="text-lg font-bold text-gray-800 font-display">{dest?.review_count ?? 0} reviews</span>
+                <span className="text-[10px] font-bold text-gray-400 uppercase block">Google Rating</span>
+                <span className="text-lg font-bold text-gray-800 font-display">{(dest?.rating ?? 0).toFixed(1)}/5.0</span>
+                <span className="text-[10px] text-gray-400 block mt-0.5">{dest?.review_count ?? 0} reviews</span>
               </div>
             </div>
 

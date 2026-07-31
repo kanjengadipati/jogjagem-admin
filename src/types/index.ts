@@ -47,6 +47,9 @@ export interface Destination {
   review_count?: number;
   images?: DestinationImage[] | string[] | string;
   facilities?: string[] | string;
+  travel_tips?: string[] | string;
+  faqs?: string[] | string;
+  weather?: Record<string, unknown>;
   seo_title?: string;
   seo_title_en?: string;
   seo_keywords?: string;
