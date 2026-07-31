@@ -287,10 +287,26 @@ export default function DestinationDetailPage() {
     setSaving(true);
     try {
       const images = galleryImgs.map((url) => ({ url, credit: "Admin" }));
+      const payload: Record<string, unknown> = { ...form, images };
+
+      const rating = parseFloat(form.rating);
+      if (Number.isNaN(rating)) delete payload.rating;
+      else payload.rating = rating;
+
+      const reviewCount = parseInt(form.review_count, 10);
+      if (Number.isNaN(reviewCount)) {
+        delete payload.review_count;
+        delete payload.google_review_count;
+      } else {
+        payload.review_count = reviewCount;
+        // Keep google_review_count in sync so the value survives a page reload.
+        payload.google_review_count = reviewCount;
+      }
+
       const res = await fetch(`/api/destinations/${id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...form, images }),
+        body: JSON.stringify(payload),
       });
       if (res.ok) {
         showToast("Saved", "Destination updated successfully", "success");
