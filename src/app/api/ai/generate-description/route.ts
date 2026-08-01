@@ -47,6 +47,8 @@ export async function POST(req: NextRequest) {
       best_time_en?: string;
       latitude?: string;
       longitude?: string;
+      rating?: string;
+      review_count?: string;
       seo_title?: string;
       seo_title_en?: string;
       seo_description?: string;
@@ -75,6 +77,8 @@ export async function POST(req: NextRequest) {
     best_time_en: d.best_time_en ?? "",
     latitude: d.latitude ?? "",
     longitude: d.longitude ?? "",
+    rating: d.rating ?? "",
+    review_count: d.review_count ?? "",
     seoTitle: d.seo_title ?? "",
     seoTitleEn: d.seo_title_en ?? "",
     seoDescription: d.seo_description ?? "",
