@@ -8,6 +8,7 @@ import { useToast } from "@/components/Toast";
 import {
   FileText, Plus, Pencil, Trash2, Search, Loader2,
   Sparkles, X, Eye, EyeOff, ChevronDown,
+  ExternalLink, ImagePlus, Link2, Link as LinkIcon,
 } from "lucide-react";
 import type { Article } from "@/types";
 
@@ -47,12 +48,47 @@ function ArticleModal({ article, onClose, onSaved }: {
   const [saving, setSaving] = useState(false);
   const [tab, setTab] = useState<"id" | "en" | "seo">("id");
   const [aiLoading, setAiLoading] = useState(false);
+  const [coverUrlInput, setCoverUrlInput] = useState("");
+  const [coverUrlResolved, setCoverUrlResolved] = useState("");
+  const [coverUrlPreviewError, setCoverUrlPreviewError] = useState(false);
 
   const set = (key: keyof Article, value: string | number) =>
     setForm(prev => ({ ...prev, [key]: value }));
 
   const handleTitleChange = (v: string) =>
     setForm(prev => ({ ...prev, title: v, slug: prev.slug || slugify(v) }));
+
+  /** Convert a Wikipedia file page URL to the direct Wikimedia image URL via the API. */
+  async function resolveWikipediaImageUrl(url: string): Promise<string> {
+    const wikiMatch = url.match(/^https?:\/\/([a-z]+)\.wikipedia\.org\/wiki\/(Berkas|File):(.+)$/i);
+    if (!wikiMatch) return url;
+    const lang = wikiMatch[1];
+    const filename = decodeURIComponent(wikiMatch[3]);
+    const apiUrl = `https://${lang}.wikipedia.org/w/api.php?action=query&titles=File:${encodeURIComponent(filename)}&prop=imageinfo&iiprop=url&format=json&origin=*`;
+    const res = await fetch(apiUrl);
+    if (!res.ok) return url;
+    const data = await res.json();
+    const pages = data?.query?.pages ?? {};
+    const page = Object.values(pages)[0] as { imageinfo?: { url: string }[] };
+    return page?.imageinfo?.[0]?.url ?? url;
+  }
+
+  async function setCoverByUrl() {
+    const trimmed = coverUrlInput.trim();
+    if (!trimmed) return;
+    try { new URL(trimmed); } catch { showToast("Invalid URL", "Please enter a valid image URL", "error"); return; }
+
+    let resolved = trimmed;
+    if (/wikipedia\.org\/wiki\/(Berkas|File):/i.test(trimmed)) {
+      try { resolved = await resolveWikipediaImageUrl(trimmed); } catch { /* fall through */ }
+    }
+
+    set("cover_image", resolved);
+    setCoverUrlInput("");
+    setCoverUrlPreviewError(false);
+    setCoverUrlResolved("");
+    showToast("Cover set", "Cover image applied from URL", "success");
+  }
 
   async function generateAI() {
     if (!form.title) { showToast("Validation", "Enter a title first", "error"); return; }
@@ -274,6 +310,92 @@ function ArticleModal({ article, onClose, onSaved }: {
                 value={form.cover_image ?? ""}
                 onChange={url => setForm(prev => ({ ...prev, cover_image: url }))}
               />
+
+              {/* Find Cover Image / Add by URL */}
+              <div className="border-t border-border pt-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest font-display">Find Cover Image from URL</label>
+                  <div className="flex items-center gap-2">
+                    <a
+                      href={`https://unsplash.com/s/photos/${encodeURIComponent((form.title ?? "Yogyakarta") + " Yogyakarta")}`}
+                      target="_blank" rel="noopener noreferrer"
+                      className="flex items-center gap-1 px-2.5 py-1 text-[9px] font-bold bg-gray-50 text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-100 transition-colors whitespace-nowrap"
+                      title="Search Unsplash"
+                    >
+                      <ExternalLink className="w-2.5 h-2.5" /> Unsplash
+                    </a>
+                    <a
+                      href={`https://www.pexels.com/search/${encodeURIComponent((form.title ?? "Yogyakarta") + " Yogyakarta")}/`}
+                      target="_blank" rel="noopener noreferrer"
+                      className="flex items-center gap-1 px-2.5 py-1 text-[9px] font-bold bg-gray-50 text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-100 transition-colors whitespace-nowrap"
+                      title="Search Pexels"
+                    >
+                      <ExternalLink className="w-2.5 h-2.5" /> Pexels
+                    </a>
+                    <a
+                      href={`https://www.google.com/search?q=${encodeURIComponent((form.title ?? "Yogyakarta") + " Yogyakarta")}&tbm=isch`}
+                      target="_blank" rel="noopener noreferrer"
+                      className="flex items-center gap-1 px-2.5 py-1 text-[9px] font-bold bg-blue-50 text-blue-600 border border-blue-200 rounded-lg hover:bg-blue-100 transition-colors whitespace-nowrap"
+                      title="Search Google Images"
+                    >
+                      <Search className="w-2.5 h-2.5" /> Find Images
+                    </a>
+                  </div>
+                </div>
+
+                <div className="flex gap-2">
+                  <div className="flex-1 flex items-center gap-2 bg-bg rounded-xl border border-transparent focus-within:border-border px-3 py-2">
+                    <LinkIcon className="w-3.5 h-3.5 text-gray-400 shrink-0" />
+                    <input
+                      type="url"
+                      value={coverUrlInput}
+                      onChange={(e) => { setCoverUrlInput(e.target.value); setCoverUrlPreviewError(false); setCoverUrlResolved(""); }}
+                      onKeyDown={(e) => e.key === "Enter" && setCoverByUrl()}
+                      placeholder="Paste image URL here…"
+                      className="flex-1 bg-transparent text-xs outline-none font-mono text-gray-700 placeholder:text-gray-400"
+                    />
+                    {coverUrlInput && (
+                      <button
+                        onClick={() => { setCoverUrlInput(""); setCoverUrlPreviewError(false); setCoverUrlResolved(""); }}
+                        className="text-gray-400 hover:text-gray-600 text-xs cursor-pointer"
+                      >✕</button>
+                    )}
+                  </div>
+                  <button
+                    onClick={setCoverByUrl}
+                    disabled={!coverUrlInput.trim()}
+                    className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-bold bg-primary text-white rounded-xl hover:bg-primary-dark disabled:opacity-40 disabled:cursor-not-allowed transition cursor-pointer whitespace-nowrap"
+                  >
+                    <ImagePlus className="w-3.5 h-3.5" />
+                    Set
+                  </button>
+                </div>
+
+                {coverUrlInput.trim() && !coverUrlPreviewError && (
+                  <div className="flex items-start gap-3 p-3 bg-bg rounded-xl border border-border">
+                    <div className="relative w-14 h-14 rounded-lg overflow-hidden border border-border shrink-0">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={coverUrlResolved || coverUrlInput.trim()}
+                        alt="preview"
+                        className="w-full h-full object-cover"
+                        onError={() => setCoverUrlPreviewError(true)}
+                      />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-0.5">Preview</p>
+                      <p className="text-[11px] text-gray-600 truncate font-mono">{coverUrlResolved || coverUrlInput.trim()}</p>
+                      {coverUrlResolved && coverUrlResolved !== coverUrlInput.trim() && (
+                        <p className="text-[10px] text-green-600 font-semibold mt-0.5">✓ Wikipedia URL resolved to direct image</p>
+                      )}
+                      <p className="text-[10px] text-gray-400 mt-1">Press Enter or click &ldquo;Set&rdquo; to apply as cover</p>
+                    </div>
+                  </div>
+                )}
+                {coverUrlInput.trim() && coverUrlPreviewError && (
+                  <p className="text-[11px] text-red-500 font-semibold">Could not load image preview — check the URL is a direct image link.</p>
+                )}
+              </div>
               <div>
                 <label className="block text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1.5">Category</label>
                 <div className="relative">
