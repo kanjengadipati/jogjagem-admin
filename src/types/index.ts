@@ -173,6 +173,15 @@ export interface Event {
   max_attendees?: number;
   video_url?: string;
   destination_id?: string;
+  title_en?: string;
+  description_en?: string;
+  seo_title?: string;
+  seo_title_en?: string;
+  seo_description?: string;
+  seo_description_en?: string;
+  seo_keywords?: string;
+  seo_keywords_en?: string;
+  og_image_url?: string;
   highlights?: unknown[];
   badge?: string;
   badges?: string[];

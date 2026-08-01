@@ -31,18 +31,18 @@ const EVENT_STATUSES   = ["upcoming","active","popular","limited","completed","c
 type Tab = "overview" | "gallery" | "seo" | "destination";
 
 type FormState = {
-  title: string; description: string; location: string;
+  title: string; title_en: string; description: string; description_en: string; location: string;
   start_date: string; end_date: string; category: string; status: string;
   ticket_price: string; organizer: string; video_url: string;
   max_attendees: string; latitude: string; longitude: string;
-  seo_title: string; seo_keywords: string; seo_description: string; og_image_url: string;
+  seo_title: string; seo_title_en: string; seo_keywords: string; seo_keywords_en: string; seo_description: string; seo_description_en: string; og_image_url: string;
 };
 
 const EMPTY_FORM: FormState = {
-  title: "", description: "", location: "", start_date: "", end_date: "",
+  title: "", title_en: "", description: "", description_en: "", location: "", start_date: "", end_date: "",
   category: "", status: "upcoming", ticket_price: "", organizer: "",
   video_url: "", max_attendees: "", latitude: "", longitude: "",
-  seo_title: "", seo_keywords: "", seo_description: "", og_image_url: "",
+  seo_title: "", seo_title_en: "", seo_keywords: "", seo_keywords_en: "", seo_description: "", seo_description_en: "", og_image_url: "",
 };
 
 function extractYouTubeId(url: string): string {
@@ -103,6 +103,7 @@ export default function EventDetailPage() {
   const [uploading, setUploading] = useState(false);
   const [aiLoading, setAiLoading] = useState(false);
   const [tab, setTab]             = useState<Tab>("overview");
+  const [lang, setLang]           = useState<"id" | "en">("id");
   const [form, setForm]           = useState<FormState>(EMPTY_FORM);
   const [galleryImgs, setGalleryImgs] = useState<string[]>([]);
   const [urlInput, setUrlInput]   = useState("");
@@ -137,15 +138,20 @@ export default function EventDetailPage() {
         const data: Event = d?.data ?? null;
         setEvent(data);
         if (data) {
+          const cat = normalizeEventCategory(data.category ?? "");
           setForm({
-            title: data.title ?? "", description: data.description ?? "",
+            title: data.title ?? "", title_en: data.title_en ?? "",
+            description: data.description ?? "", description_en: data.description_en ?? "",
             location: data.location ?? "", start_date: data.start_date ?? "",
-            end_date: data.end_date ?? "", category: normalizeEventCategory(data.category ?? ""),
+            end_date: data.end_date ?? "", category: cat,
             status: data.status ?? "upcoming", ticket_price: data.ticket_price ?? "",
             organizer: data.organizer ?? "", video_url: data.video_url ?? "",
             max_attendees: String(data.max_attendees ?? ""),
             latitude: "", longitude: "",
-            seo_title: "", seo_keywords: "", seo_description: "", og_image_url: "",
+            seo_title: data.seo_title ?? "", seo_title_en: data.seo_title_en ?? "",
+            seo_keywords: data.seo_keywords ?? "", seo_keywords_en: data.seo_keywords_en ?? "",
+            seo_description: data.seo_description ?? "", seo_description_en: data.seo_description_en ?? "",
+            og_image_url: data.og_image_url ?? "",
           });
           setLinkedDestId(data.destination_id ?? "");
           const imgs = parseImages(data.images as never);
@@ -291,23 +297,30 @@ export default function EventDetailPage() {
     if (!form.title) { showToast("Required", "Enter a title first", "warning"); return; }
     setAiLoading(true);
     try {
-      const res = await fetch("/api/ai/generate-description", {
+      const res = await fetch("/api/ai/generate-event", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          destinationName: form.title,
+          eventTitle: form.title,
           category: form.category,
-          region: form.location,
+          location: form.location,
         }),
       });
       const data = await res.json();
-      if (data.description) {
-        setField("description", data.description);
-        showToast("AI", "Description generated", "success");
-      }
-      if (data.seoTitle) setField("seo_title", data.seoTitle);
-      if (data.seoDescription) setField("seo_description", data.seoDescription);
-      if (data.seoKeywords) setField("seo_keywords", data.seoKeywords);
+      if (data.title) setField("title", data.title);
+      if (data.title_en) setField("title_en", data.title_en);
+      if (data.description) setField("description", data.description);
+      if (data.description_en) setField("description_en", data.description_en);
+      if (data.organizer) setField("organizer", data.organizer);
+      if (data.ticket_price) setField("ticket_price", data.ticket_price);
+      if (data.seo_title) setField("seo_title", data.seo_title);
+      if (data.seo_title_en) setField("seo_title_en", data.seo_title_en);
+      if (data.seo_description) setField("seo_description", data.seo_description);
+      if (data.seo_description_en) setField("seo_description_en", data.seo_description_en);
+      if (data.seo_keywords) setField("seo_keywords", data.seo_keywords);
+      if (data.seo_keywords_en) setField("seo_keywords_en", data.seo_keywords_en);
+
+      showToast("AI", "Event content generated", "success");
     } catch {
       showToast("AI Error", "Generation failed", "error");
     } finally {
@@ -362,6 +375,9 @@ export default function EventDetailPage() {
               <h2 className="text-2xl font-extrabold font-display text-gray-900 tracking-tight">{form.title || "Event"}</h2>
             </div>
           </div>
+          <button type="button" onClick={generateAI} disabled={aiLoading} className="flex items-center gap-2 bg-primary hover:bg-primary-dark disabled:opacity-60 text-white px-4 py-2.5 rounded-xl text-xs font-semibold shadow-premium transition-premium cursor-pointer">
+            <Sparkles className="w-4 h-4" />{aiLoading ? "Generating..." : "AI Generate"}
+          </button>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
@@ -388,8 +404,20 @@ export default function EventDetailPage() {
             {tab === "overview" && (
               <div className="space-y-6">
                 <div className="bg-white p-6 rounded-card border border-border shadow-soft space-y-5">
-                  <h4 className="text-sm font-bold text-gray-800 font-display">General Information</h4>
-                  <FieldInput label="Title" value={form.title} onChange={(v) => setField("title", v)} />
+                  <div className="flex items-center justify-between">
+                    <h4 className="text-sm font-bold text-gray-800 font-display">General Information</h4>
+                    <div className="flex items-center bg-bg rounded-lg border border-border p-0.5">
+                      <button onClick={() => setLang("id")}
+                        className={`px-3 py-1 text-[11px] font-bold rounded-md transition cursor-pointer ${lang === "id" ? "bg-primary text-white" : "text-gray-500 hover:text-gray-700"}`}>
+                        ID
+                      </button>
+                      <button onClick={() => setLang("en")}
+                        className={`px-3 py-1 text-[11px] font-bold rounded-md transition cursor-pointer ${lang === "en" ? "bg-primary text-white" : "text-gray-500 hover:text-gray-700"}`}>
+                        EN
+                      </button>
+                    </div>
+                  </div>
+                  <FieldInput label={lang === "id" ? "Title" : "Title (EN)"} value={lang === "id" ? form.title : form.title_en} onChange={(v) => setField(lang === "id" ? "title" : "title_en", v)} />
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                     <div className="space-y-1.5">
                       <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest font-display block">Category</label>
@@ -397,6 +425,9 @@ export default function EventDetailPage() {
                         className="w-full bg-bg focus:bg-white text-xs px-3.5 py-3.5 rounded-xl border border-transparent focus:border-border outline-none font-semibold text-gray-700">
                         <option value="">— Select —</option>
                         {EVENT_CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
+                        {form.category && !EVENT_CATEGORIES.includes(form.category) && (
+                          <option value={form.category}>{form.category} (Raw)</option>
+                        )}
                       </select>
                     </div>
                     <div className="space-y-1.5">
@@ -410,22 +441,13 @@ export default function EventDetailPage() {
                   <FieldInput label="Location / Venue" value={form.location} onChange={(v) => setField("location", v)} />
                   <div className="space-y-1.5">
                     <div className="flex items-center justify-between">
-                      <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest font-display block">Description</label>
-                      <button
-                        type="button"
-                        onClick={generateAI}
-                        disabled={aiLoading}
-                        title="Generate description with AI"
-                        className="flex items-center gap-1 text-[10px] font-bold text-primary hover:text-primary/80 transition cursor-pointer disabled:opacity-50"
-                      >
-                        {aiLoading
-                          ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                          : <Sparkles className="w-3.5 h-3.5" />}
-                        {aiLoading ? "Generating…" : "AI Generate"}
-                      </button>
-                    </div>
-                    <textarea value={form.description} onChange={(e) => setField("description", e.target.value)} rows={5}
-                      className="w-full bg-bg focus:bg-white text-xs p-4 rounded-xl border border-transparent focus:border-border outline-none font-medium leading-relaxed" />
+                    <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest font-display block">
+                      {lang === "id" ? "Description" : "Description (EN)"}
+                    </label>
+                  </div>
+                  <textarea value={lang === "id" ? form.description : form.description_en} onChange={(e) => setField(lang === "id" ? "description" : "description_en", e.target.value)} rows={5}
+                    className="w-full bg-bg focus:bg-white text-xs p-4 rounded-xl border border-transparent focus:border-border outline-none font-medium leading-relaxed" />
+
                   </div>
                 </div>
 

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { useEffect, useState, useCallback, useRef } from "react";
+import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import Header from "@/components/Header";
 import Pagination from "@/components/Pagination";
 import { useToast } from "@/components/Toast";
@@ -18,6 +19,12 @@ const RATING_OPTIONS = [
   { value: "high", label: "High (4.5+)" },
   { value: "mid",  label: "Mid (3.5–4.5)" },
   { value: "low",  label: "Low (< 3.5)" },
+];
+
+const STATUS_OPTIONS = [
+  { value: "", label: "All Statuses" },
+  { value: "published", label: "Published" },
+  { value: "draft", label: "Draft" },
 ];
 
 /* ------------------------------------------------------------------ */
@@ -79,12 +86,18 @@ function matchesRating(rating: number | undefined, filter: string): boolean {
   return true;
 }
 
-function applyFilters(all: Destination[], search: string, category: string, region: string, rating: string): Destination[] {
+function matchesStatus(d: Destination, filter: string): boolean {
+  if (!filter) return true;
+  return (d.status ?? "published").toLowerCase() === filter.toLowerCase();
+}
+
+function applyFilters(all: Destination[], search: string, category: string, region: string, rating: string, status: string): Destination[] {
   return all.filter(d =>
     matchesSearch(d, search) &&
     matchesCategory(d, category) &&
     matchesRegion(d.sub_region, region) &&
-    matchesRating(d.rating, rating)
+    matchesRating(d.rating, rating) &&
+    matchesStatus(d, status)
   );
 }
 
@@ -100,12 +113,29 @@ export default function DestinationsPage() {
   const [loading,   setLoading]   = useState(true);
   const [exporting, setExporting] = useState(false);
 
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const pathname = usePathname();
+
   // ── Filter / page state ─────────────────────────────────────────────────────
   const [page,     setPage]     = useState(1);
-  const [search,   setSearch]   = useState("");
-  const [category, setCategory] = useState("");
-  const [region,   setRegion]   = useState("");
-  const [rating,   setRating]   = useState("");
+  const [search,   setSearch]   = useState(searchParams.get("search") || "");
+  const [category, setCategory] = useState(searchParams.get("category") || "");
+  const [region,   setRegion]   = useState(searchParams.get("region") || "");
+  const [rating,   setRating]   = useState(searchParams.get("rating") || "");
+  const [status,   setStatus]   = useState(searchParams.get("status") || "");
+
+  // Sync filters to URL
+  useEffect(() => {
+    const params = new URLSearchParams();
+    if (search)   params.set("search", search);
+    if (category) params.set("category", category);
+    if (region)   params.set("region", region);
+    if (rating)   params.set("rating", rating);
+    if (status)   params.set("status", status);
+    
+    router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+  }, [search, category, region, rating, status, router, pathname]);
 
   // Track whether we've done the initial full fetch
   const didInit = useRef(false);
@@ -147,8 +177,8 @@ export default function DestinationsPage() {
   useEffect(() => { setPage(1); }, [search, category, region, rating]);
 
   // ── Filtered + paginated ────────────────────────────────────────────────────
-  const filtered = applyFilters(allItems, search, category, region, rating);
-  const anyFilter = !!(search || category || region || rating);
+  const filtered = applyFilters(allItems, search, category, region, rating, status);
+  const anyFilter = !!(search || category || region || rating || status);
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const safePage = Math.min(page, totalPages);
   const paged = filtered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
@@ -163,8 +193,8 @@ export default function DestinationsPage() {
   async function exportCSV() {
     setExporting(true);
     try {
-      const rows = [["Name","Category","Region","Rating","Reviews"]];
-      filtered.forEach(d => rows.push([d.name, d.category ?? "", d.sub_region ?? "", String(d.rating ?? 0), String(d.review_count ?? 0)]));
+      const rows = [["Name","Category","Region","Rating","Reviews","Status"]];
+      filtered.forEach(d => rows.push([d.name, d.category ?? "", d.sub_region ?? "", String(d.rating ?? 0), String(d.review_count ?? 0), d.status ?? ""]));
       const csv = rows.map(r => r.map(v => `"${v}"`).join(",")).join("\n");
       const a   = document.createElement("a");
       a.href    = "data:text/csv;charset=utf-8," + encodeURIComponent(csv);
@@ -178,7 +208,7 @@ export default function DestinationsPage() {
     }
   }
 
-  const clearFilters = () => { setSearch(""); setCategory(""); setRegion(""); setRating(""); };
+  const clearFilters = () => { setSearch(""); setCategory(""); setRegion(""); setRating(""); setStatus(""); };
 
   return (
     <>
@@ -218,7 +248,7 @@ export default function DestinationsPage() {
         </div>
 
         {/* Filters */}
-        <div className="bg-white p-5 rounded-card border border-border shadow-soft grid grid-cols-1 md:grid-cols-5 gap-4">
+        <div className="bg-white p-5 rounded-card border border-border shadow-soft grid grid-cols-1 md:grid-cols-6 gap-4">
           <div className="relative md:col-span-2">
             <Search className="absolute inset-y-0 left-3 my-auto w-4 h-4 text-gray-400 pointer-events-none" />
             <input
@@ -237,10 +267,14 @@ export default function DestinationsPage() {
             <option value="">All Regions</option>
             {REGIONS.map(r => <option key={r} value={r}>{r}</option>)}
           </select>
+          <select value={rating} onChange={e => setRating(e.target.value)}
+            className="w-full bg-bg focus:bg-white text-xs px-3.5 py-2.5 rounded-xl border border-transparent focus:border-border outline-none font-semibold text-gray-700 cursor-pointer">
+            {RATING_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+          </select>
           <div className="flex gap-2">
-            <select value={rating} onChange={e => setRating(e.target.value)}
+            <select value={status} onChange={e => setStatus(e.target.value)}
               className="flex-1 bg-bg focus:bg-white text-xs px-3.5 py-2.5 rounded-xl border border-transparent focus:border-border outline-none font-semibold text-gray-700 cursor-pointer">
-              {RATING_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+              {STATUS_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
             </select>
             {anyFilter && (
               <button

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback, useRef } from "react";
+import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import Header from "@/components/Header";
@@ -58,15 +59,28 @@ function applyFilters(all: Event[], search: string, category: string, status: st
 
 export default function EventsPage() {
   const { showToast } = useToast();
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const pathname = usePathname();
 
   const [allItems,  setAllItems]  = useState<Event[]>([]);
   const [loading,   setLoading]   = useState(true);
   const [exporting, setExporting] = useState(false);
 
   const [page,     setPage]     = useState(1);
-  const [search,   setSearch]   = useState("");
-  const [category, setCategory] = useState("");
-  const [status,   setStatus]   = useState("");
+  const [search,   setSearch]   = useState(searchParams.get("search") || "");
+  const [category, setCategory] = useState(searchParams.get("category") || "");
+  const [status,   setStatus]   = useState(searchParams.get("status") || "");
+
+  // Sync filters to URL
+  useEffect(() => {
+    const params = new URLSearchParams();
+    if (search)   params.set("search", search);
+    if (category) params.set("category", category);
+    if (status)   params.set("status", status);
+    
+    router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+  }, [search, category, status, router, pathname]);
 
   const didInit = useRef(false);
 
