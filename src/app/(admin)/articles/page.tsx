@@ -313,34 +313,32 @@ function ArticleModal({ article, onClose, onSaved }: {
 
               {/* Find Cover Image / Add by URL */}
               <div className="border-t border-border pt-4 space-y-3">
-                <div className="flex items-center justify-between">
-                  <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest font-display">Find Cover Image from URL</label>
-                  <div className="flex items-center gap-2">
-                    <a
-                      href={`https://unsplash.com/s/photos/${encodeURIComponent((form.title ?? "Yogyakarta") + " Yogyakarta")}`}
-                      target="_blank" rel="noopener noreferrer"
-                      className="flex items-center gap-1 px-2.5 py-1 text-[9px] font-bold bg-gray-50 text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-100 transition-colors whitespace-nowrap"
-                      title="Search Unsplash"
-                    >
-                      <ExternalLink className="w-2.5 h-2.5" /> Unsplash
-                    </a>
-                    <a
-                      href={`https://www.pexels.com/search/${encodeURIComponent((form.title ?? "Yogyakarta") + " Yogyakarta")}/`}
-                      target="_blank" rel="noopener noreferrer"
-                      className="flex items-center gap-1 px-2.5 py-1 text-[9px] font-bold bg-gray-50 text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-100 transition-colors whitespace-nowrap"
-                      title="Search Pexels"
-                    >
-                      <ExternalLink className="w-2.5 h-2.5" /> Pexels
-                    </a>
-                    <a
-                      href={`https://www.google.com/search?q=${encodeURIComponent((form.title ?? "Yogyakarta") + " Yogyakarta")}&tbm=isch`}
-                      target="_blank" rel="noopener noreferrer"
-                      className="flex items-center gap-1 px-2.5 py-1 text-[9px] font-bold bg-blue-50 text-blue-600 border border-blue-200 rounded-lg hover:bg-blue-100 transition-colors whitespace-nowrap"
-                      title="Search Google Images"
-                    >
-                      <Search className="w-2.5 h-2.5" /> Find Images
-                    </a>
-                  </div>
+                <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest font-display">Find Cover Image from URL</label>
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <a
+                    href={`https://unsplash.com/s/photos/${encodeURIComponent((form.title ?? "Yogyakarta") + " Yogyakarta")}`}
+                    target="_blank" rel="noopener noreferrer"
+                    className="flex items-center gap-1 px-2.5 py-1 text-[9px] font-bold bg-gray-50 text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-100 transition-colors whitespace-nowrap"
+                    title="Search Unsplash"
+                  >
+                    <ExternalLink className="w-2.5 h-2.5" /> Unsplash
+                  </a>
+                  <a
+                    href={`https://www.pexels.com/search/${encodeURIComponent((form.title ?? "Yogyakarta") + " Yogyakarta")}/`}
+                    target="_blank" rel="noopener noreferrer"
+                    className="flex items-center gap-1 px-2.5 py-1 text-[9px] font-bold bg-gray-50 text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-100 transition-colors whitespace-nowrap"
+                    title="Search Pexels"
+                  >
+                    <ExternalLink className="w-2.5 h-2.5" /> Pexels
+                  </a>
+                  <a
+                    href={`https://www.google.com/search?q=${encodeURIComponent((form.title ?? "Yogyakarta") + " Yogyakarta")}&tbm=isch`}
+                    target="_blank" rel="noopener noreferrer"
+                    className="flex items-center gap-1 px-2.5 py-1 text-[9px] font-bold bg-blue-50 text-blue-600 border border-blue-200 rounded-lg hover:bg-blue-100 transition-colors whitespace-nowrap"
+                    title="Search Google Images"
+                  >
+                    <Search className="w-2.5 h-2.5" /> Find Images
+                  </a>
                 </div>
 
                 <div className="flex gap-2">
