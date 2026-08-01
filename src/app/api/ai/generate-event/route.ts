@@ -28,5 +28,37 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "AI generation failed" }, { status: 502 });
   }
 
-  return NextResponse.json(data);
+  type GenEventData = {
+    data?: {
+      title?: string;
+      title_en?: string;
+      description?: string;
+      description_en?: string;
+      organizer?: string;
+      ticket_price?: string;
+      seo_title?: string;
+      seo_title_en?: string;
+      seo_description?: string;
+      seo_description_en?: string;
+      seo_keywords?: string;
+      seo_keywords_en?: string;
+    };
+  };
+
+  const d = (data as GenEventData)?.data ?? {};
+
+  return NextResponse.json({
+    title: d.title ?? "",
+    title_en: d.title_en ?? "",
+    description: d.description ?? "",
+    description_en: d.description_en ?? "",
+    organizer: d.organizer ?? "",
+    ticket_price: d.ticket_price ?? "",
+    seo_title: d.seo_title ?? "",
+    seo_title_en: d.seo_title_en ?? "",
+    seo_description: d.seo_description ?? "",
+    seo_description_en: d.seo_description_en ?? "",
+    seo_keywords: d.seo_keywords ?? "",
+    seo_keywords_en: d.seo_keywords_en ?? "",
+  });
 }
