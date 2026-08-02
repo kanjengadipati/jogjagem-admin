@@ -22,6 +22,7 @@ import {
   BookOpen,
   Loader2,
 } from "lucide-react";
+import { useSearchParams } from "next/navigation";
 import type { Partner } from "@/types";
 
 interface ListingStats {
@@ -32,6 +33,8 @@ interface ListingStats {
 
 export default function PartnerOverviewPage() {
   const { showToast } = useToast();
+  const searchParams = useSearchParams();
+  const placement = searchParams?.get("placement") || "";
   const [listings, setListings] = useState<Partner[]>([]);
   const [stats, setStats] = useState<Record<string, ListingStats>>({});
   const [loading, setLoading] = useState(true);
@@ -112,6 +115,31 @@ export default function PartnerOverviewPage() {
     <>
       <PartnerHeader />
       <main className="flex-1 overflow-y-auto bg-[#F9F9FB] p-6 md:p-8 space-y-6">
+
+        {/* ── Ad Placement Action Card (when redirected from /ads) ── */}
+        {placement && (
+          <div className="bg-gradient-to-r from-amber-500 via-amber-600 to-amber-700 rounded-3xl p-6 text-white shadow-md space-y-3 border border-amber-400/40">
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center">
+                <Megaphone className="w-4 h-4 text-white" />
+              </div>
+              <h3 className="font-extrabold text-base tracking-tight">
+                Pemasangan Iklan: <span className="underline decoration-amber-300 uppercase">{placement.replace("_", " ")}</span>
+              </h3>
+            </div>
+            <p className="text-xs text-amber-100 leading-relaxed max-w-xl">
+              Usaha Anda sudah siap! Klik tombol di bawah untuk mengunggah materi banner dan melengkapi detail target tayang iklan.
+            </p>
+            <div className="pt-1">
+              <Link
+                href={`/business/promotions?placement=${encodeURIComponent(placement)}`}
+                className="inline-flex items-center gap-2 px-5 py-2.5 bg-white text-amber-950 font-extrabold text-xs rounded-xl hover:bg-amber-50 shadow-sm transition-all"
+              >
+                <span>Mulai Racik Banner Iklan →</span>
+              </Link>
+            </div>
+          </div>
+        )}
 
         {/* ── Pending Verification Alert Banner ── */}
         {isPending && (
