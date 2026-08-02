@@ -284,6 +284,7 @@ export default function DestinationDetailPage() {
   });
 
   async function save() {
+    console.log("Saving destination...");
     setSaving(true);
     try {
       const images = galleryImgs.map((url) => ({ url, credit: "Admin" }));
@@ -303,17 +304,22 @@ export default function DestinationDetailPage() {
         payload.google_review_count = reviewCount;
       }
 
+      console.log("Payload:", payload);
       const res = await fetch(`/api/destinations/${id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
+      console.log("Save response:", res.status);
       if (res.ok) {
         showToast("Saved", "Destination updated successfully", "success");
       } else {
+        const errorData = await res.json().catch(() => ({}));
+        console.error("Save failed:", errorData);
         showToast("Error", "Save failed", "error");
       }
-    } catch {
+    } catch (err) {
+      console.error("Network error during save:", err);
       showToast("Error", "Network error", "error");
     } finally {
       setSaving(false);
@@ -400,6 +406,7 @@ export default function DestinationDetailPage() {
   }
 
   async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    console.log("File change detected");
     const files = Array.from(e.target.files ?? []);
     if (!files.length) return;
     setUploading(true);
@@ -408,9 +415,12 @@ export default function DestinationDetailPage() {
     const uploaded: string[] = [];
     for (const file of files) {
       try {
+        console.log("Uploading file:", file.name);
         const url = await uploadToCloudinary(file);
+        console.log("Upload successful:", url);
         uploaded.push(url);
       } catch (err) {
+        console.error("Upload failed:", err);
         showToast("Upload failed", err instanceof Error ? err.message : "Unknown error", "error");
       }
     }
