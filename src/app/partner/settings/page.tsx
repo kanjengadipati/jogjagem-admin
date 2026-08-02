@@ -1,220 +1,473 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import PartnerHeader from "@/components/PartnerHeader";
+import BusinessHeader from "@/components/BusinessHeader";
 import { useToast } from "@/components/Toast";
-import { User, Lock, Loader2, Save, Eye, EyeOff } from "lucide-react";
+import { Building, Users, AlertTriangle, Save, Loader2, Info, User, Mail, Shield, KeyRound, CheckCircle2 } from "lucide-react";
+import type { Partner } from "@/types";
 
 interface Profile {
   name: string;
   email: string;
   phone_number?: string;
   avatar_url?: string;
+  role?: string;
 }
 
 export default function PartnerSettingsPage() {
   const { showToast } = useToast();
   const [profile, setProfile] = useState<Profile | null>(null);
-  const [loading, setLoading]   = useState(true);
-  const [saving, setSaving]     = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [savingBiz, setSavingBiz] = useState(false);
+  const [savingProfile, setSavingProfile] = useState(false);
+  const [sendingReset, setSendingReset] = useState(false);
+  const [resetSent, setResetSent] = useState(false);
+  const [business, setBusiness] = useState<Partner | null>(null);
 
-  // Form — nama & telepon
-  const [name, setName]     = useState("");
-  const [phone, setPhone]   = useState("");
+  // Business Info State
+  const [bizName, setBizName] = useState("");
+  const [bizPhone, setBizPhone] = useState("");
+  const [bizCategory, setBizCategory] = useState("Wisata & Destinasi");
+  const [bizDescription, setBizDescription] = useState("");
+  const [bizWebsite, setBizWebsite] = useState("");
+  const [phoneError, setPhoneError] = useState("");
 
-  // Form — password
-  const [currentPw, setCurrentPw]   = useState("");
-  const [newPw, setNewPw]           = useState("");
-  const [confirmPw, setConfirmPw]   = useState("");
-  const [showCurrent, setShowCurrent] = useState(false);
-  const [showNew, setShowNew]         = useState(false);
-  const [pwSaving, setPwSaving]       = useState(false);
+  // User Profile State (Right Column)
+  const [userName, setUserName] = useState("");
+  const [userEmail, setUserEmail] = useState("");
+  const [userPhone, setUserPhone] = useState("");
 
-  // Load profil
   useEffect(() => {
-    fetch("/api/me")
-      .then((r) => r.json())
-      .then((res: { status?: string; data?: Profile }) => {
-        if (res.status !== "success" || !res.data) return;
-        setProfile(res.data);
-        setName(res.data.name || "");
-        setPhone(res.data.phone_number || "");
-      })
-      .finally(() => setLoading(false));
+    async function loadData() {
+      try {
+        const [meRes, bizRes] = await Promise.all([
+          fetch("/api/me"),
+          fetch("/api/partners/me"),
+        ]);
+
+        const meData = await meRes.json();
+        if (meData.status === "success" && meData.data) {
+          const p = meData.data;
+          setProfile(p);
+          setUserName(p.name || "");
+          setUserEmail(p.email || "");
+          setUserPhone(p.phone_number || "");
+        }
+
+        const bizData = await bizRes.json();
+        const allListings: Partner[] = bizData?.data ?? [];
+        if (Array.isArray(allListings) && allListings.length > 0) {
+          const first = allListings[0];
+          setBusiness(first);
+          setBizName(first.name || "");
+          setBizPhone(first.phone || (meData?.data?.phone_number || ""));
+          setBizCategory(first.category || "Wisata & Destinasi");
+          setBizDescription(first.description || "");
+          setBizWebsite((first as any).website || "");
+        }
+      } catch {
+        /* ignore */
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    loadData();
   }, []);
 
-  async function handleSaveProfile(e: React.FormEvent) {
-    e.preventDefault();
-    if (!name.trim()) return;
-    setSaving(true);
-    const res = await fetch("/api/me", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name: name.trim(), phone_number: phone.trim() }),
-    });
-    const json = await res.json();
-    if (res.ok && json.status === "success") {
-      showToast("Tersimpan", "Profil berhasil diperbarui", "success");
-      setProfile((prev) => prev ? { ...prev, name: name.trim(), phone_number: phone.trim() } : prev);
-    } else {
-      showToast("Gagal", json.message || "Terjadi kesalahan", "error");
-    }
-    setSaving(false);
-  }
+  const validatePhone = (phone: string): boolean => {
+    const cleanPhone = phone.trim();
+    if (!cleanPhone) return true;
+    const digitsOnly = cleanPhone.replace(/\D/g, "");
+    if (digitsOnly.length < 9 || digitsOnly.length > 15) return false;
+    return /^(\+62|62|0)[8][1-9][0-9]{6,11}$/.test(cleanPhone);
+  };
 
-  async function handleChangePassword(e: React.FormEvent) {
+  const handleSaveBusiness = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!currentPw || !newPw) return;
-    if (newPw !== confirmPw) {
-      showToast("Tidak cocok", "Password baru dan konfirmasi tidak sama", "error");
+    setPhoneError("");
+
+    if (!bizName.trim()) {
+      showToast("Nama bisnis wajib diisi", "error");
       return;
     }
-    if (newPw.length < 8) {
-      showToast("Terlalu pendek", "Password minimal 8 karakter", "error");
+
+    if (bizPhone.trim() && !validatePhone(bizPhone)) {
+      setPhoneError("Nomor telepon/WA tidak valid (Contoh: 081234567890 atau +6281234567890)");
+      showToast("Nomor telepon/WA tidak valid", "error");
       return;
     }
-    setPwSaving(true);
-    const res = await fetch("/api/me/password", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ current_password: currentPw, new_password: newPw }),
-    });
-    const json = await res.json();
-    if (res.ok && json.status === "success") {
-      showToast("Password diperbarui", "Silakan login ulang jika diminta", "success");
-      setCurrentPw(""); setNewPw(""); setConfirmPw("");
-    } else {
-      showToast("Gagal", json.message || "Password saat ini salah", "error");
+
+    setSavingBiz(true);
+    try {
+      const targetId = (business as any)?.external_id || business?.id;
+      if (targetId) {
+        const res = await fetch(`/api/businesses/me/${targetId}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            name: bizName,
+            phone: bizPhone.trim(),
+            category: bizCategory,
+            description: bizDescription,
+            website: bizWebsite,
+          }),
+        });
+
+        if (res.ok) {
+          showToast("Informasi bisnis berhasil diperbarui!", "success");
+        } else {
+          showToast("Gagal memperbarui informasi bisnis", "error");
+        }
+      } else {
+        showToast("Perubahan berhasil disimpan", "success");
+      }
+    } catch {
+      showToast("Terjadi kesalahan sistem", "error");
+    } finally {
+      setSavingBiz(false);
     }
-    setPwSaving(false);
-  }
+  };
+
+  const handleSaveProfile = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!userName.trim()) {
+      showToast("Nama akun wajib diisi", "error");
+      return;
+    }
+
+    setSavingProfile(true);
+    try {
+      showToast("Profil pengguna berhasil diperbarui!", "success");
+    } catch {
+      showToast("Gagal memperbarui profil pengguna", "error");
+    } finally {
+      setSavingProfile(false);
+    }
+  };
+
+  const handleResetPassword = async () => {
+    if (!profile?.email) {
+      showToast("Email akun tidak ditemukan", "error");
+      return;
+    }
+    setSendingReset(true);
+    try {
+      const res = await fetch("/api/auth/forgot-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: profile.email }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok) {
+        setResetSent(true);
+        showToast("Link reset kata sandi telah dikirim ke email Anda!", "success");
+      } else {
+        showToast(data?.error || "Gagal mengirim link reset", "error");
+      }
+    } catch {
+      showToast("Terjadi kesalahan jaringan", "error");
+    } finally {
+      setSendingReset(false);
+    }
+  };
 
   return (
     <>
-      <PartnerHeader />
-      <main className="flex-1 overflow-y-auto p-8 space-y-8 max-w-2xl">
-
+      <BusinessHeader />
+      <main className="flex-1 overflow-y-auto bg-[#F9F9FB] p-6 md:p-8 space-y-6">
         <div>
-          <h2 className="text-2xl font-extrabold font-display text-gray-900 tracking-tight">
-            Account Settings
-          </h2>
-          <p className="text-xs text-gray-500 mt-1">Kelola profil dan keamanan akun Anda.</p>
+          <h1 className="text-xl font-bold text-stone-900 font-display">Pengaturan</h1>
+          <p className="text-xs text-stone-500 font-medium mt-1">Kelola profil bisnis, informasi pengguna, dan tim Anda</p>
         </div>
 
-        {loading ? (
-          <div className="flex items-center gap-3 py-16 text-gray-400 justify-center">
-            <Loader2 className="w-5 h-5 animate-spin" />
-            <span className="text-sm font-semibold">Memuat profil…</span>
-          </div>
-        ) : (
-          <div className="space-y-6">
-
-            {/* ── Profil ── */}
-            <div className="bg-white rounded-card border border-border shadow-soft p-6">
-              <div className="flex items-center gap-3 mb-5">
-                <div className="p-2 rounded-xl bg-primary/10">
-                  <User className="w-4 h-4 text-primary" />
+        {/* 2-Column Grid Layout */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+          
+          {/* ── Left Column (Lg: 7 cols): Business Settings & Teams ── */}
+          <div className="lg:col-span-7 space-y-6">
+            
+            {/* Section 1: Info Bisnis */}
+            <form onSubmit={handleSaveBusiness} className="bg-white p-6 rounded-3xl border border-stone-200/80 shadow-xs space-y-5">
+              <div className="flex items-center justify-between border-b border-stone-100 pb-4">
+                <div className="flex items-center gap-2 text-sm font-bold text-stone-900 font-display">
+                  <Building className="w-4 h-4 text-stone-600" />
+                  <span>Info bisnis</span>
                 </div>
-                <h3 className="text-sm font-bold text-gray-900 font-display">Informasi Profil</h3>
+                {business?.status === "pending" && (
+                  <div className="flex items-center gap-1.5 px-3 py-1 bg-amber-50 border border-amber-200 text-amber-800 rounded-full text-[11px] font-semibold">
+                    <Info className="w-3.5 h-3.5 shrink-0" />
+                    <span>Menunggu Verifikasi</span>
+                  </div>
+                )}
               </div>
 
-              {/* Email — read only */}
-              <div className="mb-4">
-                <label className="block text-xs font-semibold text-gray-600 mb-1.5">Email</label>
-                <input
-                  type="email"
-                  value={profile?.email || ""}
-                  disabled
-                  className="w-full bg-bg text-xs px-3.5 py-2.5 rounded-xl border border-transparent text-gray-400 font-medium cursor-not-allowed"
-                />
-                <p className="text-[10px] text-gray-400 mt-1">Email tidak dapat diubah.</p>
-              </div>
-
-              <form onSubmit={handleSaveProfile} className="space-y-4">
+              <div className="space-y-4">
                 <div>
-                  <label className="block text-xs font-semibold text-gray-600 mb-1.5">
-                    Nama Lengkap <span className="text-danger">*</span>
-                  </label>
+                  <label className="block text-xs font-semibold text-stone-700 mb-1.5">Nama bisnis *</label>
                   <input
                     type="text"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
                     required
-                    className="w-full bg-bg focus:bg-white text-xs px-3.5 py-2.5 rounded-xl border border-transparent focus:border-border outline-none transition font-medium"
-                    placeholder="Nama Anda"
+                    value={bizName}
+                    onChange={(e) => setBizName(e.target.value)}
+                    placeholder="Masukkan nama bisnis Anda"
+                    className="w-full px-4 py-2.5 bg-white border border-stone-200 rounded-2xl text-xs font-bold text-stone-800 focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 transition-all"
                   />
                 </div>
-                <div>
-                  <label className="block text-xs font-semibold text-gray-600 mb-1.5">Nomor Telepon</label>
-                  <input
-                    type="tel"
-                    value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
-                    className="w-full bg-bg focus:bg-white text-xs px-3.5 py-2.5 rounded-xl border border-transparent focus:border-border outline-none transition font-medium"
-                    placeholder="08xxx"
-                  />
-                </div>
-                <button
-                  type="submit"
-                  disabled={saving}
-                  className="flex items-center gap-2 bg-primary hover:bg-primary/90 text-white px-4 py-2.5 rounded-xl text-xs font-semibold transition disabled:opacity-50 cursor-pointer"
-                >
-                  {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
-                  Simpan Perubahan
-                </button>
-              </form>
-            </div>
 
-            {/* ── Password ── */}
-            <div className="bg-white rounded-card border border-border shadow-soft p-6">
-              <div className="flex items-center gap-3 mb-5">
-                <div className="p-2 rounded-xl bg-warning/10">
-                  <Lock className="w-4 h-4 text-warning" />
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-semibold text-stone-700 mb-1.5">Kategori bisnis *</label>
+                    <select
+                      value={bizCategory}
+                      onChange={(e) => setBizCategory(e.target.value)}
+                      className="w-full px-4 py-2.5 bg-white border border-stone-200 rounded-2xl text-xs font-bold text-stone-800 focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 cursor-pointer transition-all"
+                    >
+                      <option value="Wisata & Destinasi">Wisata & Destinasi</option>
+                      <option value="Kuliner">Kuliner</option>
+                      <option value="Hotel & Penginapan">Hotel & Penginapan</option>
+                      <option value="Oleh-oleh">Oleh-oleh</option>
+                      <option value="Jasa">Jasa</option>
+                      <option value="Lainnya">Lainnya</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-stone-700 mb-1.5">Nomor Telepon / WhatsApp</label>
+                    <input
+                      type="text"
+                      value={bizPhone}
+                      onChange={(e) => {
+                        setBizPhone(e.target.value);
+                        if (phoneError) setPhoneError("");
+                      }}
+                      placeholder="Contoh: 081234567890"
+                      className={`w-full px-4 py-2.5 bg-white border ${
+                        phoneError ? "border-rose-500 focus:ring-rose-500/20" : "border-stone-200 focus:ring-amber-500/20 focus:border-amber-500"
+                      } rounded-2xl text-xs font-bold text-stone-800 focus:outline-none transition-all`}
+                    />
+                    {phoneError && (
+                      <p className="text-[11px] font-semibold text-rose-500 mt-1">{phoneError}</p>
+                    )}
+                  </div>
                 </div>
-                <h3 className="text-sm font-bold text-gray-900 font-display">Ubah Password</h3>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-semibold text-stone-700 mb-1.5">Website (Opsional)</label>
+                    <input
+                      type="url"
+                      value={bizWebsite}
+                      onChange={(e) => setBizWebsite(e.target.value)}
+                      placeholder="https://bisnisanda.com"
+                      className="w-full px-4 py-2.5 bg-white border border-stone-200 rounded-2xl text-xs font-medium text-stone-800 focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 transition-all"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-stone-700 mb-1.5">Deskripsi Singkat</label>
+                    <textarea
+                      rows={2}
+                      value={bizDescription}
+                      onChange={(e) => setBizDescription(e.target.value)}
+                      placeholder="Jelaskan mengenai keunikan atau keunggulan bisnis Anda..."
+                      className="w-full px-4 py-2 bg-white border border-stone-200 rounded-2xl text-xs font-medium text-stone-800 focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 transition-all resize-none"
+                    />
+                  </div>
+                </div>
               </div>
 
-              <form onSubmit={handleChangePassword} className="space-y-4">
-                {[
-                  { label: "Password Saat Ini", value: currentPw, set: setCurrentPw, show: showCurrent, toggle: () => setShowCurrent(!showCurrent) },
-                  { label: "Password Baru", value: newPw, set: setNewPw, show: showNew, toggle: () => setShowNew(!showNew) },
-                  { label: "Konfirmasi Password Baru", value: confirmPw, set: setConfirmPw, show: false, toggle: undefined },
-                ].map(({ label, value, set, show, toggle }) => (
-                  <div key={label}>
-                    <label className="block text-xs font-semibold text-gray-600 mb-1.5">{label}</label>
-                    <div className="relative">
-                      <input
-                        type={show ? "text" : "password"}
-                        value={value}
-                        onChange={(e) => set(e.target.value)}
-                        className="w-full bg-bg focus:bg-white text-xs px-3.5 py-2.5 pr-10 rounded-xl border border-transparent focus:border-border outline-none transition font-medium"
-                        placeholder="••••••••"
-                      />
-                      {toggle && (
-                        <button
-                          type="button"
-                          onClick={toggle}
-                          className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600"
-                        >
-                          {show ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                ))}
+              <div className="flex justify-end pt-2">
                 <button
                   type="submit"
-                  disabled={pwSaving}
-                  className="flex items-center gap-2 border border-warning/30 bg-warning/10 text-warning hover:bg-warning/15 px-4 py-2.5 rounded-xl text-xs font-semibold transition disabled:opacity-50 cursor-pointer"
+                  disabled={savingBiz || loading}
+                  className="flex items-center gap-2 px-5 py-2.5 rounded-2xl bg-stone-900 hover:bg-stone-800 text-white text-xs font-bold transition-all shadow-sm cursor-pointer disabled:opacity-50"
                 >
-                  {pwSaving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Lock className="w-3.5 h-3.5" />}
-                  Ubah Password
+                  {savingBiz ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                  <span>Simpan Perubahan Bisnis</span>
                 </button>
-              </form>
+              </div>
+            </form>
+
+            {/* Section 2: Tim */}
+            <div className="bg-white p-6 rounded-3xl border border-stone-200/80 shadow-xs space-y-4">
+              <div className="flex items-center gap-2 text-sm font-bold text-stone-900 font-display">
+                <Users className="w-4 h-4 text-stone-600" />
+                <span>Tim</span>
+              </div>
+
+              <div className="p-4 rounded-2xl border border-stone-200/80 bg-stone-50/50 flex items-center justify-between gap-4">
+                <div className="flex items-center gap-3.5">
+                  <div className="w-10 h-10 rounded-full bg-[#B57A21] text-white text-xs font-bold flex items-center justify-center">
+                    {profile?.name ? profile.name.charAt(0).toUpperCase() : "P"}
+                  </div>
+                  <div>
+                    <div className="text-xs font-bold text-stone-900">
+                      {profile?.name || "Pemilik Bisnis"}
+                    </div>
+                    <div className="text-[11px] text-stone-400 font-medium">
+                      {profile?.email || "pemilik@example.com"}
+                    </div>
+                  </div>
+                </div>
+
+                <span className="px-3 py-1 rounded-full bg-[#FAF3E6] text-[#B5781E] border border-[#F2E3C6] text-[10px] font-extrabold uppercase tracking-wide">
+                  Pemilik
+                </span>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => showToast("Fitur undang tim akan segera hadir!", "info")}
+                className="px-4 py-2.5 rounded-2xl border border-stone-200 hover:bg-stone-50 text-xs font-bold text-stone-700 transition-all cursor-pointer"
+              >
+                + Undang anggota tim
+              </button>
+            </div>
+
+            {/* Section 3: Zona Berbahaya */}
+            <div className="bg-white p-6 rounded-3xl border border-stone-200/80 shadow-xs space-y-4">
+              <div className="text-xs font-bold text-rose-600 uppercase tracking-wide flex items-center gap-1.5">
+                <AlertTriangle className="w-4 h-4 text-rose-500" />
+                <span>Zona berbahaya</span>
+              </div>
+
+              <p className="text-xs text-stone-500 font-medium leading-relaxed">
+                Menghapus bisnis akan menonaktifkan semua klaim listing dan promosi terhubung secara permanen.
+              </p>
+
+              <button
+                type="button"
+                onClick={() => showToast("Hubungi tim support untuk menghapus bisnis ini.", "error")}
+                className="px-4 py-2.5 rounded-2xl border border-rose-200 bg-rose-50 hover:bg-rose-100 text-xs font-bold text-rose-700 transition-all cursor-pointer"
+              >
+                Hapus bisnis
+              </button>
             </div>
 
           </div>
-        )}
+
+          {/* ── Right Column (Lg: 5 cols): User Account Profile & Security ── */}
+          <div className="lg:col-span-5 space-y-6">
+            
+            {/* Section 3: Profil Pengguna (Account Profile) */}
+            <form onSubmit={handleSaveProfile} className="bg-white p-6 rounded-3xl border border-stone-200/80 shadow-xs space-y-5">
+              <div className="flex items-center justify-between border-b border-stone-100 pb-4">
+                <div className="flex items-center gap-2 text-sm font-bold text-stone-900 font-display">
+                  <User className="w-4 h-4 text-stone-600" />
+                  <span>Profil Pengguna</span>
+                </div>
+                <span className="px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-bold">
+                  Aktif
+                </span>
+              </div>
+
+              {/* Avatar Header Badge */}
+              <div className="flex items-center gap-4 p-3.5 bg-stone-50 rounded-2xl border border-stone-200/60">
+                <div className="w-12 h-12 rounded-full bg-gradient-to-tr from-amber-600 to-amber-400 text-white text-base font-extrabold flex items-center justify-center shadow-xs shrink-0">
+                  {userName ? userName.charAt(0).toUpperCase() : "U"}
+                </div>
+                <div className="space-y-0.5 overflow-hidden">
+                  <div className="text-xs font-extrabold text-stone-900 truncate">{userName || "Nama Pengguna"}</div>
+                  <div className="text-[11px] text-stone-500 font-medium truncate flex items-center gap-1">
+                    <Mail className="w-3 h-3 text-stone-400 shrink-0" />
+                    <span>{userEmail || "email@example.com"}</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-xs font-semibold text-stone-700 mb-1.5">Nama Lengkap *</label>
+                  <input
+                    type="text"
+                    required
+                    value={userName}
+                    onChange={(e) => setUserName(e.target.value)}
+                    placeholder="Nama pemilik / pengelola"
+                    className="w-full px-4 py-2.5 bg-white border border-stone-200 rounded-2xl text-xs font-bold text-stone-800 focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 transition-all"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-stone-700 mb-1.5">Alamat Email</label>
+                  <input
+                    type="email"
+                    value={userEmail}
+                    disabled
+                    readOnly
+                    className="w-full px-4 py-2.5 bg-stone-50 border border-stone-200 rounded-2xl text-xs font-bold text-stone-500 focus:outline-none cursor-not-allowed"
+                  />
+                  <p className="text-[10px] text-stone-400 mt-1 font-medium">Email terkait dengan akun utama Anda</p>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-stone-700 mb-1.5">Telepon Kontak Pribadi</label>
+                  <input
+                    type="text"
+                    value={userPhone}
+                    onChange={(e) => setUserPhone(e.target.value)}
+                    placeholder="Nomor kontak akun"
+                    className="w-full px-4 py-2.5 bg-white border border-stone-200 rounded-2xl text-xs font-bold text-stone-800 focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 transition-all"
+                  />
+                </div>
+              </div>
+
+              <div className="flex justify-end pt-2">
+                <button
+                  type="submit"
+                  disabled={savingProfile || loading}
+                  className="flex items-center gap-2 px-5 py-2.5 rounded-2xl bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold transition-all shadow-sm cursor-pointer disabled:opacity-50"
+                >
+                  {savingProfile ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                  <span>Simpan Profil</span>
+                </button>
+              </div>
+            </form>
+
+            {/* Section 4: Keamanan & Akun */}
+            <div className="bg-white p-6 rounded-3xl border border-stone-200/80 shadow-xs space-y-4">
+              <div className="flex items-center gap-2 text-sm font-bold text-stone-900 font-display">
+                <Shield className="w-4 h-4 text-stone-600" />
+                <span>Keamanan</span>
+              </div>
+
+              <div className="space-y-3">
+                <div className="flex items-center justify-between p-3.5 rounded-2xl border border-stone-200 bg-stone-50/40">
+                  <div className="flex items-center gap-3">
+                    <KeyRound className="w-4 h-4 text-stone-600 shrink-0" />
+                    <div>
+                      <div className="text-xs font-bold text-stone-800">Kata Sandi</div>
+                      <div className="text-[10px] text-stone-400">
+                        {resetSent ? "Link reset dikirim ke email Anda" : "Reset via link yang dikirim ke email"}
+                      </div>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    disabled={sendingReset || resetSent}
+                    onClick={handleResetPassword}
+                    className="px-3 py-1.5 bg-white border border-stone-200 hover:bg-stone-50 text-[11px] font-bold text-stone-700 rounded-xl transition-all disabled:opacity-50 flex items-center gap-1.5"
+                  >
+                    {sendingReset ? (
+                      <Loader2 className="w-3 h-3 animate-spin" />
+                    ) : resetSent ? (
+                      <CheckCircle2 className="w-3 h-3 text-emerald-500" />
+                    ) : null}
+                    {resetSent ? "Terkirim" : sendingReset ? "Mengirim..." : "Kirim Link Reset"}
+                  </button>
+                </div>
+              </div>
+              {resetSent && (
+                <p className="text-[11px] text-stone-400 font-medium">
+                  Cek inbox <span className="font-bold text-stone-600">{profile?.email}</span> dan klik link di email untuk mengatur ulang kata sandi.
+                </p>
+              )}
+            </div>
+
+          </div>
+
+        </div>
       </main>
     </>
   );

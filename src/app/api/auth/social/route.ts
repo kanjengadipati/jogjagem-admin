@@ -31,14 +31,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ status: 'error', message: "Invalid token" }, { status: 500 });
     }
 
-    if (role !== "admin" && role !== "superadmin" && role !== "partner") {
-      return NextResponse.json(
-        { status: 'error', message: "Access denied." },
-        { status: 403 }
-      );
-    }
-
-    const redirectUrl = role === "partner" ? "/partner" : "/dashboard";
+    // Allow admins, superadmins, partners, and regular users accessing the portal to check business status
+    const redirectUrl = (role === "admin" || role === "superadmin") ? "/dashboard" : "/business";
 
     const response = NextResponse.json({ status: 'success', redirectUrl });
 

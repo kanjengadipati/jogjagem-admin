@@ -96,9 +96,26 @@ export interface Partner {
   reviewed_by?: string;
 }
 
+export interface Business {
+  id: string;
+  name: string;
+  description?: string;
+  category: string;
+  phone?: string;
+  email?: string;
+  website?: string;
+  avatar_url?: string;
+  status?: string;
+  legacy_partner_external_id?: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
 export interface AdCampaign {
   id: string;
   partner_name: string;
+  business_external_id?: string;
+  business_name?: string;
   placement: string;
   image_url: string;
   target_url: string;

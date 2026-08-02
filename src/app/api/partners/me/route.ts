@@ -11,6 +11,10 @@ async function getApi() {
 
 export async function GET() {
   const api = await getApi();
-  const { status, data } = await api("/partners/me");
-  return NextResponse.json(data, { status });
+  const res1 = await api("/businesses/me");
+  if (res1.status >= 200 && res1.status < 300) {
+    return NextResponse.json(res1.data, { status: res1.status });
+  }
+  const res2 = await api("/partners/me");
+  return NextResponse.json(res2.data, { status: res2.status });
 }

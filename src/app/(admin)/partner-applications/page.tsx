@@ -22,24 +22,24 @@ export default function PartnerApplicationsPage() {
   const [rejectReason, setRejectReason] = useState("");
 
   useEffect(() => {
-    fetch("/api/partner-applications")
+    fetch("/api/businesses/pending")
       .then((r) => r.json())
       .then((d) => setApplications(d?.data ?? []))
       .finally(() => setLoading(false));
   }, []);
 
   async function approve(id: string) {
-    const res = await fetch(`/api/partner-applications/${id}/approve`, { method: "POST" });
+    const res = await fetch(`/api/businesses/${id}/approve`, { method: "POST" });
     if (res.ok) {
       setApplications((prev) => prev.filter((a) => a.id !== id));
-      showToast("Disetujui", "Partner draft otomatis dibuat, akun di-upgrade ke role partner", "success");
+      showToast("Disetujui", "Bisnis telah disetujui dan aktif", "success");
     } else {
-      showToast("Error", "Gagal menyetujui aplikasi", "error");
+      showToast("Error", "Gagal menyetujui bisnis", "error");
     }
   }
 
   async function reject(id: string) {
-    const res = await fetch(`/api/partner-applications/${id}/reject`, {
+    const res = await fetch(`/api/businesses/${id}/reject`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ reason: rejectReason }),
@@ -48,9 +48,9 @@ export default function PartnerApplicationsPage() {
       setApplications((prev) => prev.filter((a) => a.id !== id));
       setRejectingId(null);
       setRejectReason("");
-      showToast("Ditolak", "Aplikasi ditolak", "success");
+      showToast("Ditolak", "Pengajuan bisnis ditolak", "success");
     } else {
-      showToast("Error", "Gagal menolak aplikasi", "error");
+      showToast("Error", "Gagal menolak pengajuan bisnis", "error");
     }
   }
 
@@ -64,9 +64,9 @@ export default function PartnerApplicationsPage() {
   return (
     <div className="p-6 space-y-6">
       <div>
-        <h1 className="text-xl font-bold text-stone-900">Partner Applications</h1>
+        <h1 className="text-xl font-bold text-stone-900">Business Claims — Pending Review</h1>
         <p className="text-sm text-stone-500">
-          Review kelayakan bisnis sebelum akun partner dibuat. Setelah disetujui, partner melengkapi listing-nya sendiri sebelum masuk antrian review utama.
+          Tinjau pengajuan bisnis baru. Setelah disetujui, pemilik dapat mengelola listing dan promosi mereka.
         </p>
       </div>
 

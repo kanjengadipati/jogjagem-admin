@@ -84,7 +84,7 @@ export default function AdCampaignsPage() {
     if (search) {
       list = list.filter(
         (c) =>
-          c.partner_name.toLowerCase().includes(search.toLowerCase()) ||
+          (c.business_name ?? c.partner_name).toLowerCase().includes(search.toLowerCase()) ||
           (c.category ?? "").toLowerCase().includes(search.toLowerCase())
       );
     }
@@ -116,7 +116,7 @@ export default function AdCampaignsPage() {
       );
       showToast(
         campaign.is_active ? "Paused" : "Activated",
-        `Campaign "${campaign.partner_name}" ${campaign.is_active ? "paused" : "activated"}`,
+        `Campaign "${campaign.business_name ?? campaign.partner_name}" ${campaign.is_active ? "paused" : "activated"}`,
         "success"
       );
     } else {
@@ -156,7 +156,7 @@ export default function AdCampaignsPage() {
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search by partner name or category..."
+              placeholder="Search by business name or category..."
               className="w-full bg-bg focus:bg-white text-xs pl-9 pr-4 py-2.5 rounded-xl border border-transparent focus:border-border outline-none transition duration-200 font-medium"
             />
           </div>
@@ -201,7 +201,7 @@ export default function AdCampaignsPage() {
               >
                 <div className="relative h-40 bg-gray-100 flex-shrink-0">
                   {c.image_url ? (
-                    <Image src={c.image_url} alt={c.partner_name} fill className="object-cover" sizes="400px" />
+                    <Image src={c.image_url} alt={c.business_name ?? c.partner_name} fill className="object-cover" sizes="400px" />
                   ) : (
                     <div className="w-full h-full flex items-center justify-center text-gray-300">
                       <Megaphone className="w-10 h-10" />
@@ -219,7 +219,7 @@ export default function AdCampaignsPage() {
 
                 <div className="p-5 flex flex-col gap-3 flex-1">
                   <div className="flex justify-between items-start">
-                    <h4 className="text-sm font-bold text-gray-900 font-display leading-snug">{c.partner_name}</h4>
+                    <h4 className="text-sm font-bold text-gray-900 font-display leading-snug">{c.business_name ?? c.partner_name}</h4>
                     <button onClick={() => deleteCampaign(c.id)} className="p-1 hover:bg-red-50 rounded">
                       <Trash2 className="w-3.5 h-3.5 text-danger" />
                     </button>
@@ -246,8 +246,8 @@ export default function AdCampaignsPage() {
                           subjectType="ad_campaign"
                           subjectExternalId={c.id}
                           amount={c.price_amount ?? 0}
-                          itemName={`Ad Campaign: ${c.partner_name}`}
-                          customerName={c.partner_name}
+                          itemName={`Ad Campaign: ${c.business_name ?? c.partner_name}`}
+                          customerName={c.business_name ?? c.partner_name}
                           onPaid={() => {
                             setPaymentBySubject((prev) => ({ ...prev, [c.id]: "paid" }));
                             showToast(

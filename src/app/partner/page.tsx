@@ -6,40 +6,23 @@ import Image from "next/image";
 import PartnerHeader from "@/components/PartnerHeader";
 import { useToast } from "@/components/Toast";
 import {
-  Briefcase,
-  Tag,
-  MessageSquare,
-  Star,
-  Eye,
-  MousePointerClick,
-  CheckCircle,
-  Clock,
-  ArrowUpRight,
-  Loader2,
+  Layers,
   TrendingUp,
-  Plus,
-  BarChart3,
+  Tag,
+  Star,
+  Clock,
+  ChevronRight,
+  Zap,
   MapPin,
+  Megaphone,
+  MessageSquare,
+  Lock,
+  ArrowRight,
+  Package,
+  BookOpen,
+  Loader2,
 } from "lucide-react";
 import type { Partner } from "@/types";
-
-/* ------------------------------------------------------------------ */
-/* Types                                                               */
-/* ------------------------------------------------------------------ */
-
-interface Promotion {
-  id: string;
-  title: string;
-  status?: string;
-}
-
-interface Review {
-  id: string;
-  rating: number;
-  comment: string;
-  user_name?: string;
-  CreatedAt?: string;
-}
 
 interface ListingStats {
   promotions: number;
@@ -47,53 +30,16 @@ interface ListingStats {
   avgRating: number;
 }
 
-/* ------------------------------------------------------------------ */
-/* Sub-components                                                      */
-/* ------------------------------------------------------------------ */
-
-function StatCard({
-  icon: Icon,
-  label,
-  value,
-  color,
-  borderColor,
-}: {
-  icon: React.ElementType;
-  label: string;
-  value: string | number;
-  color: string;
-  borderColor: string;
-}) {
-  return (
-    <div
-      className="bg-white p-6 rounded-card border border-border shadow-soft hover-scale relative overflow-hidden"
-      style={{ borderLeft: `4px solid ${borderColor}` }}
-    >
-      <div
-        className="absolute right-0 top-0 w-16 h-16 rounded-bl-full flex items-center justify-center"
-        style={{ backgroundColor: `${borderColor}10` }}
-      >
-        <Icon className="w-5 h-5" style={{ color: borderColor }} />
-      </div>
-      <p className="text-[11px] font-bold text-gray-400 tracking-wider uppercase font-display">
-        {label}
-      </p>
-      <h3 className="text-3xl font-extrabold text-gray-900 font-display mt-2 leading-none">
-        {value}
-      </h3>
-    </div>
-  );
-}
-
-/* ------------------------------------------------------------------ */
-/* Page                                                                */
-/* ------------------------------------------------------------------ */
-
 export default function PartnerOverviewPage() {
   const { showToast } = useToast();
   const [listings, setListings] = useState<Partner[]>([]);
   const [stats, setStats] = useState<Record<string, ListingStats>>({});
   const [loading, setLoading] = useState(true);
+  const [bizInfo, setBizInfo] = useState<{ name: string; status: string; date: string }>({
+    name: "siap",
+    status: "pending",
+    date: "1/8/2026",
+  });
 
   useEffect(() => {
     let cancelled = false;
@@ -107,7 +53,17 @@ export default function PartnerOverviewPage() {
         if (cancelled) return;
         setListings(allListings);
 
-        // Fetch promotions + reviews for each listing
+        if (Array.isArray(allListings) && allListings.length > 0) {
+          const first = allListings[0];
+          setBizInfo({
+            name: first.name || "siap",
+            status: first.status || "pending",
+            date: (first as any).created_at
+              ? new Date((first as any).created_at).toLocaleDateString("id-ID")
+              : "1/8/2026",
+          });
+        }
+
         const statsMap: Record<string, ListingStats> = {};
         await Promise.all(
           allListings.map(async (p) => {
@@ -118,15 +74,15 @@ export default function PartnerOverviewPage() {
               ]);
               const promoData = await promoRes.json();
               const reviewData = await reviewRes.json();
-              const promos: Promotion[] = promoData?.data ?? [];
-              const reviews: Review[] = reviewData?.data ?? [];
-              const withRating = reviews.filter((r) => r.rating > 0);
+              const promos = promoData?.data ?? [];
+              const reviews = reviewData?.data ?? [];
+              const withRating = reviews.filter((r: any) => r.rating > 0);
               statsMap[p.id] = {
                 promotions: promos.length,
                 reviews: reviews.length,
                 avgRating:
                   withRating.length > 0
-                    ? withRating.reduce((s, r) => s + r.rating, 0) / withRating.length
+                    ? withRating.reduce((s: number, r: any) => s + r.rating, 0) / withRating.length
                     : 0,
               };
             } catch {
@@ -144,265 +100,226 @@ export default function PartnerOverviewPage() {
     }
 
     load();
-    return () => { cancelled = true; };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
-  /* ---------- derived stats ---------- */
-  const totalListings = listings.length;
   const activeListings = listings.filter((p) => p.status === "approved").length;
-  const pendingListings = listings.filter((p) => p.status === "pending").length;
-  const totalPromotions = Object.values(stats).reduce((s, v) => s + v.promotions, 0);
-  const totalReviews = Object.values(stats).reduce((s, v) => s + v.reviews, 0);
-  const totalImpressions = listings.reduce((s, p) => s + (p.impression_count ?? 0), 0);
-  const totalClicks = listings.reduce((s, p) => s + (p.click_count ?? 0), 0);
-  const allRatings = Object.values(stats)
-    .filter((v) => v.avgRating > 0)
-    .map((v) => v.avgRating);
-  const overallAvg =
-    allRatings.length > 0
-      ? (allRatings.reduce((s, r) => s + r, 0) / allRatings.length).toFixed(1)
-      : "-";
+  const isPending = bizInfo.status === "pending" || activeListings === 0;
 
   return (
     <>
       <PartnerHeader />
-      <main className="flex-1 overflow-y-auto">
+      <main className="flex-1 overflow-y-auto bg-[#F9F9FB] p-6 md:p-8 space-y-6">
 
-        {/* ── Hero Banner ── */}
-        <div className="relative h-72 md:h-80 overflow-hidden">
-          <Image
-            src="https://images.unsplash.com/photo-1707378174003-418d6262d355?fm=jpg&q=60&w=3000&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8Mnx8dHVndSUyMGpvZ2phfGVufDB8fDB8fHww"
-            alt="Tugu Jogja"
-            fill
-            className="object-cover"
-            priority
-          />
-          <div className="absolute inset-0 bg-gradient-to-r from-[#0f100c]/90 via-[#0f100c]/40 to-transparent" />
-          <div className="absolute inset-0 bg-gradient-to-t from-[#0f100c]/60 via-transparent to-[#0f100c]/30" />
-          <div className="absolute inset-0 flex items-end p-8">
-            <div>
-              <p className="text-xs font-mono text-gold-400 uppercase tracking-widest mb-1.5">
-                Jogjagem Partner
-              </p>
-              <h2 className="font-display text-3xl md:text-4xl font-bold leading-[1.05] tracking-tight">
-                Sugeng Rawuh, Partner!
-              </h2>
-              <p className="text-sm text-white/75 leading-relaxed max-w-lg font-light mt-2">
-                Kelola bisnis pariwisata Anda di Jogjagem dari satu tempat.
-              </p>
+        {/* ── Pending Verification Alert Banner ── */}
+        {isPending && (
+          <div className="bg-[#FEF6E6] border border-[#F9E8C7] rounded-3xl p-5 md:p-6 flex items-center justify-between gap-4 text-[#825410]">
+            <div className="flex items-start gap-4">
+              <div className="w-10 h-10 rounded-full bg-[#F8E3B9] flex items-center justify-center shrink-0 text-[#A66E19] mt-0.5">
+                <Clock className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="font-extrabold text-base text-[#6B440A]">
+                  Menunggu verifikasi admin
+                </h3>
+                <p className="text-xs text-[#8F5D15] mt-1 font-medium">
+                  Diajukan {bizInfo.date} — biasanya diproses dalam 1x24 jam.
+                </p>
+              </div>
             </div>
+
+            <button className="hidden sm:flex items-center gap-1.5 px-4 py-2.5 rounded-2xl border border-[#EACD96] bg-white/80 hover:bg-white text-xs font-bold text-[#825410] shadow-2xs transition-all cursor-pointer">
+              <span>Lihat Detail</span>
+              <ChevronRight className="w-3.5 h-3.5" />
+            </button>
           </div>
-        </div>
+        )}
 
-        <div className="p-8 space-y-8">
-
-          {loading ? (
-            <div className="flex items-center justify-center py-24 text-gray-400 gap-3">
-              <Loader2 className="w-5 h-5 animate-spin" />
-              <span className="text-sm font-semibold">Loading overview...</span>
-            </div>
-          ) : (
-            <>
-              {/* ── Stats Grid ── */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                <StatCard
-                  icon={Briefcase}
-                  label="Total Listings"
-                  value={totalListings}
-                  color="#8B5E3C"
-                  borderColor="#8B5E3C"
-                />
-                <StatCard
-                  icon={CheckCircle}
-                  label="Active"
-                  value={activeListings}
-                  color="#10b981"
-                  borderColor="#10b981"
-                />
-                <StatCard
-                  icon={Tag}
-                  label="Promotions"
-                  value={totalPromotions}
-                  color="#6366f1"
-                  borderColor="#6366f1"
-                />
-                <StatCard
-                  icon={Star}
-                  label="Avg Rating"
-                  value={overallAvg}
-                  color="#f59e0b"
-                  borderColor="#f59e0b"
-                />
+        {loading ? (
+          <div className="flex items-center justify-center py-24 text-stone-400 gap-3">
+            <Loader2 className="w-5 h-5 animate-spin" />
+            <span className="text-xs font-semibold">Memuat data dashboard...</span>
+          </div>
+        ) : (
+          <>
+            {/* ── 4 Stat Cards Row ── */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+              {/* Card 1: Total listings */}
+              <div className="bg-white p-5 rounded-3xl border border-stone-200/80 shadow-xs space-y-4">
+                <div className="w-10 h-10 rounded-2xl bg-[#FAF3E6] text-[#B5781E] flex items-center justify-center">
+                  <Layers className="w-5 h-5" />
+                </div>
+                <div>
+                  <div className="text-xs font-bold text-stone-500">Total listings</div>
+                  <div className="text-3xl font-extrabold text-stone-900 mt-1 font-display">
+                    {listings.length}
+                  </div>
+                  <div className="text-[11px] font-medium text-stone-400 mt-1">Listing</div>
+                </div>
               </div>
 
-              {/* ── Insights Row ── */}
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                {/* Performance Stats */}
-                <div className="bg-white p-6 rounded-card border border-border shadow-soft space-y-4">
-                  <div className="flex items-center gap-2">
-                    <div className="p-1.5 rounded-lg bg-primary/10 text-primary">
-                      <BarChart3 className="w-4 h-4" />
-                    </div>
-                    <h4 className="text-sm font-bold text-gray-800 font-display">
-                      Statistik Performa
-                    </h4>
+              {/* Card 2: Aktif */}
+              <div className="bg-white p-5 rounded-3xl border border-stone-200/80 shadow-xs space-y-4">
+                <div className="w-10 h-10 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
+                  <TrendingUp className="w-5 h-5" />
+                </div>
+                <div>
+                  <div className="text-xs font-bold text-emerald-600">Aktif</div>
+                  <div className="text-3xl font-extrabold text-stone-900 mt-1 font-display">
+                    {activeListings}
                   </div>
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between p-3 rounded-xl bg-bg border border-border">
-                      <div className="flex items-center gap-2">
-                        <Eye className="w-4 h-4 text-blue-500" />
-                        <span className="text-xs font-bold text-gray-700 font-display">
-                          Impressions
-                        </span>
-                      </div>
-                      <span className="text-sm font-extrabold text-gray-900">
-                        {totalImpressions.toLocaleString()}
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between p-3 rounded-xl bg-bg border border-border">
-                      <div className="flex items-center gap-2">
-                        <MousePointerClick className="w-4 h-4 text-purple-500" />
-                        <span className="text-xs font-bold text-gray-700 font-display">
-                          Clicks
-                        </span>
-                      </div>
-                      <span className="text-sm font-extrabold text-gray-900">
-                        {totalClicks.toLocaleString()}
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between p-3 rounded-xl bg-bg border border-border">
-                      <div className="flex items-center gap-2">
-                        <MessageSquare className="w-4 h-4 text-green-500" />
-                        <span className="text-xs font-bold text-gray-700 font-display">
-                          Total Reviews
-                        </span>
-                      </div>
-                      <span className="text-sm font-extrabold text-gray-900">
-                        {totalReviews}
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between p-3 rounded-xl bg-bg border border-border">
-                      <div className="flex items-center gap-2">
-                        <Clock className="w-4 h-4 text-amber-500" />
-                        <span className="text-xs font-bold text-gray-700 font-display">
-                          Pending Review
-                        </span>
-                      </div>
-                      <span className="text-sm font-extrabold text-gray-900">
-                        {pendingListings}
-                      </span>
-                    </div>
+                  <div className="text-[11px] font-medium text-stone-400 mt-1">Listing aktif</div>
+                </div>
+              </div>
+
+              {/* Card 3: Promosi */}
+              <div className="bg-white p-5 rounded-3xl border border-stone-200/80 shadow-xs space-y-4">
+                <div className="w-10 h-10 rounded-2xl bg-purple-50 text-purple-600 flex items-center justify-center">
+                  <Tag className="w-5 h-5" />
+                </div>
+                <div>
+                  <div className="text-xs font-bold text-stone-500 flex items-center gap-1">
+                    <span>Promosi</span>
+                    {isPending && <Lock className="w-3 h-3 text-stone-400" />}
                   </div>
+                  <div className="text-3xl font-extrabold text-stone-900 mt-1 font-display">
+                    {isPending ? "-" : Object.values(stats).reduce((s, v) => s + v.promotions, 0)}
+                  </div>
+                  <div className="text-[11px] font-medium text-stone-400 mt-1">Belum ada</div>
+                </div>
+              </div>
+
+              {/* Card 4: Rating rata-rata */}
+              <div className="bg-white p-5 rounded-3xl border border-stone-200/80 shadow-xs space-y-4">
+                <div className="w-10 h-10 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center">
+                  <Star className="w-5 h-5" />
+                </div>
+                <div>
+                  <div className="text-xs font-bold text-stone-500">Rating rata-rata</div>
+                  <div className="text-3xl font-extrabold text-stone-900 mt-1 font-display">
+                    {isPending ? "-" : (Object.values(stats).reduce((s, v) => s + v.avgRating, 0) || "-")}
+                  </div>
+                  <div className="text-[11px] font-medium text-stone-400 mt-1">Belum ada rating</div>
+                </div>
+              </div>
+            </div>
+
+            {/* ── Main Content Grid ── */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Left Card: Aksi Cepat */}
+              <div className="bg-white p-6 rounded-3xl border border-stone-200/80 shadow-xs space-y-5">
+                <div className="flex items-center gap-2 text-sm font-extrabold text-stone-900">
+                  <Zap className="w-4 h-4 text-amber-500 fill-amber-500" />
+                  <span>Aksi cepat</span>
                 </div>
 
-                {/* Quick Actions */}
-                <div className="bg-white p-6 rounded-card border border-border shadow-soft">
-                  <h4 className="text-sm font-bold text-gray-800 font-display mb-4">
-                    Aksi Cepat
-                  </h4>
-                  <div className="space-y-2">
-                    {[
-                      { label: "Kelola Listings", icon: Briefcase, path: "/partner/listings" },
-                      { label: "Buat Promosi", icon: Tag, path: "/partner/promotions" },
-                      { label: "Lihat Reviews", icon: MessageSquare, path: "/partner/reviews" },
-                    ].map((a) => (
+                <div className="space-y-3">
+                  {/* Action 1: Kelola Destinasi */}
+                  <div className="p-4 rounded-2xl border border-stone-200/90 bg-stone-50/50 flex items-center justify-between gap-4">
+                    <div className="flex items-center gap-3.5">
+                      <div className="w-9 h-9 rounded-xl bg-stone-100 text-stone-600 flex items-center justify-center">
+                        <MapPin className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <div className="text-xs font-bold text-stone-900">Kelola destinasi</div>
+                        <div className="text-[11px] text-stone-400 font-medium mt-0.5">
+                          Kelola informasi destinasi dan detail bisnis Anda.
+                        </div>
+                      </div>
+                    </div>
+                    <ArrowRight className="w-4 h-4 text-stone-400 shrink-0" />
+                  </div>
+
+                  {/* Action 2: Buat Promosi */}
+                  <div className="p-4 rounded-2xl border border-[#F3E5C8] bg-[#FFFDF8] flex items-center justify-between gap-4">
+                    <div className="flex items-center gap-3.5">
+                      <div className="w-9 h-9 rounded-xl bg-[#FAF3E6] text-[#B5781E] flex items-center justify-center">
+                        <Megaphone className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <div className="text-xs font-bold text-[#8A5C13]">Buat promosi</div>
+                        <div className="text-[11px] text-[#B5853E] font-medium mt-0.5">
+                          Buat promosi atau penawaran spesial untuk pelanggan.
+                        </div>
+                      </div>
+                    </div>
+                    <ArrowRight className="w-4 h-4 text-[#B5781E] shrink-0" />
+                  </div>
+
+                  {/* Action 3: Lihat Reviews */}
+                  <Link
+                    href="/partner/reviews"
+                    className="p-4 rounded-2xl border border-blue-100 bg-blue-50/40 flex items-center justify-between gap-4 hover:bg-blue-50/80 transition-all group"
+                  >
+                    <div className="flex items-center gap-3.5">
+                      <div className="w-9 h-9 rounded-xl bg-blue-100 text-blue-600 flex items-center justify-center">
+                        <MessageSquare className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <div className="text-xs font-bold text-blue-900 group-hover:text-blue-700">Lihat reviews</div>
+                        <div className="text-[11px] text-blue-600 font-medium mt-0.5">
+                          Lihat dan balas ulasan dari pelanggan Anda.
+                        </div>
+                      </div>
+                    </div>
+                    <ArrowRight className="w-4 h-4 text-blue-600 shrink-0 group-hover:translate-x-0.5 transition-transform" />
+                  </Link>
+                </div>
+              </div>
+
+              {/* Right Card: Empty State */}
+              <div className="bg-white p-8 rounded-3xl border border-stone-200/80 shadow-xs flex flex-col items-center justify-center text-center min-h-[300px]">
+                {isPending || listings.length === 0 ? (
+                  <div className="space-y-4 max-w-sm flex flex-col items-center">
+                    {/* Illustration Container */}
+                    <div className="w-24 h-24 rounded-full bg-[#FAF4E8] flex items-center justify-center text-[#C28929] relative shadow-2xs">
+                      <Package className="w-11 h-11" />
+                    </div>
+                    <div>
+                      <h4 className="text-base font-extrabold text-stone-900">
+                        Belum ada listing
+                      </h4>
+                      <p className="text-xs text-stone-400 font-medium mt-1">
+                        Muncul di sini setelah klaim disetujui.
+                      </p>
+                    </div>
+                    <button className="px-5 py-3 rounded-2xl bg-gradient-to-r from-[#B57A21] to-[#C98B29] hover:from-[#A26C1C] hover:to-[#B77D20] text-white text-xs font-bold flex items-center gap-2 shadow-xs transition-all cursor-pointer">
+                      <BookOpen className="w-4 h-4" />
+                      <span>Pelajari Cara Klaim</span>
+                    </button>
+                  </div>
+                ) : (
+                  <div className="w-full space-y-3">
+                    <div className="flex items-center justify-between mb-2">
+                      <h4 className="text-sm font-bold text-stone-900">
+                        Listings Anda
+                      </h4>
                       <Link
-                        key={a.path}
-                        href={a.path}
-                        className="flex items-center gap-3 p-3 rounded-xl border border-border hover:border-primary/30 hover:bg-primary/5 transition-premium group"
+                        href="/partner/listings"
+                        className="text-xs font-semibold text-blue-600 hover:underline"
                       >
-                        <a.icon className="w-4 h-4 text-gray-400 group-hover:text-primary" />
-                        <span className="text-xs font-bold text-gray-700 font-display group-hover:text-primary transition-colors">
-                          {a.label}
-                        </span>
-                        <ArrowUpRight className="w-3.5 h-3.5 text-gray-300 group-hover:text-primary ml-auto" />
+                        Lihat Semua
                       </Link>
+                    </div>
+                    {listings.map((p) => (
+                      <div
+                        key={p.id}
+                        className="flex items-center justify-between p-3.5 rounded-2xl border border-stone-100 bg-stone-50/60 text-xs font-bold text-stone-800"
+                      >
+                        <span>{p.name}</span>
+                        <span className="px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-bold">
+                          {p.status}
+                        </span>
+                      </div>
                     ))}
                   </div>
-                </div>
-
-                {/* Listings Preview */}
-                <div className="bg-white p-6 rounded-card border border-border shadow-soft">
-                  <div className="flex items-center justify-between mb-4">
-                    <h4 className="text-sm font-bold text-gray-800 font-display">
-                      Listings Anda
-                    </h4>
-                    <Link
-                      href="/partner/listings"
-                      className="text-xs font-bold text-primary hover:underline"
-                    >
-                      View All
-                    </Link>
-                  </div>
-                  {listings.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center py-8 text-gray-400 gap-2">
-                      <Briefcase className="w-8 h-8" />
-                      <span className="text-xs font-semibold">Belum ada listing</span>
-                    </div>
-                  ) : (
-                    <div className="space-y-3">
-                      {listings.slice(0, 4).map((p) => (
-                        <div
-                          key={p.id}
-                          className="flex items-center gap-3 p-3 rounded-xl border border-border hover:border-primary/20 hover:bg-primary/5 transition-premium group"
-                        >
-                          {p.image ? (
-                            <Image
-                              src={p.image}
-                              alt={p.name}
-                              width={40}
-                              height={40}
-                              className="w-10 h-10 rounded-lg object-cover flex-shrink-0"
-                            />
-                          ) : (
-                            <div className="w-10 h-10 rounded-lg bg-gray-100 flex items-center justify-center flex-shrink-0">
-                              <Briefcase className="w-4 h-4 text-gray-300" />
-                            </div>
-                          )}
-                          <div className="min-w-0 flex-1">
-                            <span className="text-xs font-bold text-gray-800 font-display block truncate group-hover:text-primary transition-colors">
-                              {p.name}
-                            </span>
-                            <div className="flex items-center gap-2 mt-0.5">
-                              {p.location && (
-                                <span className="text-[10px] text-gray-400 flex items-center gap-0.5">
-                                  <MapPin className="w-2.5 h-2.5" />
-                                  {p.location}
-                                </span>
-                              )}
-                              {stats[p.id] && stats[p.id].avgRating > 0 && (
-                                <span className="text-[10px] text-amber-600 flex items-center gap-0.5">
-                                  <Star className="w-2.5 h-2.5 fill-amber-400 text-amber-400" />
-                                  {stats[p.id].avgRating.toFixed(1)}
-                                </span>
-                              )}
-                            </div>
-                          </div>
-                          <span
-                            className={`text-[10px] font-bold px-2 py-0.5 rounded-full flex-shrink-0 ${
-                              p.status === "approved"
-                                ? "bg-success/10 text-success"
-                                : p.status === "pending"
-                                ? "bg-warning/10 text-warning"
-                                : "bg-gray-100 text-gray-500"
-                            }`}
-                          >
-                            {p.status === "approved"
-                              ? "Active"
-                              : p.status === "pending"
-                              ? "Pending"
-                              : p.status ?? "Unknown"}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
+                )}
               </div>
-            </>
-          )}
-        </div>
+            </div>
+          </>
+        )}
       </main>
     </>
   );

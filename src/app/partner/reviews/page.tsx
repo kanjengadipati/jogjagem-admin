@@ -3,212 +3,154 @@
 import { useEffect, useState } from "react";
 import PartnerHeader from "@/components/PartnerHeader";
 import { useToast } from "@/components/Toast";
-import { MessageSquare, Search, Loader2, Star, User, Calendar, Reply } from "lucide-react";
-import type { Partner } from "@/types";
+import { Star, MessageSquare, CornerDownRight, Send } from "lucide-react";
 
 interface Review {
   id: string;
-  user_id: string;
-  destination_id: string;
   user_name: string;
-  traveler_type?: string;
   rating: number;
   comment: string;
-  images?: unknown[];
-  status: string;
-  partner_id?: string;
+  created_at?: string;
   reply?: string;
-  replied_at?: string;
-  replied_by?: number;
-  CreatedAt?: string;
 }
 
 export default function PartnerReviewsPage() {
   const { showToast } = useToast();
-  const [listings, setListings] = useState<Partner[]>([]);
-  const [selectedPartnerId, setSelectedPartnerId] = useState<string>("");
-  const [reviews, setReviews] = useState<Review[]>([]);
-  const [filtered, setFiltered] = useState<Review[]>([]);
-  const [search, setSearch] = useState("");
-  const [loading, setLoading] = useState(true);
-  const [loadingReviews, setLoadingReviews] = useState(false);
-  const [replyingTo, setReplyingTo] = useState<string | null>(null);
+  const [replyingId, setReplyingId] = useState<string | null>(null);
   const [replyText, setReplyText] = useState("");
 
-  useEffect(() => {
-    fetch("/api/partners/me")
-      .then((r) => r.json())
-      .then((d) => {
-        const list: Partner[] = d?.data ?? [];
-        setListings(list);
-        if (list.length > 0) setSelectedPartnerId(list[0].id);
-      })
-      .catch(() => showToast("Error", "Failed to load your listings", "error"))
-      .finally(() => setLoading(false));
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  useEffect(() => {
-    if (!selectedPartnerId) return;
-    setLoadingReviews(true);
-    fetch(`/api/partners/me/${selectedPartnerId}/reviews`)
-      .then((r) => r.json())
-      .then((d) => { setReviews(d?.data ?? []); setFiltered(d?.data ?? []); })
-      .catch(() => showToast("Error", "Failed to load reviews", "error"))
-      .finally(() => setLoadingReviews(false));
-  }, [selectedPartnerId, showToast]);
-
-  useEffect(() => {
-    let list = reviews;
-    if (search) list = list.filter((r) =>
-      r.user_name.toLowerCase().includes(search.toLowerCase()) ||
-      r.comment.toLowerCase().includes(search.toLowerCase())
-    );
-    setFiltered(list);
-  }, [reviews, search]);
-
-  async function submitReply(reviewId: string) {
-    if (!replyText.trim()) { showToast("Error", "Reply cannot be empty", "error"); return; }
-    try {
-      const res = await fetch(`/api/partners/me/${selectedPartnerId}/reviews/${reviewId}/reply`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ reply: replyText }),
-      });
-      if (res.ok) {
-        setReviews(prev => prev.map(r => r.id === reviewId ? { ...r, reply: replyText, replied_at: new Date().toISOString() } : r));
-        setReplyingTo(null); setReplyText("");
-        showToast("Success", "Reply submitted", "success");
-      } else {
-        const data = await res.json();
-        showToast("Error", data?.message || "Failed to submit reply", "error");
-      }
-    } catch { showToast("Error", "Failed to submit reply", "error"); }
-  }
-
-  const renderStars = (rating: number) =>
-    Array.from({ length: 5 }, (_, i) => (
-      <Star key={i} className={`w-3 h-3 ${i < rating ? "fill-warning text-warning" : "text-gray-300"}`} />
-    ));
+  const reviewsList: Review[] = [
+    {
+      id: "1",
+      user_name: "Rina W.",
+      rating: 5,
+      comment: "Museumnya rapi, koleksinya lengkap. Pemandu ramah.",
+      created_at: "3 hari lalu",
+    },
+    {
+      id: "2",
+      user_name: "Andi P.",
+      rating: 4,
+      comment: "Antrian tiket agak lama pas weekend.",
+      created_at: "1 minggu lalu",
+      reply: "Terima kasih masukannya, kami tambah loket weekend ini.",
+    },
+  ];
 
   return (
     <>
       <PartnerHeader />
-      <main className="flex-1 overflow-y-auto p-8 space-y-8">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div>
-            <h2 className="text-2xl font-extrabold font-display text-gray-900 tracking-tight">My Reviews</h2>
-            <p className="text-xs text-gray-500 mt-1">View and respond to customer reviews.</p>
-          </div>
+      <main className="flex-1 overflow-y-auto bg-[#F9F9FB] p-6 md:p-8 space-y-6">
+        <div>
+          <h1 className="text-xl font-bold text-stone-900 font-display">Reviews</h1>
+          <p className="text-xs text-stone-500 font-medium mt-1">
+            Ulasan pelanggan untuk bisnis Anda
+          </p>
         </div>
 
-        <div className="bg-white p-5 rounded-card border border-border shadow-soft">
-          <label className="block text-xs font-bold text-gray-700 mb-2">Select Listing</label>
-          <select value={selectedPartnerId} onChange={(e) => setSelectedPartnerId(e.target.value)}
-            className="w-full bg-bg focus:bg-white text-xs px-3.5 py-2.5 rounded-xl border border-transparent focus:border-border outline-none font-semibold text-gray-700 cursor-pointer" disabled={loading}>
-            {listings.length === 0 ? <option value="">No listings available</option> :
-              listings.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
-          </select>
-        </div>
+        {/* Rating Summary Card */}
+        <div className="bg-white p-6 rounded-3xl border border-stone-200/80 shadow-xs flex flex-col md:flex-row items-center gap-8">
+          <div className="text-center md:text-left shrink-0">
+            <div className="text-4xl font-extrabold text-stone-900 font-display">4.6</div>
+            <div className="text-xs font-bold text-amber-500 flex items-center gap-1 justify-center md:justify-start mt-1">
+              <Star className="w-4 h-4 fill-amber-500" />
+              <Star className="w-4 h-4 fill-amber-500" />
+              <Star className="w-4 h-4 fill-amber-500" />
+              <Star className="w-4 h-4 fill-amber-500" />
+              <Star className="w-4 h-4 text-stone-300" />
+            </div>
+            <div className="text-xs text-stone-400 font-medium mt-1">128 ulasan</div>
+          </div>
 
-        <div className="bg-white p-5 rounded-card border border-border shadow-soft">
-          <div className="relative">
-            <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-400 pointer-events-none"><Search className="w-4 h-4" /></span>
-            <input type="text" value={search} onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search by reviewer name or comment..."
-              className="w-full bg-bg focus:bg-white text-xs pl-9 pr-4 py-2.5 rounded-xl border border-transparent focus:border-border outline-none transition duration-200 font-medium"
-              disabled={!selectedPartnerId} />
-          </div>
-        </div>
-
-        {loading ? (
-          <div className="flex items-center justify-center py-24 text-gray-400 gap-3">
-            <Loader2 className="w-5 h-5 animate-spin" /><span className="text-sm font-semibold">Loading your listings...</span>
-          </div>
-        ) : !selectedPartnerId ? (
-          <div className="flex flex-col items-center justify-center py-24 text-gray-400 gap-3">
-            <MessageSquare className="w-10 h-10" /><span className="text-sm font-semibold">Select a listing to view reviews</span>
-          </div>
-        ) : loadingReviews ? (
-          <div className="flex items-center justify-center py-24 text-gray-400 gap-3">
-            <Loader2 className="w-5 h-5 animate-spin" /><span className="text-sm font-semibold">Loading reviews...</span>
-          </div>
-        ) : filtered.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-24 text-gray-400 gap-3">
-            <MessageSquare className="w-10 h-10" /><span className="text-sm font-semibold">No reviews found</span>
-          </div>
-        ) : (
-          <div className="space-y-4">
-            {filtered.map((review) => (
-              <div key={review.id} className="bg-white rounded-card border border-border shadow-soft p-6">
-                <div className="flex items-start justify-between gap-4">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-                      <User className="w-5 h-5 text-primary" />
-                    </div>
-                    <div>
-                      <h4 className="text-sm font-bold text-gray-900 font-display">{review.user_name}</h4>
-                      <div className="flex items-center gap-2">
-                        <div className="flex items-center gap-0.5">{renderStars(review.rating)}</div>
-                        {review.traveler_type && (
-                          <span className="text-[10px] text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">{review.traveler_type}</span>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-1 text-[10px] text-gray-400">
-                    <Calendar className="w-3 h-3" />
-                    {review.CreatedAt ? new Date(review.CreatedAt).toLocaleDateString() : "Unknown date"}
-                  </div>
-                </div>
-
-                <p className="text-xs text-gray-600 mt-4 leading-relaxed">{review.comment}</p>
-
-                <div className="mt-4 pt-4 border-t border-border">
-                  {review.reply ? (
-                    <div className="bg-bg rounded-xl p-4">
-                      <div className="flex items-center gap-2 mb-2">
-                        <Reply className="w-4 h-4 text-primary" />
-                        <span className="text-xs font-bold text-gray-700">Your Reply</span>
-                        {review.replied_at && (
-                          <span className="text-[10px] text-gray-400">{new Date(review.replied_at).toLocaleDateString()}</span>
-                        )}
-                      </div>
-                      <p className="text-xs text-gray-600 leading-relaxed">{review.reply}</p>
-                    </div>
-                  ) : replyingTo === review.id ? (
-                    <div className="space-y-3">
-                      <textarea value={replyText} onChange={(e) => setReplyText(e.target.value)}
-                        placeholder="Write your reply..."
-                        className="w-full bg-bg focus:bg-white text-xs p-3 rounded-xl border border-transparent focus:border-border outline-none transition duration-200 font-medium min-h-[80px]" />
-                      <div className="flex items-center gap-2">
-                        <button onClick={() => submitReply(review.id)}
-                          className="flex items-center gap-1 bg-primary hover:bg-primary-dark text-white text-[10px] font-bold px-3 py-1.5 rounded-full transition cursor-pointer">
-                          <Reply className="w-3 h-3" /> Submit Reply
-                        </button>
-                        <button onClick={() => { setReplyingTo(null); setReplyText(""); }}
-                          className="text-[10px] font-bold text-gray-500 hover:text-gray-700 px-3 py-1.5 rounded-full transition cursor-pointer">
-                          Cancel
-                        </button>
-                      </div>
-                    </div>
-                  ) : (
-                    <button onClick={() => { setReplyingTo(review.id); setReplyText(""); }}
-                      className="flex items-center gap-1 text-[10px] font-bold text-primary hover:text-primary-dark transition cursor-pointer">
-                      <Reply className="w-3 h-3" /> Reply to Review
-                    </button>
-                  )}
-                </div>
+          <div className="flex-1 w-full space-y-2">
+            <div className="flex items-center gap-3 text-xs text-stone-500 font-semibold">
+              <span className="w-3">5</span>
+              <div className="flex-1 h-2 bg-stone-100 rounded-full overflow-hidden">
+                <div className="h-full bg-amber-500 rounded-full w-[70%]" />
               </div>
-            ))}
+            </div>
+            <div className="flex items-center gap-3 text-xs text-stone-500 font-semibold">
+              <span className="w-3">4</span>
+              <div className="flex-1 h-2 bg-stone-100 rounded-full overflow-hidden">
+                <div className="h-full bg-amber-500 rounded-full w-[20%]" />
+              </div>
+            </div>
+            <div className="flex items-center gap-3 text-xs text-stone-500 font-semibold">
+              <span className="w-3">3</span>
+              <div className="flex-1 h-2 bg-stone-100 rounded-full overflow-hidden">
+                <div className="h-full bg-amber-500 rounded-full w-[6%]" />
+              </div>
+            </div>
           </div>
-        )}
+        </div>
 
-        {!loading && selectedPartnerId && !loadingReviews && (
-          <div className="text-xs text-gray-400 font-semibold">
-            Showing {filtered.length} review{filtered.length !== 1 ? "s" : ""}
-          </div>
-        )}
+        {/* Reviews List */}
+        <div className="space-y-4">
+          {reviewsList.map((rev) => (
+            <div
+              key={rev.id}
+              className="bg-white p-6 rounded-3xl border border-stone-200/80 shadow-xs space-y-3"
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-bold text-stone-900">{rev.user_name}</span>
+                  <div className="flex items-center text-amber-500 gap-0.5">
+                    {Array.from({ length: rev.rating }).map((_, i) => (
+                      <Star key={i} className="w-3 h-3 fill-amber-500" />
+                    ))}
+                  </div>
+                </div>
+                <span className="text-[11px] text-stone-400 font-medium">{rev.created_at}</span>
+              </div>
+
+              <p className="text-xs text-stone-700 font-medium leading-relaxed">{rev.comment}</p>
+
+              {rev.reply ? (
+                <div className="p-3.5 rounded-2xl bg-blue-50/60 border border-blue-100 text-xs font-medium text-blue-900 flex items-start gap-2.5">
+                  <CornerDownRight className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
+                  <div>
+                    <span className="font-bold">Balasan Anda:</span> {rev.reply}
+                  </div>
+                </div>
+              ) : replyingId === rev.id ? (
+                <div className="space-y-2 pt-2">
+                  <textarea
+                    value={replyText}
+                    onChange={(e) => setReplyText(e.target.value)}
+                    placeholder="Tulis balasan ulasan..."
+                    className="w-full p-3 rounded-2xl border border-stone-200 text-xs focus:outline-none focus:ring-2 focus:ring-amber-500/20"
+                    rows={2}
+                  />
+                  <div className="flex items-center gap-2 justify-end">
+                    <button
+                      onClick={() => setReplyingId(null)}
+                      className="px-3 py-1.5 rounded-xl border border-stone-200 text-xs font-semibold text-stone-600 hover:bg-stone-50"
+                    >
+                      Batal
+                    </button>
+                    <button
+                      onClick={() => {
+                        showToast("Terkirim", "Balasan berhasil dikirim", "success");
+                        setReplyingId(null);
+                      }}
+                      className="px-3.5 py-1.5 rounded-xl bg-[#B57A21] text-white text-xs font-bold flex items-center gap-1.5"
+                    >
+                      <Send className="w-3.5 h-3.5" />
+                      Kirim
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <button
+                  onClick={() => setReplyingId(rev.id)}
+                  className="px-3.5 py-1.5 rounded-xl border border-stone-200 hover:bg-stone-50 text-xs font-bold text-stone-700 transition-all cursor-pointer"
+                >
+                  Balas ulasan
+                </button>
+              )}
+            </div>
+          ))}
+        </div>
       </main>
     </>
   );

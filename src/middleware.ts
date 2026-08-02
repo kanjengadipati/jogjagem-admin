@@ -7,7 +7,11 @@ const PUBLIC_PATHS = ["/login", "/logout", "/api/auth"];
 
 export function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
-  const isPartnerPortal = pathname === "/partner" || pathname.startsWith("/partner/");
+  const isPartnerPortal =
+    pathname === "/partner" ||
+    pathname.startsWith("/partner/") ||
+    pathname === "/business" ||
+    pathname.startsWith("/business/");
 
   // Allow public routes and static assets
   if (
@@ -39,17 +43,20 @@ export function middleware(req: NextRequest) {
 
   const role = payload.role;
 
-  if (role === 'partner') {
-    // Allow access to partner portal and API
-    if (!isPartnerPortal &&
-        !req.nextUrl.pathname.startsWith('/api/partners/me') &&
-        !req.nextUrl.pathname.startsWith('/api/me') &&
-        !req.nextUrl.pathname.startsWith('/api/auth')) {
-      return NextResponse.redirect(new URL('/partner', req.url));
+  if (role === 'partner' || role === 'business_owner') {
+    // Allow access to business/partner portal and API
+    if (
+      !isPartnerPortal &&
+      !req.nextUrl.pathname.startsWith('/api/businesses') &&
+      !req.nextUrl.pathname.startsWith('/api/partners/me') &&
+      !req.nextUrl.pathname.startsWith('/api/me') &&
+      !req.nextUrl.pathname.startsWith('/api/auth')
+    ) {
+      return NextResponse.redirect(new URL('/business', req.url));
     }
   } else {
-    // Admin/Superadmin: restrict access to partner portal
-    if (isPartnerPortal) {
+    // Admin/Superadmin: restrict root /partner or /business without business ID
+    if (pathname === '/partner' || pathname === '/business') {
       return NextResponse.redirect(new URL('/dashboard', req.url));
     }
   }

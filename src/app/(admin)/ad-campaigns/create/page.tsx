@@ -1,13 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import Header from "@/components/Header";
 import CoverImageUpload from "@/components/CoverImageUpload";
 import { useToast } from "@/components/Toast";
-import { ArrowLeft, CheckCircle, ExternalLink, Megaphone } from "lucide-react";
+import { ArrowLeft, CheckCircle, ExternalLink, Loader2, Megaphone } from "lucide-react";
+import type { Business } from "@/types";
 
 const PLACEMENTS = [
   { value: "homepage_hero", label: "Homepage Hero (below category filters)" },
@@ -46,8 +47,10 @@ export default function CreateAdCampaignPage() {
   const router = useRouter();
   const { showToast } = useToast();
   const [saving, setSaving] = useState(false);
+  const [businesses, setBusinesses] = useState<Business[]>([]);
+  const [businessesLoading, setBusinessesLoading] = useState(true);
   const [form, setForm] = useState({
-    partner_name: "",
+    business_id: "",
     placement: "homepage_hero",
     image_url: "",
     target_url: "",
@@ -59,26 +62,40 @@ export default function CreateAdCampaignPage() {
     price_currency: "IDR",
   });
 
+  const selectedBusiness = businesses.find((b) => b.id === form.business_id);
+
+  useEffect(() => {
+    fetch("/api/businesses")
+      .then((r) => r.json())
+      .then((d) => setBusinesses((d?.data ?? []).filter((b: Business) => b.status === "approved")))
+      .catch(() => showToast("Error", "Failed to load businesses", "error"))
+      .finally(() => setBusinessesLoading(false));
+  }, [showToast]);
+
   function set<K extends keyof typeof form>(key: K, val: string) {
     setForm((f) => ({ ...f, [key]: val }));
   }
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
-    if (!form.partner_name || !form.image_url || !form.target_url) {
-      showToast("Missing fields", "Partner name, image URL, and target URL are required", "error");
+    if (!form.business_id || !selectedBusiness || !form.image_url || !form.target_url) {
+      showToast("Missing fields", "Business, image URL, and target URL are required", "error");
       return;
     }
 
     setSaving(true);
     try {
-      const externalId = `${slugify(form.partner_name)}-${Date.now().toString(36)}`;
+      const externalId = `${slugify(selectedBusiness.name)}-${Date.now().toString(36)}`;
       const res = await fetch("/api/ad-campaigns", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           id: externalId,
-          partner_name: form.partner_name,
+          business_external_id: selectedBusiness.id,
+          // partner_name is still NOT NULL in the DB during the migration
+          // transition; auto-filled from the selected business until Phase 4
+          // step 4 drops the column.
+          partner_name: selectedBusiness.name,
           placement: form.placement,
           image_url: form.image_url,
           target_url: form.target_url,
@@ -133,14 +150,28 @@ export default function CreateAdCampaignPage() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                 <div className="space-y-1.5">
                   <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest font-display block">
-                    Partner Name
+                    Business
                   </label>
-                  <input
-                    value={form.partner_name}
-                    onChange={(e) => set("partner_name", e.target.value)}
-                    placeholder="e.g. Malioboro Grand Hotel"
-                    className="w-full bg-bg focus:bg-white text-xs px-4 py-3 rounded-xl border border-transparent focus:border-border outline-none font-medium"
-                  />
+                  {businessesLoading ? (
+                    <div className="w-full bg-bg flex items-center gap-2 text-xs px-4 py-3 rounded-xl border border-transparent text-gray-400">
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" /> Loading businesses...
+                    </div>
+                  ) : businesses.length === 0 ? (
+                    <div className="w-full bg-bg text-xs px-4 py-3 rounded-xl border border-transparent text-danger">
+                      No approved businesses yet — create one first.
+                    </div>
+                  ) : (
+                    <select
+                      value={form.business_id}
+                      onChange={(e) => set("business_id", e.target.value)}
+                      className="w-full bg-bg focus:bg-white text-xs px-4 py-3 rounded-xl border border-transparent focus:border-border outline-none font-semibold text-gray-700 cursor-pointer"
+                    >
+                      <option value="">Select a business...</option>
+                      {businesses.map((b) => (
+                        <option key={b.id} value={b.id}>{b.name}</option>
+                      ))}
+                    </select>
+                  )}
                 </div>
 
                 <div className="space-y-1.5">
@@ -278,7 +309,7 @@ export default function CreateAdCampaignPage() {
               <h4 className="text-xs font-bold text-gray-400 uppercase tracking-widest font-display">Publish</h4>
               <button
                 type="submit"
-                disabled={saving || !form.partner_name || !form.image_url || !form.target_url}
+                disabled={saving || !form.business_id || !form.image_url || !form.target_url}
                 className="w-full bg-primary hover:bg-primary-dark disabled:opacity-60 text-white py-3 rounded-xl text-xs font-semibold shadow-premium transition-premium cursor-pointer disabled:cursor-not-allowed"
               >
                 {saving ? "Creating..." : "Create Campaign"}
@@ -308,7 +339,7 @@ export default function CreateAdCampaignPage() {
               </div>
               <div className="space-y-2">
                 <h3 className="text-sm font-bold text-gray-900 font-display leading-snug">
-                  {form.partner_name || "Partner name"}
+                  {selectedBusiness?.name || "Business name"}
                 </h3>
                 {form.target_url && (
                   <a href={form.target_url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 text-xs text-primary font-semibold hover:underline">
