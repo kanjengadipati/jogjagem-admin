@@ -86,6 +86,14 @@ export default function PartnerSettingsPage() {
     loadData();
   }, []);
 
+  const validatePhone = (phone: string): boolean => {
+    const cleanPhone = phone.trim();
+    if (!cleanPhone) return true;
+    const digitsOnly = cleanPhone.replace(/\D/g, "");
+    if (digitsOnly.length < 9 || digitsOnly.length > 15) return false;
+    return /^(\+62|62|0)[8][1-9][0-9]{6,11}$/.test(cleanPhone);
+  };
+
   const handleSaveBusiness = async (e: React.FormEvent) => {
     e.preventDefault();
     setPhoneError("");
