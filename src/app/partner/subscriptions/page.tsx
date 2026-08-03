@@ -97,6 +97,7 @@ export default function PartnerSubscriptionsPage() {
                     : "bg-[#B57A21] hover:bg-[#9B671A] text-white shadow-xs"
                 }`}
               >
+                {/* TODO: Implement functional subscription purchase flow using SnapCheckoutButton + Payment */}
                 {plan.buttonText}
               </button>
             </div>

@@ -103,6 +103,7 @@ export default function PartnerMarketingPage() {
 
   // ── State ──────────────────────────────────────────────────────────────────
   const [partnerId, setPartnerId] = useState<string | null>(null);
+  const [isBusiness, setIsBusiness] = useState(false);
   const [promotions, setPromotions] = useState<Promotion[]>([]);
   const [campaigns, setCampaigns] = useState<AdCampaign[]>([]);
   const [paymentBySubject, setPaymentBySubject] = useState<
@@ -125,22 +126,37 @@ export default function PartnerMarketingPage() {
 
   // ── Load data ──────────────────────────────────────────────────────────────
   useEffect(() => {
-    // Ambil partner ID dari /api/partners/me lalu fetch promotions
-    fetch("/api/partners/me")
-      .then((r) => r.json())
-      .then((d) => {
-        const list = d?.data ?? [];
+    async function load() {
+      try {
+        let meRes = await fetch("/api/partners/me");
+        let meData = await meRes.json();
+        let list = meData?.data ?? [];
+        let isBiz = false;
+
+        if (!Array.isArray(list) || list.length === 0) {
+          const bizRes = await fetch("/api/businesses/me");
+          const bizData = await bizRes.json();
+          list = bizData?.data ?? (Array.isArray(bizData) ? bizData : []);
+          isBiz = true;
+        }
+
         const first = list[0];
         if (!first) return;
-        setPartnerId(first.id);
-        return fetch(`/api/partners/me/${first.id}/promotions`);
-      })
-      .then((r) => r?.json())
-      .then((d) => {
-        setPromotions(d?.data ?? []);
-      })
-      .catch(() => {})
-      .finally(() => setLoadingPromos(false));
+
+        const id = isBiz ? (first.external_id || String(first.id)) : first.id;
+        setPartnerId(id);
+        setIsBusiness(isBiz);
+
+        const promoRes = await fetch(`/api/${isBiz ? 'businesses' : 'partners'}/me/${id}/promotions`);
+        const promoData = await promoRes.json();
+        setPromotions(promoData?.data ?? []);
+      } catch {
+        showToast("Error", "Gagal memuat promosi", "error");
+      } finally {
+        setLoadingPromos(false);
+      }
+    }
+    load();
   }, []);
 
   useEffect(() => {
@@ -191,7 +207,8 @@ export default function PartnerMarketingPage() {
     }
     setSavingPromo(true);
     try {
-      const res = await fetch(`/api/partners/me/${partnerId}/promotions`, {
+      const endpoint = isBusiness ? `/api/businesses/me/${partnerId}/promotions` : `/api/partners/me/${partnerId}/promotions`;
+      const res = await fetch(endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -230,7 +247,8 @@ export default function PartnerMarketingPage() {
   async function handleDeletePromo(id: string) {
     if (!partnerId) return;
     if (!confirm("Hapus promosi ini?")) return;
-    const res = await fetch(`/api/partners/me/${partnerId}/promotions/${id}`, {
+    const endpoint = isBusiness ? `/api/businesses/me/${partnerId}/promotions/${id}` : `/api/partners/me/${partnerId}/promotions/${id}`;
+    const res = await fetch(endpoint, {
       method: "DELETE",
     });
     if (res.ok) {
