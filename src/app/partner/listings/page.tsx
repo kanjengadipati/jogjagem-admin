@@ -71,40 +71,20 @@ export default function PartnerListingsPage() {
         {/* Listings List */}
         <div className="space-y-4">
           {listings.length === 0 ? (
-            <div className="bg-white p-6 rounded-3xl border border-stone-200/80 shadow-xs flex items-center justify-between gap-4">
-              <div className="flex items-center gap-4">
-                <div className="w-16 h-16 rounded-2xl bg-stone-100 flex items-center justify-center text-stone-400 shrink-0">
-                  <MapPin className="w-6 h-6" />
-                </div>
-                <div>
-                  <div className="flex items-center gap-2">
-                    <h3 className="text-sm font-bold text-stone-900">Candi Sonobudoyo Museum</h3>
-                    <span className="px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-extrabold uppercase tracking-wide">
-                      Terverifikasi
-                    </span>
-                  </div>
-                  <p className="text-xs text-stone-400 font-medium mt-0.5">Destinasi • Kraton, Yogyakarta</p>
-                  <div className="flex items-center gap-4 text-[11px] text-stone-500 font-semibold mt-2">
-                    <span className="flex items-center gap-1">
-                      <Eye className="w-3.5 h-3.5 text-stone-400" />
-                      1.240 impresi
-                    </span>
-                    <span className="flex items-center gap-1">
-                      <Star className="w-3.5 h-3.5 text-amber-500 fill-amber-500" />
-                      4.6 rating
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-2">
-                <button className="px-3.5 py-2 rounded-xl border border-stone-200 hover:bg-stone-50 text-xs font-bold text-stone-700 transition-all cursor-pointer">
-                  Edit profil
-                </button>
-                <button className="px-3.5 py-2 rounded-xl border border-stone-200 hover:bg-stone-50 text-xs font-bold text-stone-700 transition-all cursor-pointer">
-                  Kelola media
-                </button>
-              </div>
+            <div className="text-center py-12 border border-dashed border-stone-200 rounded-3xl bg-white shadow-xs">
+              <MapPin className="w-10 h-10 text-stone-300 mx-auto mb-3" />
+              <h3 className="text-sm font-bold text-stone-900">Belum ada destinasi terdaftar</h3>
+              <p className="text-xs text-stone-500 font-medium mt-1 mb-4">
+                Mulai kelola bisnis Anda dengan mengklaim listing destinasi.
+              </p>
+              <a
+                href="http://localhost:3001/business/claim"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-block px-4 py-2.5 rounded-2xl bg-[#B57A21] hover:bg-[#9B671A] text-white text-xs font-bold transition-all"
+              >
+                Ajukan klaim listing baru
+              </a>
             </div>
           ) : (
             listings.map((item) => (
