@@ -146,6 +146,7 @@ export function SnapCheckoutButton({
   const { showToast } = useToast();
   const [loading, setLoading] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
+  const [agreeTerms, setAgreeTerms] = useState(false);
 
   async function generateInvoice(email: string) {
     setModalOpen(false);
@@ -201,7 +202,28 @@ export function SnapCheckoutButton({
   }
 
   return (
-    <>
+    <div className="w-full space-y-3">
+      {/* Checkbox Persetujuan */}
+      <label className="flex items-start gap-2 cursor-pointer group">
+        <input
+          type="checkbox"
+          checked={agreeTerms}
+          onChange={(e) => setAgreeTerms(e.target.checked)}
+          className="mt-0.5 rounded border-stone-300 text-[#B8912A] focus:ring-[#B8912A]"
+        />
+        <span className="text-[10px] text-stone-500 leading-tight">
+          Saya setuju dengan{" "}
+          <a href="/syarat-ketentuan" target="_blank" className="text-[#B8912A] hover:underline">
+            Syarat & Ketentuan
+          </a>{" "}
+          dan{" "}
+          <a href="/kebijakan-privasi" target="_blank" className="text-[#B8912A] hover:underline">
+            Kebijakan Privasi
+          </a>{" "}
+          Jogjagem.
+        </span>
+      </label>
+
       {/* Snap.js dimuat sekali — strategy afterInteractive agar tidak block render */}
       <Script
         src={SNAP_JS_URL}
@@ -219,7 +241,7 @@ export function SnapCheckoutButton({
 
       <button
         onClick={handleClick}
-        disabled={loading}
+        disabled={loading || !agreeTerms}
         className={
           fullWidth
             ? "inline-flex items-center justify-center gap-1.5 w-full py-2.5 px-4 rounded-2xl bg-[#B57A21] hover:bg-[#9B671A] text-white text-xs font-bold transition-all disabled:opacity-50 cursor-pointer"
@@ -233,6 +255,6 @@ export function SnapCheckoutButton({
         )}
         {label}
       </button>
-    </>
+    </div>
   );
 }
