@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import PartnerHeader from "@/components/PartnerHeader";
 import { useToast } from "@/components/Toast";
 import { CreditCard, CheckCircle2, Shield, ArrowUpRight, Zap, Loader2, AlertCircle } from "lucide-react";
+import { SnapCheckoutButton } from "@/components/SnapCheckoutButton";
 
 interface Subscription {
   external_id: string;
@@ -19,11 +20,34 @@ interface BusinessInfo {
   category: string;
 }
 
-const PLAN_META: Record<string, { description: string; label: string }> = {
-  free: { label: "Free", description: "Baru mulai, coba-coba dulu" },
-  pro: { label: "Pro", description: "Tampil lebih menonjol" },
-  business_plus: { label: "Business+", description: "Slot iklan lebih banyak" },
-  enterprise: { label: "Enterprise", description: "Banyak listing sekaligus" },
+const PLAN_META: Record<
+  string,
+  { description: string; label: string; price: number; itemName: string }
+> = {
+  free: {
+    label: "Free",
+    description: "Baru mulai, coba-coba dulu",
+    price: 0,
+    itemName: "",
+  },
+  pro: {
+    label: "Pro",
+    description: "Tampil lebih menonjol",
+    price: 199000,
+    itemName: "Langganan JogjaGEM Pro (1 bulan)",
+  },
+  business_plus: {
+    label: "Business+",
+    description: "Slot iklan lebih banyak",
+    price: 499000,
+    itemName: "Langganan JogjaGEM Business+ (1 bulan)",
+  },
+  enterprise: {
+    label: "Enterprise",
+    description: "Banyak listing sekaligus",
+    price: 0,
+    itemName: "",
+  },
 };
 
 const PLAN_ORDER = ["free", "pro", "business_plus", "enterprise"];
@@ -37,45 +61,52 @@ function fmtDate(d?: string) {
   });
 }
 
+function fmtPrice(n: number) {
+  return "Rp " + n.toLocaleString("id-ID");
+}
+
 export default function PartnerSubscriptionsPage() {
   const { showToast } = useToast();
   const [subscription, setSubscription] = useState<Subscription | null>(null);
   const [business, setBusiness] = useState<BusinessInfo | null>(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    async function load() {
-      try {
-        const bizRes = await fetch("/api/businesses/me");
-        const bizJson = await bizRes.json();
-        const bizList = bizJson?.data ?? (Array.isArray(bizJson) ? bizJson : []);
-        if (!Array.isArray(bizList) || bizList.length === 0) return;
-        const first = bizList[0];
-        setBusiness({
-          id: first.external_id || String(first.id),
-          name: first.name || "Bisnis Saya",
-          category: first.category || "Wisata",
-        });
+  const load = useCallback(async () => {
+    try {
+      const bizRes = await fetch("/api/businesses/me");
+      const bizJson = await bizRes.json();
+      const bizList = bizJson?.data ?? (Array.isArray(bizJson) ? bizJson : []);
+      if (!Array.isArray(bizList) || bizList.length === 0) return;
+      const first = bizList[0];
+      setBusiness({
+        id: first.external_id || String(first.id),
+        name: first.name || "Bisnis Saya",
+        category: first.category || "Wisata",
+      });
 
-        const subRes = await fetch(
-          `/api/businesses/me/${first.external_id || String(first.id)}/subscription`
-        );
-        const subJson = await subRes.json();
-        const data = subJson?.data ?? subJson;
-        if (data && typeof data === "object" && data.plan) {
-          setSubscription(data as Subscription);
-        }
-      } catch {
-        showToast("Error", "Gagal memuat data langganan", "error");
-      } finally {
-        setLoading(false);
+      const subRes = await fetch(
+        `/api/businesses/me/${first.external_id || String(first.id)}/subscription`
+      );
+      const subJson = await subRes.json();
+      const data = subJson?.data ?? subJson;
+      if (data && typeof data === "object" && data.plan) {
+        setSubscription(data as Subscription);
       }
+    } catch {
+      showToast("Error", "Gagal memuat data langganan", "error");
+    } finally {
+      setLoading(false);
     }
+  }, [showToast]);
+
+  useEffect(() => {
     load();
-  }, []);
+  }, [load]);
 
   const currentPlan = subscription?.plan ?? "free";
   const currentMeta = PLAN_META[currentPlan] ?? PLAN_META.free;
+  const nextPlanKey = PLAN_ORDER[Math.min(PLAN_ORDER.indexOf(currentPlan) + 1, PLAN_ORDER.length - 1)];
+  const nextPlan = nextPlanKey !== currentPlan && nextPlanKey !== "enterprise" ? PLAN_META[nextPlanKey] : null;
 
   if (loading) {
     return (
@@ -121,13 +152,18 @@ export default function PartnerSubscriptionsPage() {
               </p>
             </div>
           </div>
-          {/* TODO: Implement functional subscription purchase flow using SnapCheckoutButton + Payment */}
-          <button
-            onClick={() => showToast("Fitur upgrade akan segera hadir", "info")}
-            className="px-4 py-2.5 rounded-2xl border border-[#EACD96] bg-white hover:bg-stone-50 text-xs font-bold text-[#825410] shadow-2xs transition-all cursor-pointer"
-          >
-            Kelola pembayaran
-          </button>
+          {business && subscription && nextPlan && (
+            <SnapCheckoutButton
+              subjectType="subscription"
+              subjectExternalId={subscription.external_id}
+              amount={nextPlan.price}
+              itemName={nextPlan.itemName}
+              customerName={business.name}
+              apiEndpoint={`/api/businesses/me/${business.id}/subscription/upgrade`}
+              label={`Upgrade ke ${nextPlan.label}`}
+              onPaid={() => void load()}
+            />
+          )}
         </div>
 
         {/* Plans Grid */}
@@ -150,6 +186,12 @@ export default function PartnerSubscriptionsPage() {
                   )}
                   <h3 className="text-lg font-extrabold text-stone-900 font-display">{plan.label}</h3>
                   <p className="text-xs text-stone-500 font-medium mt-1 leading-relaxed">{plan.description}</p>
+                  {plan.price > 0 && (
+                    <p className="text-sm font-extrabold text-stone-900 mt-2">
+                      {fmtPrice(plan.price)}
+                      <span className="text-[10px] font-medium text-stone-400"> /bulan</span>
+                    </p>
+                  )}
                 </div>
 
                 {isCurrent ? (
@@ -164,10 +206,21 @@ export default function PartnerSubscriptionsPage() {
                   >
                     Hubungi sales
                   </button>
+                ) : business ? (
+                  <SnapCheckoutButton
+                    subjectType="subscription"
+                    subjectExternalId={subscription?.external_id ?? ""}
+                    amount={plan.price}
+                    itemName={plan.itemName}
+                    customerName={business.name}
+                    apiEndpoint={`/api/businesses/me/${business.id}/subscription/upgrade`}
+                    label="Upgrade"
+                    fullWidth
+                    onPaid={() => void load()}
+                  />
                 ) : (
-                  // TODO: Implement functional subscription purchase flow using SnapCheckoutButton + Payment
                   <button
-                    onClick={() => showToast("Fitur upgrade akan segera hadir", "info")}
+                    onClick={() => showToast("Data bisnis belum dimuat, coba muat ulang halaman", "info")}
                     className="w-full py-2.5 px-4 rounded-2xl text-xs font-bold transition-all cursor-pointer bg-[#B57A21] hover:bg-[#9B671A] text-white shadow-xs"
                   >
                     Upgrade
@@ -188,3 +241,4 @@ export default function PartnerSubscriptionsPage() {
     </>
   );
 }
+

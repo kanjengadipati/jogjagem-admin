@@ -115,13 +115,19 @@ export function InvoiceEmailModal({
 // ─── Tombol utama Generate Invoice ───────────────────────────────────────────
 
 interface SnapCheckoutButtonProps {
-  subjectType: "ad_campaign" | "partner_sponsorship";
+  subjectType: "ad_campaign" | "partner_sponsorship" | "subscription";
   subjectExternalId: string;
   amount: number;
   itemName: string;
   customerName: string;
   /** Kalau sudah tersedia (misal dari field owner_email), langsung dipakai tanpa modal */
   customerEmail?: string;
+  /** Ganti endpoint invoice (subscription upgrade pakai proxy business sendiri) */
+  apiEndpoint?: string;
+  /** Label tombol (default "Generate Invoice") */
+  label?: string;
+  /** Tampilkan tombol full-width (untuk kartu paket upgrade) */
+  fullWidth?: boolean;
   onPaid: () => void;
 }
 
@@ -132,6 +138,9 @@ export function SnapCheckoutButton({
   itemName,
   customerName,
   customerEmail,
+  apiEndpoint = "/api/payments",
+  label = "Generate Invoice",
+  fullWidth = false,
   onPaid,
 }: SnapCheckoutButtonProps) {
   const { showToast } = useToast();
@@ -142,7 +151,7 @@ export function SnapCheckoutButton({
     setModalOpen(false);
     setLoading(true);
     try {
-      const res = await fetch("/api/payments", {
+      const res = await fetch(apiEndpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -211,14 +220,18 @@ export function SnapCheckoutButton({
       <button
         onClick={handleClick}
         disabled={loading}
-        className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-[10px] font-semibold text-white hover:bg-primary/90 disabled:opacity-50 transition cursor-pointer"
+        className={
+          fullWidth
+            ? "inline-flex items-center justify-center gap-1.5 w-full py-2.5 px-4 rounded-2xl bg-[#B57A21] hover:bg-[#9B671A] text-white text-xs font-bold transition-all disabled:opacity-50 cursor-pointer"
+            : "inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-[10px] font-semibold text-white hover:bg-primary/90 disabled:opacity-50 transition cursor-pointer"
+        }
       >
         {loading ? (
           <Loader2 className="w-3.5 h-3.5 animate-spin" />
         ) : (
           <CreditCard className="w-3.5 h-3.5" />
         )}
-        Generate Invoice
+        {label}
       </button>
     </>
   );
