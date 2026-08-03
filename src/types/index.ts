@@ -48,7 +48,7 @@ export interface Destination {
   images?: DestinationImage[] | string[] | string;
   facilities?: string[] | string;
   travel_tips?: string[] | string;
-  faqs?: string[] | string;
+  faqs?: string[] | string | { q: string; a: string }[];
   weather?: Record<string, unknown>;
   seo_title?: string;
   seo_title_en?: string;
@@ -58,6 +58,7 @@ export interface Destination {
   seo_description_en?: string;
   og_image_url?: string;
   video_url?: string;
+  google_maps_url?: string;
   status?: string;
   created_at?: string;
   updated_at?: string;

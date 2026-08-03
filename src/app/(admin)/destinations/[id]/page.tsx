@@ -53,6 +53,7 @@ type FormState = {
   latitude: string;
   longitude: string;
   video_url: string;
+  google_maps_url: string;
   rating: string;
   review_count: string;
   seo_title: string;
@@ -68,10 +69,73 @@ type FormState = {
 const EMPTY_FORM: FormState = {
   name: "", name_en: "", category: "", sub_region: "", tagline: "", tagline_en: "", location: "",
   description: "", description_en: "", story: "", story_en: "", ticket_price: "", opening_hours: "", best_time: "", best_time_en: "",
-  latitude: "", longitude: "", video_url: "", rating: "", review_count: "", seo_title: "", seo_title_en: "", seo_keywords: "", seo_keywords_en: "", seo_description: "", seo_description_en: "", og_image_url: "",
+  latitude: "", longitude: "", video_url: "", google_maps_url: "", rating: "", review_count: "", seo_title: "", seo_title_en: "", seo_keywords: "", seo_keywords_en: "", seo_description: "", seo_description_en: "", og_image_url: "",
   status: "published",
 };
 
+type FaqItem = { q: string; a: string };
+
+type RichContent = {
+  facilities: string[];
+  travel_tips: string[];
+  faqs: FaqItem[];
+  weather: { temp: string; condition: string; status: string };
+};
+
+const EMPTY_RICH: RichContent = {
+  facilities: [],
+  travel_tips: [],
+  faqs: [],
+  weather: { temp: "", condition: "", status: "" },
+};
+
+function parseArr(v: unknown): string[] {
+  if (!v) return [];
+  let arr: unknown = v;
+  if (typeof v === "string") {
+    try { arr = JSON.parse(v); } catch { return []; }
+  }
+  if (!Array.isArray(arr)) return [];
+  return arr.map((x) => (typeof x === "string" ? x : "")).filter(Boolean);
+}
+
+function parseFaqs(v: unknown): FaqItem[] {
+  if (!v) return [];
+  let arr: unknown = v;
+  if (typeof v === "string") {
+    try { arr = JSON.parse(v); } catch { return []; }
+  }
+  if (!Array.isArray(arr)) return [];
+  return arr.map((x) => {
+    if (x && typeof x === "object") {
+      const o = x as Record<string, unknown>;
+      return { q: typeof o.q === "string" ? o.q : "", a: typeof o.a === "string" ? o.a : "" };
+    }
+    return { q: "", a: "" };
+  }).filter((f) => f.q || f.a);
+}
+
+function parseWeather(v: unknown): RichContent["weather"] {
+  if (v && typeof v === "object" && !Array.isArray(v)) {
+    const o = v as Record<string, unknown>;
+    return {
+      temp: typeof o.temp === "string" ? o.temp : "",
+      condition: typeof o.condition === "string" ? o.condition : "",
+      status: typeof o.status === "string" ? o.status : "",
+    };
+  }
+  return EMPTY_RICH.weather;
+}
+
+function mapsUrlFor(form: FormState): string | null {
+  if (form.google_maps_url.trim()) return form.google_maps_url.trim();
+  const lat = form.latitude.trim();
+  const lng = form.longitude.trim();
+  if (lat && lng && Number.isFinite(Number(lat)) && Number.isFinite(Number(lng))) {
+    return `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`;
+  }
+  return null;
+}
 function FieldInput({ label, value, onChange, mono = false }: {
   label: string; value: string; onChange: (v: string) => void; mono?: boolean;
 }) {
@@ -83,6 +147,31 @@ function FieldInput({ label, value, onChange, mono = false }: {
         onChange={(e) => onChange(e.target.value)}
         className={`w-full bg-bg focus:bg-white text-xs px-4 py-3 rounded-xl border border-transparent focus:border-border outline-none font-medium${mono ? " font-mono" : ""}`}
       />
+    </div>
+  );
+}
+
+function AddItemInput({ placeholder, onSubmit }: { placeholder: string; onSubmit: (v: string) => void }) {
+  const [val, setVal] = useState("");
+  const submit = () => {
+    const t = val.trim();
+    if (!t) return;
+    onSubmit(t);
+    setVal("");
+  };
+  return (
+    <div className="flex gap-2">
+      <input
+        value={val}
+        onChange={(e) => setVal(e.target.value)}
+        onKeyDown={(e) => e.key === "Enter" && submit()}
+        placeholder={placeholder}
+        className="flex-1 bg-bg focus:bg-white text-xs px-4 py-2.5 rounded-xl border border-transparent focus:border-border outline-none font-medium"
+      />
+      <button onClick={submit}
+        className="px-4 py-2.5 text-xs font-bold bg-primary text-white rounded-xl hover:bg-primary-dark transition-premium cursor-pointer">
+        Add
+      </button>
     </div>
   );
 }
@@ -126,6 +215,7 @@ export default function DestinationDetailPage() {
   const [tab, setTab] = useState<Tab>("overview");
   const [lang, setLang] = useState<"id" | "en">("id");
   const [form, setForm] = useState<FormState>(EMPTY_FORM);
+  const [rich, setRich] = useState<RichContent>(EMPTY_RICH);
   const [galleryImgs, setGalleryImgs] = useState<string[]>([]);
   const [urlInput, setUrlInput] = useState("");
   const [urlPreviewError, setUrlPreviewError] = useState(false);
@@ -165,6 +255,7 @@ export default function DestinationDetailPage() {
             latitude: String(data.latitude ?? ""),
             longitude: String(data.longitude ?? ""),
             video_url: data.video_url ?? "",
+            google_maps_url: data.google_maps_url ?? "",
             rating: String((data as any).rating ?? ""),
             review_count: String((data as any).google_review_count ?? (data as any).review_count ?? ""),
             seo_title: data.seo_title ?? "",
@@ -177,6 +268,12 @@ export default function DestinationDetailPage() {
             status: data.status ?? "published",
           });
           setGalleryImgs(parseImages(data.images));
+          setRich({
+            facilities: parseArr(data.facilities),
+            travel_tips: parseArr(data.travel_tips),
+            faqs: parseFaqs(data.faqs),
+            weather: parseWeather(data.weather),
+          });
         }
       })
       .catch(() => showToast("Error", "Failed to load destination", "error"))
@@ -288,7 +385,14 @@ export default function DestinationDetailPage() {
     setSaving(true);
     try {
       const images = galleryImgs.map((url) => ({ url, credit: "Admin" }));
-      const payload: Record<string, unknown> = { ...form, images };
+      const payload: Record<string, unknown> = {
+        ...form,
+        images,
+        facilities: rich.facilities,
+        travel_tips: rich.travel_tips,
+        faqs: rich.faqs,
+        weather: rich.weather,
+      };
 
       const rating = parseFloat(form.rating);
       if (Number.isNaN(rating)) delete payload.rating;
@@ -312,6 +416,9 @@ export default function DestinationDetailPage() {
       });
       console.log("Save response:", res.status);
       if (res.ok) {
+        const saved = await res.json().catch(() => null);
+        const updated: Destination | null = saved?.data ?? saved ?? null;
+        if (updated) setDest(updated);
         showToast("Saved", "Destination updated successfully", "success");
       } else {
         const errorData = await res.json().catch(() => ({}));
@@ -489,13 +596,43 @@ export default function DestinationDetailPage() {
     showToast("Cover set", "Image moved to cover position", "success");
   }
 
-  const facs: string[] = dest
-    ? Array.isArray(dest.facilities)
-      ? (dest.facilities as string[])
-      : JSON.parse((dest.facilities as string) || "[]")
-    : [];
-
-  const contentScore = useMemo(() => computeContentScore(dest), [dest]);
+  const contentScore = useMemo(() => {
+    const live: Destination = {
+      id: dest?.id ?? "new",
+      ...(dest ?? {}),
+      name: form.name,
+      name_en: form.name_en,
+      tagline: form.tagline,
+      tagline_en: form.tagline_en,
+      category: form.category,
+      sub_region: form.sub_region,
+      location: form.location,
+      description: form.description,
+      description_en: form.description_en,
+      story: form.story,
+      story_en: form.story_en,
+      ticket_price: form.ticket_price,
+      opening_hours: form.opening_hours,
+      best_time: form.best_time,
+      best_time_en: form.best_time_en,
+      latitude: form.latitude,
+      longitude: form.longitude,
+      video_url: form.video_url,
+      seo_title: form.seo_title,
+      seo_title_en: form.seo_title_en,
+      seo_keywords: form.seo_keywords,
+      seo_keywords_en: form.seo_keywords_en,
+      seo_description: form.seo_description,
+      seo_description_en: form.seo_description_en,
+      og_image_url: form.og_image_url,
+      images: galleryImgs,
+      facilities: rich.facilities,
+      travel_tips: rich.travel_tips,
+      faqs: rich.faqs,
+      weather: rich.weather,
+    };
+    return computeContentScore(live);
+  }, [dest, form, galleryImgs, rich]);
   const TABS: Tab[] = ["overview", "gallery", "facilities", "seo", "events"];
   const tabLabel = (t: Tab) => {
     if (t === "seo") return "SEO & AI";
@@ -641,6 +778,19 @@ export default function DestinationDetailPage() {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                     <FieldInput label="Rating" value={form.rating} onChange={(v) => setField("rating", v)} />
                     <FieldInput label="Review Count" value={form.review_count} onChange={(v) => setField("review_count", v)} />
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-1 gap-5">
+                    <div>
+                      <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-1.5">Google Maps URL</label>
+                      <input
+                        type="url"
+                        value={form.google_maps_url}
+                        onChange={(e) => setField("google_maps_url", e.target.value)}
+                        placeholder="https://maps.google.com/?cid=... or place link"
+                        className="w-full px-3 py-2 text-sm border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono"
+                      />
+                      <p className="text-[10px] text-gray-400 mt-1">Used by the "View on Google Maps" shortcut. Falls back to lat/lng query if empty.</p>
+                    </div>
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-1 gap-5">
                     <div>
@@ -847,22 +997,84 @@ export default function DestinationDetailPage() {
               </div>
             )}
 
-            {/* Facilities */}
+            {/* Rich Content */}
             {tab === "facilities" && (
-              <div className="bg-white p-6 rounded-card border border-border shadow-soft space-y-4">
-                <h4 className="text-sm font-bold text-gray-800 font-display">Physical Facilities & Amenities</h4>
-                {facs.length === 0
-                  ? <p className="text-xs text-gray-400">No facilities data available.</p>
-                  : (
-                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                      {facs.map((f) => (
-                        <label key={f} className="flex items-center gap-3 p-3 rounded-xl border border-border hover:bg-bg cursor-pointer">
-                          <input type="checkbox" defaultChecked className="rounded text-primary focus:ring-primary w-4 h-4" />
-                          <span className="text-xs font-semibold text-gray-700">{f}</span>
-                        </label>
-                      ))}
-                    </div>
-                  )}
+              <div className="bg-white p-6 rounded-card border border-border shadow-soft space-y-6">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-sm font-bold text-gray-800 font-display">Facilities & Travel Tips</h4>
+                  <span className="text-[10px] text-gray-400 font-semibold">Save Changes to persist</span>
+                </div>
+
+                {/* Facilities */}
+                <div className="space-y-3">
+                  <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest font-display block">Facilities ({rich.facilities.length})</label>
+                  <div className="flex flex-wrap gap-2">
+                    {rich.facilities.map((f, i) => (
+                      <span key={i} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary/5 border border-primary/20 text-[11px] font-semibold text-primary">
+                        {f}
+                        <button onClick={() => setRich((r) => ({ ...r, facilities: r.facilities.filter((_, j) => j !== i) }))}
+                          className="text-primary/60 hover:text-primary cursor-pointer">✕</button>
+                      </span>
+                    ))}
+                    {rich.facilities.length === 0 && <span className="text-xs text-gray-400">No facilities added.</span>}
+                  </div>
+                  <AddItemInput placeholder="Add facility (e.g. Parking Area)" onSubmit={(v) => setRich((r) => (r.facilities.includes(v) ? r : { ...r, facilities: [...r.facilities, v] }))} />
+                </div>
+
+                {/* Travel Tips */}
+                <div className="space-y-3">
+                  <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest font-display block">Travel Tips ({rich.travel_tips.length})</label>
+                  <div className="space-y-2">
+                    {rich.travel_tips.map((t, i) => (
+                      <div key={i} className="flex items-start gap-2">
+                        <textarea value={t} rows={2} onChange={(e) => setRich((r) => ({ ...r, travel_tips: r.travel_tips.map((x, j) => (j === i ? e.target.value : x)) }))}
+                          className="flex-1 bg-bg focus:bg-white text-xs p-3 rounded-xl border border-transparent focus:border-border outline-none font-medium leading-relaxed" />
+                        <button onClick={() => setRich((r) => ({ ...r, travel_tips: r.travel_tips.filter((_, j) => j !== i) }))}
+                          className="p-2 rounded-lg border border-border hover:bg-red-50 hover:border-red-200 text-gray-400 hover:text-red-500 transition cursor-pointer">
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    ))}
+                    {rich.travel_tips.length === 0 && <span className="text-xs text-gray-400">No travel tips added.</span>}
+                  </div>
+                  <AddItemInput placeholder="Add travel tip" onSubmit={(v) => setRich((r) => ({ ...r, travel_tips: [...r.travel_tips, v] }))} />
+                </div>
+
+                {/* FAQs */}
+                <div className="space-y-3">
+                  <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest font-display block">FAQs ({rich.faqs.length})</label>
+                  <div className="space-y-3">
+                    {rich.faqs.map((f, i) => (
+                      <div key={i} className="space-y-2 p-3 rounded-xl border border-border bg-bg/50">
+                        <div className="flex items-center gap-2">
+                          <input value={f.q} onChange={(e) => setRich((r) => ({ ...r, faqs: r.faqs.map((x, j) => (j === i ? { ...x, q: e.target.value } : x)) }))}
+                            placeholder="Question"
+                            className="flex-1 bg-white text-xs px-3 py-2 rounded-lg border border-border outline-none font-semibold" />
+                          <button onClick={() => setRich((r) => ({ ...r, faqs: r.faqs.filter((_, j) => j !== i) }))}
+                            className="p-2 rounded-lg border border-border hover:bg-red-50 hover:border-red-200 text-gray-400 hover:text-red-500 transition cursor-pointer">
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                        <textarea value={f.a} rows={2} onChange={(e) => setRich((r) => ({ ...r, faqs: r.faqs.map((x, j) => (j === i ? { ...x, a: e.target.value } : x)) }))}
+                          placeholder="Answer"
+                          className="w-full bg-white text-xs px-3 py-2 rounded-lg border border-border outline-none font-medium leading-relaxed" />
+                      </div>
+                    ))}
+                    {rich.faqs.length === 0 && <span className="text-xs text-gray-400">No FAQs added.</span>}
+                  </div>
+                  <button onClick={() => setRich((r) => ({ ...r, faqs: [...r.faqs, { q: "", a: "" }] }))}
+                    className="text-xs font-bold text-primary hover:text-primary-dark cursor-pointer">+ Add FAQ</button>
+                </div>
+
+                {/* Weather */}
+                <div className="space-y-3">
+                  <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest font-display block">Weather</label>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <FieldInput label="Temp" value={rich.weather.temp} onChange={(v) => setRich((r) => ({ ...r, weather: { ...r.weather, temp: v } }))} />
+                    <FieldInput label="Condition" value={rich.weather.condition} onChange={(v) => setRich((r) => ({ ...r, weather: { ...r.weather, condition: v } }))} />
+                    <FieldInput label="Status" value={rich.weather.status} onChange={(v) => setRich((r) => ({ ...r, weather: { ...r.weather, status: v } }))} />
+                  </div>
+                </div>
               </div>
             )}
 
@@ -1090,6 +1302,16 @@ export default function DestinationDetailPage() {
                 <div className="flex justify-between"><span>Lat</span><span>{form.latitude || "N/A"}</span></div>
                 <div className="flex justify-between"><span>Lng</span><span>{form.longitude || "N/A"}</span></div>
               </div>
+              <a
+                href={mapsUrlFor(form) ?? "#"}
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-disabled={!mapsUrlFor(form)}
+                className="flex items-center justify-center gap-1.5 w-full py-2 rounded-lg border border-border text-[11px] font-bold text-gray-600 hover:bg-bg hover:text-primary transition cursor-pointer"
+              >
+                <ExternalLink className="w-3.5 h-3.5" />
+                View on Google Maps
+              </a>
             </div>
           </div>
         </div>

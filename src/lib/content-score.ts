@@ -48,7 +48,7 @@ const parseArr = (v: unknown): unknown[] => {
 const validCoord = (v: unknown): boolean => {
   if (v === undefined || v === null || v === "") return false;
   const n = Number(v);
-  return Number.isFinite(n) && n !== 0;
+  return Number.isFinite(n);
 };
 
 function finish(key: string, label: string, max: number, items: ContentScoreItem[]): ContentScoreCategory {
