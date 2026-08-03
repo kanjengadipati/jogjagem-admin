@@ -103,12 +103,14 @@ function ArticleModal({ article, onClose, onSaved }: {
       setForm(prev => ({
         ...prev,
         // Indonesian
+        title:            json.title            ?? prev.title,
         content:          json.content          ?? prev.content,
         excerpt:          json.excerpt          ?? prev.excerpt,
         seo_title:        json.seoTitle         ?? prev.seo_title,
         seo_description:  json.seoDescription   ?? prev.seo_description,
         seo_keywords:     json.seoKeywords      ?? prev.seo_keywords,
         // English
+        title_en:           json.titleEn          ?? prev.title_en,
         content_en:         json.contentEn        ?? prev.content_en,
         excerpt_en:         json.excerptEn        ?? prev.excerpt_en,
         seo_title_en:       json.seoTitleEn       ?? prev.seo_title_en,

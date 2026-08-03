@@ -1,10 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Link from "next/link";
 import BusinessHeader from "@/components/BusinessHeader";
 import { useToast } from "@/components/Toast";
 import { Star, MessageSquare, CornerDownRight, Send, Loader2 } from "lucide-react";
+import { useActiveBusiness } from "@/hooks/useActiveBusiness";
 
 interface Review {
   id: string;
@@ -17,6 +17,7 @@ interface Review {
 
 export default function BusinessReviewsPage() {
   const { showToast } = useToast();
+  const { active: business, externalId } = useActiveBusiness();
   const [reviews, setReviews] = useState<Review[]>([]);
   const [loading, setLoading] = useState(true);
   const [replyingId, setReplyingId] = useState<string | null>(null);
@@ -24,23 +25,19 @@ export default function BusinessReviewsPage() {
   const [bizId, setBizId] = useState("");
 
   useEffect(() => {
+    if (!business) {
+      setLoading(false);
+      return;
+    }
+    const id = externalId || business.id;
+    setBizId(id);
+
     async function loadReviews() {
       try {
-        const res = await fetch("/api/businesses/me");
-        const json = await res.json();
-        const bizList = json?.data ?? [];
-        if (!Array.isArray(bizList) || bizList.length === 0) {
-          setReviews([]);
-          return;
-        }
-
-        const firstBiz = bizList[0];
-        const id = firstBiz.external_id || String(firstBiz.id);
-        setBizId(id);
         const reviewRes = await fetch(`/api/businesses/me/${id}/reviews`);
         const reviewJson = await reviewRes.json();
         const list: Review[] = reviewJson?.data ?? [];
-        setReviews(list);
+        setReviews(Array.isArray(list) ? list : []);
       } catch {
         showToast("Error", "Failed to load reviews", "error");
       } finally {
@@ -49,7 +46,7 @@ export default function BusinessReviewsPage() {
     }
 
     loadReviews();
-  }, []);
+  }, [business, externalId]);
 
   const avgRating = reviews.length > 0
     ? reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length

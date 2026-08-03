@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter, useParams } from "next/navigation";
 import { useState, useEffect } from "react";
 import { useSidebar } from "@/contexts/SidebarContext";
 import {
@@ -31,6 +31,10 @@ interface BusinessOption {
 
 export default function BusinessSidebar() {
   const pathname = usePathname();
+  const router = useRouter();
+  const params = useParams();
+  const externalId = typeof params?.externalId === "string" ? params.externalId : undefined;
+
   const [collapsed, setCollapsed] = useState(false);
   const { isMobileOpen, toggleMobileSidebar } = useSidebar();
   const [businesses, setBusinesses] = useState<BusinessOption[]>([]);
@@ -50,7 +54,10 @@ export default function BusinessSidebar() {
             status: b.status || "pending",
           }));
           setBusinesses(mapped);
-          setSelectedBiz(mapped[0]);
+          const chosen = externalId
+            ? mapped.find((b) => b.id === externalId) ?? mapped[0]
+            : mapped[0];
+          setSelectedBiz(chosen);
         } else {
           const defaultBiz = {
             id: "default",
@@ -73,7 +80,14 @@ export default function BusinessSidebar() {
       }
     }
     loadBiz();
-  }, []);
+  }, [externalId]);
+
+  useEffect(() => {
+    if (externalId && businesses.length > 0) {
+      const found = businesses.find((b) => b.id === externalId);
+      if (found) setSelectedBiz(found);
+    }
+  }, [externalId, businesses]);
 
   const handleLinkClick = (e: React.MouseEvent, locked: boolean) => {
     if (locked) {
@@ -99,31 +113,31 @@ export default function BusinessSidebar() {
     {
       name: "Kelola Destinasi",
       icon: MapPin,
-      path: "/business/listings",
+      path: selectedBiz?.id && selectedBiz.id !== "default" ? `/business/${selectedBiz.id}/listings` : "/business/listings",
       locked: isPending,
     },
     {
       name: "Marketing",
       icon: Megaphone,
-      path: "/business/promotions",
+      path: selectedBiz?.id && selectedBiz.id !== "default" ? `/business/${selectedBiz.id}/promotions` : "/business/promotions",
       locked: isPending,
     },
     {
       name: "Reviews",
       icon: MessageSquare,
-      path: "/business/reviews",
+      path: selectedBiz?.id && selectedBiz.id !== "default" ? `/business/${selectedBiz.id}/reviews` : "/business/reviews",
       locked: false,
     },
     {
       name: "Langganan",
       icon: CreditCard,
-      path: "/business/subscriptions",
+      path: selectedBiz?.id && selectedBiz.id !== "default" ? `/business/${selectedBiz.id}/subscriptions` : "/business/subscriptions",
       locked: isPending,
     },
     {
       name: "Pengaturan",
       icon: Settings,
-      path: "/business/settings",
+      path: selectedBiz?.id && selectedBiz.id !== "default" ? `/business/${selectedBiz.id}/settings` : "/business/settings",
       locked: false,
     },
   ];
@@ -207,7 +221,10 @@ export default function BusinessSidebar() {
                   value={selectedBiz?.id || ""}
                   onChange={(e) => {
                     const found = businesses.find((b) => b.id === e.target.value);
-                    if (found) setSelectedBiz(found);
+                    if (found) {
+                      setSelectedBiz(found);
+                      router.push(`/business/${found.id}/dashboard`);
+                    }
                   }}
                   className="w-full appearance-none bg-white border border-stone-200 rounded-2xl pl-10 pr-9 py-3 text-xs font-bold text-stone-800 focus:outline-none focus:ring-2 focus:ring-amber-500/20 cursor-pointer truncate shadow-2xs"
                 >

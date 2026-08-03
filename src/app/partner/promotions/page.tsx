@@ -25,6 +25,7 @@ import {
   Zap,
 } from "lucide-react";
 import type { AdCampaign } from "@/types";
+import { useActiveBusiness } from "@/hooks/useActiveBusiness";
 
 interface Promotion {
   id: string;
@@ -100,6 +101,7 @@ function fmtPrice(amount?: number, currency?: string) {
 
 export default function PartnerMarketingPage() {
   const { showToast } = useToast();
+  const { active: business, externalId } = useActiveBusiness();
 
   // ── State ──────────────────────────────────────────────────────────────────
   const [partnerId, setPartnerId] = useState<string | null>(null);
@@ -126,28 +128,17 @@ export default function PartnerMarketingPage() {
 
   // ── Load data ──────────────────────────────────────────────────────────────
   useEffect(() => {
+    if (!business) {
+      setLoadingPromos(false);
+      return;
+    }
     async function load() {
+      if (!business) return;
+      const id = externalId || business.id;
+      setPartnerId(id);
+      setIsBusiness(true);
       try {
-        let meRes = await fetch("/api/partners/me");
-        let meData = await meRes.json();
-        let list = meData?.data ?? [];
-        let isBiz = false;
-
-        if (!Array.isArray(list) || list.length === 0) {
-          const bizRes = await fetch("/api/businesses/me");
-          const bizData = await bizRes.json();
-          list = bizData?.data ?? (Array.isArray(bizData) ? bizData : []);
-          isBiz = true;
-        }
-
-        const first = list[0];
-        if (!first) return;
-
-        const id = isBiz ? (first.external_id || String(first.id)) : first.id;
-        setPartnerId(id);
-        setIsBusiness(isBiz);
-
-        const promoRes = await fetch(`/api/${isBiz ? 'businesses' : 'partners'}/me/${id}/promotions`);
+        const promoRes = await fetch(`/api/businesses/me/${id}/promotions`);
         const promoData = await promoRes.json();
         setPromotions(promoData?.data ?? []);
       } catch {
@@ -157,7 +148,7 @@ export default function PartnerMarketingPage() {
       }
     }
     load();
-  }, []);
+  }, [business, externalId]);
 
   useEffect(() => {
     // Fetch semua campaign lalu filter ke bisnis ini
@@ -199,8 +190,14 @@ export default function PartnerMarketingPage() {
     0
   );
 
+  const isPending = business?.status === "pending";
+
   // ── Handlers ──────────────────────────────────────────────────────────────
   async function handleSavePromo() {
+    if (isPending) {
+      showToast("Bisnis masih dalam peninjauan", "info");
+      return;
+    }
     if (!partnerId || !promoForm.title.trim()) {
       showToast("Error", "Judul promosi wajib diisi", "error");
       return;

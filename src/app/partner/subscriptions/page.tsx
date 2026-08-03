@@ -5,6 +5,7 @@ import PartnerHeader from "@/components/PartnerHeader";
 import { useToast } from "@/components/Toast";
 import { CreditCard, CheckCircle2, Shield, ArrowUpRight, Zap, Loader2, AlertCircle } from "lucide-react";
 import { SnapCheckoutButton } from "@/components/SnapCheckoutButton";
+import { useActiveBusiness } from "@/hooks/useActiveBusiness";
 
 interface Subscription {
   external_id: string;
@@ -12,12 +13,6 @@ interface Subscription {
   plan: string;
   status: string;
   current_period_end?: string;
-}
-
-interface BusinessInfo {
-  id: string;
-  name: string;
-  category: string;
 }
 
 const PLAN_META: Record<
@@ -67,26 +62,18 @@ function fmtPrice(n: number) {
 
 export default function PartnerSubscriptionsPage() {
   const { showToast } = useToast();
+  const { active: business, externalId } = useActiveBusiness();
   const [subscription, setSubscription] = useState<Subscription | null>(null);
-  const [business, setBusiness] = useState<BusinessInfo | null>(null);
   const [loading, setLoading] = useState(true);
 
   const load = useCallback(async () => {
+    if (!business) {
+      setLoading(false);
+      return;
+    }
     try {
-      const bizRes = await fetch("/api/businesses/me");
-      const bizJson = await bizRes.json();
-      const bizList = bizJson?.data ?? (Array.isArray(bizJson) ? bizJson : []);
-      if (!Array.isArray(bizList) || bizList.length === 0) return;
-      const first = bizList[0];
-      setBusiness({
-        id: first.external_id || String(first.id),
-        name: first.name || "Bisnis Saya",
-        category: first.category || "Wisata",
-      });
-
-      const subRes = await fetch(
-        `/api/businesses/me/${first.external_id || String(first.id)}/subscription`
-      );
+      const id = externalId || business.id;
+      const subRes = await fetch(`/api/businesses/me/${id}/subscription`);
       const subJson = await subRes.json();
       const data = subJson?.data ?? subJson;
       if (data && typeof data === "object" && data.plan) {
@@ -97,7 +84,7 @@ export default function PartnerSubscriptionsPage() {
     } finally {
       setLoading(false);
     }
-  }, [showToast]);
+  }, [business, externalId, showToast]);
 
   useEffect(() => {
     load();

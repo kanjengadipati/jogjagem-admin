@@ -5,6 +5,7 @@ import BusinessHeader from "@/components/BusinessHeader";
 import { useToast } from "@/components/Toast";
 import { Building, Users, AlertTriangle, Save, Loader2, Info, User, Mail, Shield, KeyRound, CheckCircle2 } from "lucide-react";
 import type { Partner } from "@/types";
+import { useActiveBusiness } from "@/hooks/useActiveBusiness";
 
 interface Profile {
   name: string;
@@ -16,6 +17,7 @@ interface Profile {
 
 export default function PartnerSettingsPage() {
   const { showToast } = useToast();
+  const { active: activeBiz } = useActiveBusiness();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
   const [savingBiz, setSavingBiz] = useState(false);
@@ -39,13 +41,9 @@ export default function PartnerSettingsPage() {
   const [userPhone, setUserPhone] = useState("");
 
   useEffect(() => {
-    async function loadData() {
+    async function loadProfile() {
       try {
-        const [meRes, partnerRes] = await Promise.all([
-          fetch("/api/me"),
-          fetch("/api/partners/me"),
-        ]);
-
+        const meRes = await fetch("/api/me");
         const meData = await meRes.json();
         if (meData.status === "success" && meData.data) {
           const p = meData.data;
@@ -54,37 +52,24 @@ export default function PartnerSettingsPage() {
           setUserEmail(p.email || "");
           setUserPhone(p.phone_number || "");
         }
-
-        let bizData = await partnerRes.json();
-        let list = bizData?.data ?? [];
-        let isBiz = false;
-
-        if (!Array.isArray(list) || list.length === 0) {
-          const bizRes = await fetch("/api/businesses/me");
-          const bizJson = await bizRes.json();
-          list = bizJson?.data ?? (Array.isArray(bizJson) ? bizJson : []);
-          isBiz = true;
-        }
-
-        if (list.length > 0) {
-          const first = list[0];
-          setBusiness(first);
-          setIsBusiness(isBiz);
-          setBizName(first.name || "");
-          setBizPhone(first.phone || (meData?.data?.phone_number || ""));
-          setBizCategory(first.category || "Wisata & Destinasi");
-          setBizDescription(first.description || "");
-          setBizWebsite((first as any).website || "");
-        }
       } catch {
         /* ignore */
-      } finally {
-        setLoading(false);
       }
     }
-
-    loadData();
+    loadProfile();
   }, []);
+
+  useEffect(() => {
+    if (!activeBiz) return;
+    setBusiness(activeBiz);
+    setIsBusiness(true);
+    setBizName(activeBiz.name || "");
+    setBizPhone(activeBiz.phone || "");
+    setBizCategory(activeBiz.category || "Wisata & Destinasi");
+    setBizDescription(activeBiz.description || "");
+    setBizWebsite(activeBiz.website || "");
+    setLoading(false);
+  }, [activeBiz]);
 
   const validatePhone = (phone: string): boolean => {
     const cleanPhone = phone.trim();
