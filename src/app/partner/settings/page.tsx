@@ -22,7 +22,8 @@ export default function PartnerSettingsPage() {
   const [savingProfile, setSavingProfile] = useState(false);
   const [sendingReset, setSendingReset] = useState(false);
   const [resetSent, setResetSent] = useState(false);
-  const [business, setBusiness] = useState<Partner | null>(null);
+  const [business, setBusiness] = useState<any | null>(null);
+  const [isBusiness, setIsBusiness] = useState(false);
 
   // Business Info State
   const [bizName, setBizName] = useState("");
@@ -40,7 +41,7 @@ export default function PartnerSettingsPage() {
   useEffect(() => {
     async function loadData() {
       try {
-        const [meRes, bizRes] = await Promise.all([
+        const [meRes, partnerRes] = await Promise.all([
           fetch("/api/me"),
           fetch("/api/partners/me"),
         ]);
@@ -54,11 +55,21 @@ export default function PartnerSettingsPage() {
           setUserPhone(p.phone_number || "");
         }
 
-        const bizData = await bizRes.json();
-        const allListings: Partner[] = bizData?.data ?? [];
-        if (Array.isArray(allListings) && allListings.length > 0) {
-          const first = allListings[0];
+        let bizData = await partnerRes.json();
+        let list = bizData?.data ?? [];
+        let isBiz = false;
+
+        if (!Array.isArray(list) || list.length === 0) {
+          const bizRes = await fetch("/api/businesses/me");
+          const bizJson = await bizRes.json();
+          list = bizJson?.data ?? (Array.isArray(bizJson) ? bizJson : []);
+          isBiz = true;
+        }
+
+        if (list.length > 0) {
+          const first = list[0];
           setBusiness(first);
+          setIsBusiness(isBiz);
           setBizName(first.name || "");
           setBizPhone(first.phone || (meData?.data?.phone_number || ""));
           setBizCategory(first.category || "Wisata & Destinasi");
@@ -74,14 +85,6 @@ export default function PartnerSettingsPage() {
 
     loadData();
   }, []);
-
-  const validatePhone = (phone: string): boolean => {
-    const cleanPhone = phone.trim();
-    if (!cleanPhone) return true;
-    const digitsOnly = cleanPhone.replace(/\D/g, "");
-    if (digitsOnly.length < 9 || digitsOnly.length > 15) return false;
-    return /^(\+62|62|0)[8][1-9][0-9]{6,11}$/.test(cleanPhone);
-  };
 
   const handleSaveBusiness = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -100,9 +103,10 @@ export default function PartnerSettingsPage() {
 
     setSavingBiz(true);
     try {
-      const targetId = (business as any)?.external_id || business?.id;
+      const targetId = isBusiness ? (business?.external_id || String(business?.id)) : business?.id;
       if (targetId) {
-        const res = await fetch(`/api/businesses/me/${targetId}`, {
+        const endpoint = isBusiness ? `/api/businesses/me/${targetId}` : `/api/partners/me/${targetId}`;
+        const res = await fetch(endpoint, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
