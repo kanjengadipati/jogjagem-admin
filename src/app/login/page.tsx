@@ -17,7 +17,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
   if (existingToken) {
     const payload = decodeJwtPayload(existingToken);
     const role = payload?.role;
-    redirect(role === "partner" ? "/partner" : "/dashboard");
+    redirect(role === "partner" || role === "business_owner" ? "/business" : "/dashboard");
   }
 
   return <LoginForm />;

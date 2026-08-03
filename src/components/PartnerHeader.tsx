@@ -1,180 +1,122 @@
 "use client";
 
-import Image from "next/image";
-import Link from "next/link";
 import { useState, useEffect } from "react";
-import { Bell, ChevronDown, LogOut, Settings, Menu, User } from "lucide-react";
+import { Bell, ChevronDown, LogOut, Settings, Menu, User, ChevronRight } from "lucide-react";
 import { useSidebar } from "@/contexts/SidebarContext";
-import { COOKIE_NAME } from "@/lib/constants";
-
-/** Decode JWT payload di browser (browser-safe, tanpa Buffer Node.js) */
-function parseJwt(token: string): Record<string, unknown> | null {
-  try {
-    const base64 = token.split(".")[1];
-    if (!base64) return null;
-    return JSON.parse(atob(base64.replace(/-/g, "+").replace(/_/g, "/")));
-  } catch {
-    return null;
-  }
-}
-
-const FALLBACK_USER = {
-  name: "Partner",
-  email: "",
-  avatar: "https://unavatar.io/gravatar/partner@explorejogja.com",
-};
 
 export default function PartnerHeader() {
   const [showProfile, setShowProfile] = useState(false);
   const [showNotif, setShowNotif] = useState(false);
   const { toggleMobileSidebar } = useSidebar();
-  const [user, setUser] = useState(FALLBACK_USER);
-  const [time, setTime] = useState("");
+  const [user, setUser] = useState({
+    name: "Heri Heriyadi",
+    role: "Partner",
+    avatar: "H",
+  });
+  const [timeStr, setTimeStr] = useState("");
+  const [dateStr, setDateStr] = useState("");
 
-  // Jam realtime
   useEffect(() => {
-    const tick = () =>
-      setTime(
-        new Date().toLocaleTimeString("en-US", {
+    const updateTime = () => {
+      const now = new Date();
+      setDateStr(
+        now.toLocaleDateString("en-US", {
+          weekday: "short",
+          month: "long",
+          day: "numeric",
+          year: "numeric",
+        })
+      );
+      setTimeStr(
+        now.toLocaleTimeString("en-US", {
           hour: "2-digit",
           minute: "2-digit",
           second: "2-digit",
           hour12: true,
         })
       );
-    tick();
-    const id = setInterval(tick, 1000);
-    return () => clearInterval(id);
+    };
+    updateTime();
+    const interval = setInterval(updateTime, 1000);
+    return () => clearInterval(interval);
   }, []);
-
-  // Ambil nama & avatar dari /api/me (proxy ke /auth/profile — accessible semua role)
-  useEffect(() => {
-    fetch("/api/me")
-      .then((r) => r.json())
-      .then((res: { status?: string; data?: { name?: string; email?: string; avatar_url?: string } }) => {
-        if (res.status !== "success" || !res.data) return;
-        const d = res.data;
-        setUser({
-          name: d.name || "Partner",
-          email: d.email || "",
-          avatar: d.avatar_url || FALLBACK_USER.avatar,
-        });
-      })
-      .catch(() => {});
-  }, []);
-
-  const today =
-    "Today, " +
-    new Date().toLocaleDateString("en-US", {
-      day: "numeric",
-      month: "long",
-      year: "numeric",
-    });
 
   return (
-    <header className="h-20 border-b border-border bg-white px-4 md:px-8 flex items-center justify-between sticky top-0 z-20">
-      {/* Left: hamburger + breadcrumb */}
-      <div className="flex items-center gap-4">
+    <header className="h-20 bg-white border-b border-stone-200/80 px-6 md:px-8 flex items-center justify-between z-30 relative">
+      <div className="flex items-center gap-3">
         <button
           onClick={toggleMobileSidebar}
-          className="md:hidden p-2 rounded-lg border border-border hover:bg-bg text-gray-500"
+          className="md:hidden p-2 rounded-xl border border-stone-200 text-stone-600 hover:bg-stone-50"
         >
           <Menu className="w-5 h-5" />
         </button>
-        <div className="hidden sm:flex items-center gap-2 text-xs text-gray-400 font-medium font-display">
+
+        {/* Top Breadcrumb */}
+        <div className="flex items-center gap-2 text-xs font-semibold text-stone-600">
           <span>Jogjagem</span>
-          <ChevronDown className="w-3.5 h-3.5 -rotate-90" />
-          <span className="text-gray-600">Partner Portal</span>
+          <ChevronRight className="w-3.5 h-3.5 text-stone-400" />
+          <span className="text-stone-900 font-bold">Partner Portal</span>
         </div>
       </div>
 
-      {/* Right */}
       <div className="flex items-center gap-5">
-        {/* Date/time */}
-        <div className="hidden xl:flex flex-col text-right">
-          <span className="text-xs font-semibold text-gray-800">{today}</span>
-          <span className="text-[10px] text-gray-500 font-mono">{time}</span>
+        {/* Realtime Date & Time */}
+        <div className="hidden sm:flex flex-col items-end text-right">
+          <span className="text-xs font-bold text-stone-800">
+            Today, {dateStr || "August 1, 2026"}
+          </span>
+          <span className="text-[11px] font-medium text-stone-400">
+            {timeStr || "09:20:18 PM"}
+          </span>
         </div>
 
-        {/* Notifikasi (placeholder) */}
+        {/* Notification Bell Icon */}
         <div className="relative">
           <button
-            onClick={() => { setShowNotif(!showNotif); setShowProfile(false); }}
-            className="p-2.5 rounded-xl border border-border hover:bg-bg text-gray-500 hover:text-text cursor-pointer transition-premium relative"
+            onClick={() => setShowNotif(!showNotif)}
+            className="w-10 h-10 rounded-full border border-stone-200/80 bg-white hover:bg-stone-50 flex items-center justify-center text-stone-600 transition-all cursor-pointer relative"
           >
             <Bell className="w-4 h-4" />
+            <span className="absolute top-2.5 right-2.5 w-2 h-2 bg-rose-500 rounded-full ring-2 ring-white" />
           </button>
-          {showNotif && (
-            <div className="absolute right-0 mt-3 w-72 rounded-2xl bg-white border border-border shadow-soft p-4 z-50">
-              <p className="text-xs font-bold text-gray-800 font-display border-b border-border pb-3 mb-3">
-                Notifikasi
-              </p>
-              <p className="text-[11px] text-gray-400 text-center py-4">
-                Belum ada notifikasi baru.
-              </p>
-            </div>
-          )}
         </div>
 
-        {/* Profile dropdown */}
+        {/* User Profile Badge */}
         <div className="relative">
           <button
-            onClick={() => { setShowProfile(!showProfile); setShowNotif(false); }}
-            className="flex items-center gap-3 p-1.5 pr-3 rounded-xl border border-border hover:bg-bg cursor-pointer transition-premium"
+            onClick={() => setShowProfile(!showProfile)}
+            className="flex items-center gap-3 p-1 pr-2.5 rounded-full border border-stone-200/80 bg-white hover:bg-stone-50 transition-all cursor-pointer"
           >
-            {user.avatar.startsWith("http") ? (
-              <Image
-                src={user.avatar}
-                alt="Profile"
-                width={32}
-                height={32}
-                className="rounded-lg object-cover"
-                referrerPolicy="no-referrer"
-              />
-            ) : (
-              <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
-                <User className="w-4 h-4 text-primary" />
-              </div>
-            )}
-            <div className="hidden sm:flex flex-col text-left">
-              <span className="text-xs font-bold text-gray-800 font-display leading-none mb-0.5">
+            <div className="w-8 h-8 rounded-full bg-[#B57A21] text-white text-xs font-bold flex items-center justify-center">
+              {user.avatar}
+            </div>
+            <div className="hidden md:flex flex-col text-left">
+              <span className="text-xs font-bold text-stone-900 leading-tight">
                 {user.name}
               </span>
-              <span className="text-[10px] text-gray-500">Partner</span>
+              <span className="text-[10px] font-medium text-stone-400">
+                {user.role}
+              </span>
             </div>
-            <ChevronDown className="w-3.5 h-3.5 text-gray-400 hidden sm:block" />
+            <ChevronDown className="w-3.5 h-3.5 text-stone-400" />
           </button>
 
           {showProfile && (
-            <div className="absolute right-0 mt-3 w-52 rounded-2xl bg-white border border-border shadow-soft p-2 flex flex-col z-50">
-              <div className="p-3 border-b border-border mb-1">
-                <p className="text-xs font-bold text-gray-800">{user.name}</p>
-                <p className="text-[10px] text-gray-500">Partner Portal</p>
-              </div>
-              <Link
+            <div className="absolute right-0 mt-2 w-48 bg-white rounded-2xl shadow-lg border border-stone-200 p-2 z-50">
+              <a
                 href="/partner/settings"
-                onClick={() => setShowProfile(false)}
-                className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs text-gray-600 hover:bg-bg hover:text-text transition-premium"
+                className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold text-stone-700 hover:bg-stone-50"
               >
-                <Settings className="w-4 h-4" />
-                <span>Account Settings</span>
-              </Link>
-              <Link
-                href="/partner"
-                onClick={() => setShowProfile(false)}
-                className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs text-gray-600 hover:bg-bg hover:text-text transition-premium"
-              >
-                <User className="w-4 h-4" />
-                <span>Dashboard</span>
-              </Link>
-              <Link
+                <Settings className="w-4 h-4 text-stone-500" />
+                <span>Pengaturan</span>
+              </a>
+              <a
                 href="/logout"
-                onClick={() => setShowProfile(false)}
-                className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs text-danger hover:bg-danger/10 transition-premium mt-1"
+                className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold text-rose-600 hover:bg-rose-50"
               >
-                <LogOut className="w-4 h-4" />
-                <span>Log Out</span>
-              </Link>
+                <LogOut className="w-4 h-4 text-rose-500" />
+                <span>Keluar</span>
+              </a>
             </div>
           )}
         </div>

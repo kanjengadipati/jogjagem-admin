@@ -16,11 +16,21 @@ export default async function AdminLayout({
   const token = store.get(COOKIE_NAME)?.value;
   if (!token) redirect("/login");
 
-  let role: AdminRole = "admin";
   const payload = decodeJwtPayload(token);
-  if (payload?.role === "superadmin") {
-    role = "superadmin";
+  const userRole = payload?.role;
+
+  // Strict Role Guard:
+  // If user is a partner, redirect them to Business Portal /partner
+  if (userRole === "partner" || userRole === "business_owner") {
+    redirect("/business");
   }
+
+  // If user is a regular user (not admin/superadmin), kick them out to login
+  if (userRole !== "admin" && userRole !== "superadmin") {
+    redirect("/login");
+  }
+
+  const role: AdminRole = userRole === "superadmin" ? "superadmin" : "admin";
 
   return (
     <ToastProvider>
