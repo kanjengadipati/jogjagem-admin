@@ -98,6 +98,7 @@ export interface Partner {
 
 export interface Business {
   id: string;
+  external_id?: string;
   name: string;
   description?: string;
   category: string;

@@ -85,11 +85,15 @@ export default function BusinessSidebar() {
 
   const isPending = selectedBiz?.status === "pending" || businesses.length === 0 || selectedBiz?.status === "draft";
 
+  const dashboardHref = selectedBiz?.id && selectedBiz.id !== "default"
+    ? `/business/${selectedBiz.id}/dashboard`
+    : "/business";
+
   const menuItems = [
     {
       name: "Dashboard",
       icon: LayoutDashboard,
-      path: "/business",
+      path: dashboardHref,
       locked: false,
     },
     {
@@ -113,7 +117,7 @@ export default function BusinessSidebar() {
     {
       name: "Langganan",
       icon: CreditCard,
-      path: "#",
+      path: "/business/subscriptions",
       locked: isPending,
     },
     {

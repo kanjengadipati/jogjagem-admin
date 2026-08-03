@@ -22,7 +22,7 @@ import {
   BookOpen,
   Loader2,
 } from "lucide-react";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useParams } from "next/navigation";
 import type { Partner } from "@/types";
 
 interface ListingStats {
@@ -34,6 +34,8 @@ interface ListingStats {
 export default function PartnerOverviewPage() {
   const { showToast } = useToast();
   const searchParams = useSearchParams();
+  const routeParams = useParams();
+  const routeExternalId = routeParams?.externalId as string | undefined;
   const placement = searchParams?.get("placement") || "";
   const [listings, setListings] = useState<Partner[]>([]);
   const [stats, setStats] = useState<Record<string, ListingStats>>({});
@@ -49,20 +51,39 @@ export default function PartnerOverviewPage() {
 
     async function load() {
       try {
-        const meRes = await fetch("/api/partners/me");
-        const meData = await meRes.json();
-        const allListings: Partner[] = meData?.data ?? [];
+        let meRes = await fetch("/api/partners/me");
+        let meData = await meRes.json();
+        let allListings: Partner[] = meData?.data ?? [];
+
+        // Fallback to /api/businesses/me for new business-portal accounts if partners list is empty
+        if (!Array.isArray(allListings) || allListings.length === 0) {
+          const bizRes = await fetch("/api/businesses/me");
+          const bizData = await bizRes.json();
+          const bizList = bizData?.data ?? (Array.isArray(bizData) ? bizData : []);
+          if (Array.isArray(bizList) && bizList.length > 0) {
+            allListings = bizList.map((b: any) => ({
+              id: b.external_id || String(b.id),
+              name: b.name,
+              category: b.category || "Wisata",
+              status: b.status || "approved",
+              description: b.description || "",
+              created_at: b.created_at,
+            })) as Partner[];
+          }
+        }
 
         if (cancelled) return;
         setListings(allListings);
 
         if (Array.isArray(allListings) && allListings.length > 0) {
-          const first = allListings[0];
+          const matched = routeExternalId 
+            ? allListings.find(l => l.id === routeExternalId) || allListings[0]
+            : allListings[0];
           setBizInfo({
-            name: first.name || "siap",
-            status: first.status || "pending",
-            date: (first as any).created_at
-              ? new Date((first as any).created_at).toLocaleDateString("id-ID")
+            name: matched.name || "siap",
+            status: matched.status || "pending",
+            date: (matched as any).created_at
+              ? new Date((matched as any).created_at).toLocaleDateString("id-ID")
               : "1/8/2026",
           });
         }

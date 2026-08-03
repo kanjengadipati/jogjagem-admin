@@ -16,8 +16,8 @@ import {
 } from "lucide-react";
 
 interface ListingClaim {
-  id: number;
-  external_id: string;
+  id: string | number;
+  external_id?: string;
   business_id: number;
   business_name?: string;
   listing_type: string;
@@ -25,6 +25,10 @@ interface ListingClaim {
   status: "pending" | "approved" | "rejected";
   rejection_reason?: string;
   submitted_at: string;
+}
+
+function getClaimId(claim: ListingClaim): string {
+  return String(claim.id || claim.external_id || "");
 }
 
 export default function BusinessClaimsPage() {
@@ -49,7 +53,7 @@ export default function BusinessClaimsPage() {
     if (search.trim()) {
       const q = search.toLowerCase();
       result = result.filter(c => 
-        c.external_id.toLowerCase().includes(q) ||
+        getClaimId(c).toLowerCase().includes(q) ||
         c.listing_external_id.toLowerCase().includes(q) ||
         c.listing_type.toLowerCase().includes(q) ||
         String(c.business_id).includes(q) ||
@@ -86,10 +90,11 @@ export default function BusinessClaimsPage() {
   }
 
   async function handleApprove(claim: ListingClaim) {
-    if (!confirm(`Approve claim #${claim.external_id} for business ID ${claim.business_id}?`)) return;
-    setProcessingId(claim.external_id);
+    const claimId = getClaimId(claim);
+    if (!confirm(`Approve claim #${claimId} for business ID ${claim.business_id}?`)) return;
+    setProcessingId(claimId);
     try {
-      const res = await fetch(`/api/business-claims/${claim.external_id}/approve`, { method: "POST" });
+      const res = await fetch(`/api/business-claims/${claimId}/approve`, { method: "POST" });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
         showToast("Error", data?.message || "Failed to approve claim", "error");
@@ -105,11 +110,12 @@ export default function BusinessClaimsPage() {
   }
 
   async function handleReject(claim: ListingClaim) {
+    const claimId = getClaimId(claim);
     const reason = prompt("Enter rejection reason:");
     if (reason === null) return;
-    setProcessingId(claim.external_id);
+    setProcessingId(claimId);
     try {
-      const res = await fetch(`/api/business-claims/${claim.external_id}/reject`, {
+      const res = await fetch(`/api/business-claims/${claimId}/reject`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ rejection_reason: reason })
@@ -203,45 +209,48 @@ export default function BusinessClaimsPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100 text-gray-700">
-                  {filtered.map((claim) => (
-                    <tr key={claim.external_id || claim.id} className="hover:bg-gray-50/80 transition-colors">
-                      <td className="px-4 py-3 font-mono font-bold text-gray-900">{claim.external_id}</td>
-                      <td className="px-4 py-3 font-mono">
-                        <div className="flex items-center gap-1.5">
-                          <Building2 className="w-3.5 h-3.5 text-gray-400" />
-                          <span>#{claim.business_id}</span>
-                        </div>
-                      </td>
-                      <td className="px-4 py-3">
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-50 text-amber-800 font-semibold capitalize border border-amber-200 text-[10px]">
-                          <Tag className="w-3 h-3" />
-                          {claim.listing_type}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 font-mono text-gray-800">{claim.listing_external_id}</td>
-                      <td className="px-4 py-3 text-gray-500">
-                        {claim.submitted_at ? new Date(claim.submitted_at).toLocaleString() : "-"}
-                      </td>
-                      <td className="px-4 py-3 text-right space-x-2">
-                        <button
-                          onClick={() => handleApprove(claim)}
-                          disabled={processingId === claim.external_id}
-                          className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-lg text-xs transition-colors disabled:opacity-50 inline-flex items-center gap-1"
-                        >
-                          <CheckCircle className="w-3.5 h-3.5" />
-                          <span>Approve</span>
-                        </button>
-                        <button
-                          onClick={() => handleReject(claim)}
-                          disabled={processingId === claim.external_id}
-                          className="px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white font-semibold rounded-lg text-xs transition-colors disabled:opacity-50 inline-flex items-center gap-1"
-                        >
-                          <XCircle className="w-3.5 h-3.5" />
-                          <span>Reject</span>
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
+                  {filtered.map((claim) => {
+                    const cId = getClaimId(claim);
+                    return (
+                      <tr key={cId} className="hover:bg-gray-50/80 transition-colors">
+                        <td className="px-4 py-3 font-mono font-bold text-gray-900">{cId}</td>
+                        <td className="px-4 py-3 font-mono">
+                          <div className="flex items-center gap-1.5">
+                            <Building2 className="w-3.5 h-3.5 text-gray-400" />
+                            <span>#{claim.business_id}</span>
+                          </div>
+                        </td>
+                        <td className="px-4 py-3">
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-50 text-amber-800 font-semibold capitalize border border-amber-200 text-[10px]">
+                            <Tag className="w-3 h-3" />
+                            {claim.listing_type}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 font-mono text-gray-800">{claim.listing_external_id}</td>
+                        <td className="px-4 py-3 text-gray-500">
+                          {claim.submitted_at ? new Date(claim.submitted_at).toLocaleString() : "-"}
+                        </td>
+                        <td className="px-4 py-3 text-right space-x-2">
+                          <button
+                            onClick={() => handleApprove(claim)}
+                            disabled={processingId === cId}
+                            className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-lg text-xs transition-colors disabled:opacity-50 inline-flex items-center gap-1"
+                          >
+                            <CheckCircle className="w-3.5 h-3.5" />
+                            <span>Approve</span>
+                          </button>
+                          <button
+                            onClick={() => handleReject(claim)}
+                            disabled={processingId === cId}
+                            className="px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white font-semibold rounded-lg text-xs transition-colors disabled:opacity-50 inline-flex items-center gap-1"
+                          >
+                            <XCircle className="w-3.5 h-3.5" />
+                            <span>Reject</span>
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>

@@ -14,14 +14,36 @@ export default function PartnerListingsPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch("/api/partners/me")
-      .then((r) => r.json())
-      .then((d) => {
-        const list: Partner[] = d?.data ?? [];
+    async function loadListings() {
+      try {
+        let meRes = await fetch("/api/partners/me");
+        let meData = await meRes.json();
+        let list: Partner[] = meData?.data ?? [];
+
+        if (!Array.isArray(list) || list.length === 0) {
+          const bizRes = await fetch("/api/businesses/me");
+          const bizData = await bizRes.json();
+          const bizList = bizData?.data ?? (Array.isArray(bizData) ? bizData : []);
+          if (Array.isArray(bizList) && bizList.length > 0) {
+            list = bizList.map((b: any) => ({
+              id: b.external_id || String(b.id),
+              name: b.name,
+              category: b.category || "Wisata",
+              status: b.status || "approved",
+              description: b.description || "",
+            })) as Partner[];
+          }
+        }
+
         setListings(list);
-      })
-      .catch(() => showToast("Error", "Failed to load listings", "error"))
-      .finally(() => setLoading(false));
+      } catch {
+        showToast("Error", "Failed to load listings", "error");
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    loadListings();
   }, []);
 
   return (

@@ -62,7 +62,7 @@ export default function CreateAdCampaignPage() {
     price_currency: "IDR",
   });
 
-  const selectedBusiness = businesses.find((b) => b.id === form.business_id);
+  const selectedBusiness = businesses.find((b) => (b.external_id || b.id) === form.business_id);
 
   useEffect(() => {
     fetch("/api/businesses")
@@ -85,13 +85,14 @@ export default function CreateAdCampaignPage() {
 
     setSaving(true);
     try {
+      const bizExtId = selectedBusiness.external_id || selectedBusiness.id;
       const externalId = `${slugify(selectedBusiness.name)}-${Date.now().toString(36)}`;
       const res = await fetch("/api/ad-campaigns", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           id: externalId,
-          business_external_id: selectedBusiness.id,
+          business_external_id: bizExtId,
           // partner_name is still NOT NULL in the DB during the migration
           // transition; auto-filled from the selected business until Phase 4
           // step 4 drops the column.
@@ -167,9 +168,12 @@ export default function CreateAdCampaignPage() {
                       className="w-full bg-bg focus:bg-white text-xs px-4 py-3 rounded-xl border border-transparent focus:border-border outline-none font-semibold text-gray-700 cursor-pointer"
                     >
                       <option value="">Select a business...</option>
-                      {businesses.map((b) => (
-                        <option key={b.id} value={b.id}>{b.name}</option>
-                      ))}
+                      {businesses.map((b) => {
+                        const val = b.external_id || b.id;
+                        return (
+                          <option key={val} value={val}>{b.name}</option>
+                        );
+                      })}
                     </select>
                   )}
                 </div>
