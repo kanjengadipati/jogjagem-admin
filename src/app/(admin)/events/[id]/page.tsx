@@ -313,6 +313,11 @@ export default function EventDetailPage() {
       if (data.description_en) setField("description_en", data.description_en);
       if (data.organizer) setField("organizer", data.organizer);
       if (data.ticket_price) setField("ticket_price", data.ticket_price);
+      if (data.start_date) setField("start_date", data.start_date);
+      if (data.end_date) setField("end_date", data.end_date);
+      if (data.max_attendees) setField("max_attendees", data.max_attendees);
+      if (data.latitude) setField("latitude", data.latitude);
+      if (data.longitude) setField("longitude", data.longitude);
       if (data.seo_title) setField("seo_title", data.seo_title);
       if (data.seo_title_en) setField("seo_title_en", data.seo_title_en);
       if (data.seo_description) setField("seo_description", data.seo_description);

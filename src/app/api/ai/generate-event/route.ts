@@ -36,6 +36,11 @@ export async function POST(req: NextRequest) {
       description_en?: string;
       organizer?: string;
       ticket_price?: string;
+      start_date?: string;
+      end_date?: string;
+      max_attendees?: string;
+      latitude?: string;
+      longitude?: string;
       seo_title?: string;
       seo_title_en?: string;
       seo_description?: string;
@@ -54,6 +59,11 @@ export async function POST(req: NextRequest) {
     description_en: d.description_en ?? "",
     organizer: d.organizer ?? "",
     ticket_price: d.ticket_price ?? "",
+    start_date: d.start_date ?? "",
+    end_date: d.end_date ?? "",
+    max_attendees: d.max_attendees ?? "",
+    latitude: d.latitude ?? "",
+    longitude: d.longitude ?? "",
     seo_title: d.seo_title ?? "",
     seo_title_en: d.seo_title_en ?? "",
     seo_description: d.seo_description ?? "",

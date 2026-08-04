@@ -137,8 +137,11 @@ export interface HouseAd {
   id: string;
   placement: string;
   headline: string;
+  headline_en?: string;
   subline?: string;
+  subline_en?: string;
   cta_label: string;
+  cta_label_en?: string;
   image_url?: string;
   target_url: string;
   is_enabled?: boolean;
