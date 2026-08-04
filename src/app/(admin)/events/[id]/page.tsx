@@ -26,7 +26,7 @@ function normalizeEventCategory(val: string): string {
   const found = EVENT_CATEGORIES.find((c) => c.toLowerCase() === lower);
   return found ?? val;
 }
-const EVENT_STATUSES   = ["upcoming","active","popular","limited","completed","cancelled"];
+const EVENT_STATUSES   = ["draft","upcoming","active","popular","limited","completed","cancelled"];
 
 type Tab = "overview" | "gallery" | "seo" | "destination";
 

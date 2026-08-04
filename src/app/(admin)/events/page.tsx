@@ -14,6 +14,7 @@ const PAGE_SIZE = 25;
 
 const STATUS_OPTIONS = [
   { value: "", label: "All Statuses" },
+  { value: "draft", label: "Draft" },
   { value: "active", label: "Active" },
   { value: "upcoming", label: "Upcoming" },
   { value: "completed", label: "Completed" },
@@ -166,6 +167,7 @@ export default function EventsPage() {
     s === "active"    ? "bg-success/10 text-success" :
     s === "cancelled" ? "bg-danger/10 text-danger"   :
     s === "completed" ? "bg-info/10 text-info"       :
+    s === "draft"     ? "bg-gray-100 text-gray-400"  :
                         "bg-warning/10 text-warning";
 
   return (
