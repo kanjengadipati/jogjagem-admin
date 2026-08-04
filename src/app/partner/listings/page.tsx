@@ -70,7 +70,7 @@ export default function PartnerListingsPage() {
           </div>
           {!isJasa && (
             <a
-              href="http://localhost:3001/business/claim"
+              href={`${process.env.NEXT_PUBLIC_FRONTEND_URL || 'http://localhost:3001'}/business/claim`}
               target="_blank"
               rel="noopener noreferrer"
               className="px-4 py-2.5 rounded-2xl bg-[#B57A21] hover:bg-[#9B671A] text-white text-xs font-bold flex items-center gap-1.5 shadow-xs transition-all cursor-pointer"
@@ -105,7 +105,7 @@ export default function PartnerListingsPage() {
               Mulai kelola bisnis Anda dengan mengklaim listing.
             </p>
             <a
-              href="http://localhost:3001/business/claim"
+              href={`${process.env.NEXT_PUBLIC_FRONTEND_URL || 'http://localhost:3001'}/business/claim`}
               target="_blank"
               rel="noopener noreferrer"
               className="inline-block px-4 py-2.5 rounded-2xl bg-[#B57A21] hover:bg-[#9B671A] text-white text-xs font-bold transition-all"
@@ -155,7 +155,7 @@ export default function PartnerListingsPage() {
           <div className="p-4 rounded-2xl border border-stone-200/80 bg-stone-50/60 text-center text-xs font-medium text-stone-500">
             Punya tempat lain yang belum diklaim?{" "}
             <a
-              href="http://localhost:3001/business/claim"
+              href={`${process.env.NEXT_PUBLIC_FRONTEND_URL || 'http://localhost:3001'}/business/claim`}
               target="_blank"
               rel="noopener noreferrer"
               className="text-[#B57A21] font-bold hover:underline"

@@ -151,8 +151,13 @@ export default function PartnerMarketingPage() {
   }, [business, externalId]);
 
   useEffect(() => {
-    // Fetch semua campaign lalu filter ke bisnis ini
-    fetch("/api/ad-campaigns")
+    if (!business) {
+      setLoadingCampaigns(false);
+      return;
+    }
+    const id = externalId || business.id;
+    // Fetch campaigns scoped to this business via the self-service endpoint
+    fetch(`/api/businesses/me/${id}/ad-campaigns`)
       .then((r) => r.json())
       .then((d) => {
         const list: AdCampaign[] = d?.data ?? [];
@@ -177,7 +182,7 @@ export default function PartnerMarketingPage() {
       })
       .catch(() => {})
       .finally(() => setLoadingCampaigns(false));
-  }, []);
+  }, [business, externalId]);
 
   // ── Stats ──────────────────────────────────────────────────────────────────
   const activePromos = promotions.filter(
