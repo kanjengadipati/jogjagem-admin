@@ -7,7 +7,7 @@ import Image from "next/image";
 import Header from "@/components/Header";
 import Pagination from "@/components/Pagination";
 import { useToast } from "@/components/Toast";
-import { Calendar, MapPin, Search, Tag, Plus, FileSpreadsheet, X } from "lucide-react";
+import { Calendar, MapPin, Search, Tag, Plus, FileSpreadsheet, X, Trash2, Loader2, CheckSquare, Check } from "lucide-react";
 import type { Event, PaginationMeta } from "@/types";
 
 const PAGE_SIZE = 25;
@@ -67,6 +67,10 @@ export default function EventsPage() {
   const [allItems,  setAllItems]  = useState<Event[]>([]);
   const [loading,   setLoading]   = useState(true);
   const [exporting, setExporting] = useState(false);
+
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [confirm,  setConfirm]  = useState<{ ids: string[]; label: string } | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   const [page,     setPage]     = useState(1);
   const [search,   setSearch]   = useState(searchParams.get("search") || "");
@@ -163,6 +167,55 @@ export default function EventsPage() {
 
   const clearFilters = () => { setSearch(""); setCategory(""); setStatus(""); };
 
+  // ── Selection + delete ────────────────────────────────────────────────────────
+  const pageIds = paged.map(e => e.id);
+  const allPageSelected = pageIds.length > 0 && pageIds.every(id => selected.has(id));
+
+  const toggleAllPage = () => {
+    setSelected(prev => {
+      const n = new Set(prev);
+      if (allPageSelected) pageIds.forEach(id => n.delete(id));
+      else pageIds.forEach(id => n.add(id));
+      return n;
+    });
+  };
+
+  const toggleOne = (id: string) => {
+    setSelected(prev => {
+      const n = new Set(prev);
+      if (n.has(id)) n.delete(id);
+      else n.add(id);
+      return n;
+    });
+  };
+
+  async function confirmDelete() {
+    if (!confirm) return;
+    setDeleting(true);
+    try {
+      const results = await Promise.all(
+        confirm.ids.map(id =>
+          fetch(`/api/events/${id}`, { method: "DELETE" }).then(r => r.ok)
+        )
+      );
+      const ok = results.filter(Boolean).length;
+      const failed = results.length - ok;
+      const gone = new Set(confirm.ids);
+      setAllItems(prev => prev.filter(e => !gone.has(e.id)));
+      setSelected(new Set());
+      if (failed === 0) {
+        showToast("Deleted", `${ok} event${ok === 1 ? "" : "s"} deleted`, "success");
+      } else {
+        showToast("Partial", `${ok} deleted, ${failed} failed`, "warning");
+      }
+    } catch {
+      showToast("Error", "Network error", "error");
+    } finally {
+      setDeleting(false);
+      setConfirm(null);
+    }
+  }
+
   const statusColor = (s?: string) =>
     s === "active"    ? "bg-success/10 text-success" :
     s === "cancelled" ? "bg-danger/10 text-danger"   :
@@ -234,6 +287,33 @@ export default function EventsPage() {
           </div>
         </div>
 
+        {/* Bulk actions */}
+        {selected.size > 0 && (
+          <div className="flex flex-wrap items-center justify-between gap-3 bg-red-50/60 border border-red-200 rounded-card px-4 py-3">
+            <div className="flex items-center gap-3">
+              <button onClick={toggleAllPage}
+                className="flex items-center gap-1.5 text-xs font-bold text-red-700 hover:text-red-800 cursor-pointer">
+                <CheckSquare className="w-4 h-4" />
+                {allPageSelected ? "Deselect page" : "Select all on page"}
+              </button>
+              <span className="text-xs font-semibold text-gray-500">{selected.size} selected</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <button onClick={() => setSelected(new Set())}
+                className="text-xs font-bold text-gray-500 hover:text-gray-700 px-3 py-2 cursor-pointer">
+                Clear
+              </button>
+              <button
+                onClick={() => setConfirm({ ids: [...selected], label: `${selected.size} events` })}
+                className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-red-600 hover:bg-red-700 text-white text-xs font-bold transition cursor-pointer"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                Delete Selected
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Grid */}
         {loading ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -263,7 +343,7 @@ export default function EventsPage() {
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {paged.map(ev => (
-              <div key={ev.id} className="bg-white rounded-card border border-border shadow-soft overflow-hidden hover:border-primary/20 hover:shadow-premium transition-premium flex flex-col">
+              <div key={ev.id} className="bg-white rounded-card border border-border shadow-soft overflow-hidden hover:border-primary/20 hover:shadow-premium transition-premium flex flex-col relative">
                 <Link href={`/events/${ev.id}`} className="block relative h-40 bg-gray-100">
                   {ev.image_url ? (
                     <Image src={ev.image_url} alt={ev.title} fill className="object-cover" sizes="400px" />
@@ -283,6 +363,22 @@ export default function EventsPage() {
                     </span>
                   )}
                 </Link>
+                <div className="absolute bottom-3 left-3 flex items-center gap-2 z-10">
+                  <button
+                    onClick={() => toggleOne(ev.id)}
+                    title={selected.has(ev.id) ? "Remove from selection" : "Select event"}
+                    className={`w-7 h-7 rounded-lg flex items-center justify-center bg-white/95 border shadow-sm transition cursor-pointer ${selected.has(ev.id) ? "border-primary bg-primary/10" : "border-gray-200 hover:border-primary/40"}`}
+                  >
+                    {selected.has(ev.id) && <Check className="w-3.5 h-3.5 text-primary" />}
+                  </button>
+                  <button
+                    onClick={() => setConfirm({ ids: [ev.id], label: ev.title })}
+                    title="Delete event"
+                    className="w-7 h-7 rounded-lg flex items-center justify-center bg-white/95 border border-gray-200 hover:border-red-200 text-gray-500 hover:text-red-600 shadow-sm transition cursor-pointer"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                </div>
                 <Link href={`/events/${ev.id}`} className="p-5 flex flex-col gap-3 flex-1">
                   <h4 className="text-sm font-bold text-gray-900 font-display leading-snug">{ev.title}</h4>
                   {ev.description && (
@@ -323,6 +419,38 @@ export default function EventsPage() {
           </div>
         )}
       </main>
+
+      {/* Delete Confirmation Modal */}
+      {confirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl shadow-xl p-6 max-w-sm w-full mx-4 space-y-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center shrink-0">
+                <Trash2 className="w-5 h-5 text-red-600" />
+              </div>
+              <div>
+                <h3 className="text-sm font-bold text-gray-900">
+                  Delete {confirm.ids.length > 1 ? "Events?" : "Event?"}
+                </h3>
+                <p className="text-xs text-gray-500 mt-0.5">
+                  <span className="font-semibold text-gray-700">{confirm.label}</span> will be permanently removed. This action cannot be undone.
+                </p>
+              </div>
+            </div>
+            <div className="flex gap-3">
+              <button onClick={() => setConfirm(null)}
+                className="flex-1 py-2.5 rounded-xl border border-border text-xs font-bold text-gray-700 hover:bg-bg transition cursor-pointer">
+                Cancel
+              </button>
+              <button onClick={confirmDelete} disabled={deleting}
+                className="flex-1 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 disabled:opacity-60 text-white text-xs font-bold transition cursor-pointer flex items-center justify-center gap-2">
+                {deleting && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+                {deleting ? "Deleting…" : "Yes, Delete"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }

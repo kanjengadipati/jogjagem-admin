@@ -8,7 +8,7 @@ import Header from "@/components/Header";
 import Pagination from "@/components/Pagination";
 import { useToast } from "@/components/Toast";
 import { firstImage } from "@/lib/images";
-import { DownloadCloud, FileSpreadsheet, Plus, Search, Star, Edit3, X } from "lucide-react";
+import { DownloadCloud, FileSpreadsheet, Plus, Search, Star, Edit3, X, Trash2, Loader2, CheckSquare } from "lucide-react";
 import type { Destination, PaginationMeta } from "@/types";
 
 const PAGE_SIZE = 25;
@@ -113,6 +113,10 @@ export default function DestinationsPage() {
   const [loading,   setLoading]   = useState(true);
   const [exporting, setExporting] = useState(false);
 
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [confirm,  setConfirm]  = useState<{ ids: string[]; label: string } | null>(null);
+  const [deleting, setDeleting] = useState(false);
+
   const searchParams = useSearchParams();
   const router = useRouter();
   const pathname = usePathname();
@@ -210,6 +214,55 @@ export default function DestinationsPage() {
 
   const clearFilters = () => { setSearch(""); setCategory(""); setRegion(""); setRating(""); setStatus(""); };
 
+  // ── Selection + delete ────────────────────────────────────────────────────────
+  const pageIds = paged.map(d => d.id);
+  const allPageSelected = pageIds.length > 0 && pageIds.every(id => selected.has(id));
+
+  const toggleAllPage = () => {
+    setSelected(prev => {
+      const n = new Set(prev);
+      if (allPageSelected) pageIds.forEach(id => n.delete(id));
+      else pageIds.forEach(id => n.add(id));
+      return n;
+    });
+  };
+
+  const toggleOne = (id: string) => {
+    setSelected(prev => {
+      const n = new Set(prev);
+      if (n.has(id)) n.delete(id);
+      else n.add(id);
+      return n;
+    });
+  };
+
+  async function confirmDelete() {
+    if (!confirm) return;
+    setDeleting(true);
+    try {
+      const results = await Promise.all(
+        confirm.ids.map(id =>
+          fetch(`/api/destinations/${id}`, { method: "DELETE" }).then(r => r.ok)
+        )
+      );
+      const ok = results.filter(Boolean).length;
+      const failed = results.length - ok;
+      const gone = new Set(confirm.ids);
+      setAllItems(prev => prev.filter(d => !gone.has(d.id)));
+      setSelected(new Set());
+      if (failed === 0) {
+        showToast("Deleted", `${ok} destination${ok === 1 ? "" : "s"} deleted`, "success");
+      } else {
+        showToast("Partial", `${ok} deleted, ${failed} failed`, "warning");
+      }
+    } catch {
+      showToast("Error", "Network error", "error");
+    } finally {
+      setDeleting(false);
+      setConfirm(null);
+    }
+  }
+
   return (
     <>
       <Header activeId="destinations" />
@@ -288,12 +341,49 @@ export default function DestinationsPage() {
           </div>
         </div>
 
+        {/* Bulk actions */}
+        {selected.size > 0 && (
+          <div className="flex flex-wrap items-center justify-between gap-3 bg-red-50/60 border border-red-200 rounded-card px-4 py-3">
+            <div className="flex items-center gap-3">
+              <button onClick={toggleAllPage}
+                className="flex items-center gap-1.5 text-xs font-bold text-red-700 hover:text-red-800 cursor-pointer">
+                <CheckSquare className="w-4 h-4" />
+                {allPageSelected ? "Deselect page" : "Select all on page"}
+              </button>
+              <span className="text-xs font-semibold text-gray-500">{selected.size} selected</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <button onClick={() => setSelected(new Set())}
+                className="text-xs font-bold text-gray-500 hover:text-gray-700 px-3 py-2 cursor-pointer">
+                Clear
+              </button>
+              <button
+                onClick={() => setConfirm({ ids: [...selected], label: `${selected.size} destinations` })}
+                className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-red-600 hover:bg-red-700 text-white text-xs font-bold transition cursor-pointer"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                Delete Selected
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Table */}
         <div className="bg-white rounded-card border border-border shadow-soft overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="border-b border-border bg-bg/40 text-[10px] font-bold text-gray-400 uppercase tracking-widest font-display">
+                  <th className="py-4 px-4 w-10">
+                    <input
+                      type="checkbox"
+                      checked={allPageSelected}
+                      onChange={toggleAllPage}
+                      disabled={paged.length === 0}
+                      className="w-4 h-4 accent-primary cursor-pointer disabled:opacity-40"
+                      title="Select all on page"
+                    />
+                  </th>
                   <th className="py-4 px-6">Destination</th>
                   <th className="py-4 px-6">Category</th>
                   <th className="py-4 px-6">Region</th>
@@ -307,6 +397,7 @@ export default function DestinationsPage() {
                 {loading ? (
                   Array.from({ length: PAGE_SIZE }).map((_, i) => (
                     <tr key={i} className="animate-pulse">
+                      <td className="py-4 px-4" />
                       <td className="py-4 px-6">
                         <div className="flex items-center gap-4">
                           <div className="w-12 h-12 rounded-xl bg-bg" />
@@ -324,7 +415,7 @@ export default function DestinationsPage() {
                   ))
                 ) : paged.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="py-16 text-center text-gray-400">
+                    <td colSpan={8} className="py-16 text-center text-gray-400">
                       <div className="flex flex-col items-center gap-3">
                         <Search className="w-10 h-10" />
                         <span className="text-sm font-semibold">
@@ -340,6 +431,14 @@ export default function DestinationsPage() {
                   </tr>
                 ) : paged.map(dest => (
                   <tr key={dest.id} className="hover:bg-bg/40 transition-premium">
+                    <td className="py-4 px-4">
+                      <input
+                        type="checkbox"
+                        checked={selected.has(dest.id)}
+                        onChange={() => toggleOne(dest.id)}
+                        className="w-4 h-4 accent-primary cursor-pointer"
+                      />
+                    </td>
                     <td className="py-4 px-6">
                       <div className="flex items-center gap-4">
                         <Image
@@ -384,6 +483,13 @@ export default function DestinationsPage() {
                       >
                         <Edit3 className="w-4 h-4" />
                       </Link>
+                      <button
+                        onClick={() => setConfirm({ ids: [dest.id], label: dest.name })}
+                        title="Delete destination"
+                        className="p-1.5 rounded-lg border border-border hover:bg-red-50 hover:border-red-200 text-gray-500 hover:text-red-600 cursor-pointer transition-premium inline-flex ml-2"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
                     </td>
                   </tr>
                 ))}
@@ -399,6 +505,38 @@ export default function DestinationsPage() {
           </div>
         </div>
       </main>
+
+      {/* Delete Confirmation Modal */}
+      {confirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl shadow-xl p-6 max-w-sm w-full mx-4 space-y-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center shrink-0">
+                <Trash2 className="w-5 h-5 text-red-600" />
+              </div>
+              <div>
+                <h3 className="text-sm font-bold text-gray-900">
+                  Delete {confirm.ids.length > 1 ? "Destinations?" : "Destination?"}
+                </h3>
+                <p className="text-xs text-gray-500 mt-0.5">
+                  <span className="font-semibold text-gray-700">{confirm.label}</span> will be permanently removed. This action cannot be undone.
+                </p>
+              </div>
+            </div>
+            <div className="flex gap-3">
+              <button onClick={() => setConfirm(null)}
+                className="flex-1 py-2.5 rounded-xl border border-border text-xs font-bold text-gray-700 hover:bg-bg transition cursor-pointer">
+                Cancel
+              </button>
+              <button onClick={confirmDelete} disabled={deleting}
+                className="flex-1 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 disabled:opacity-60 text-white text-xs font-bold transition cursor-pointer flex items-center justify-center gap-2">
+                {deleting && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+                {deleting ? "Deleting…" : "Yes, Delete"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }
