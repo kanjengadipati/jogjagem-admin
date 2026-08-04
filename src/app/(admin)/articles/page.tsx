@@ -91,35 +91,37 @@ function ArticleModal({ article, onClose, onSaved }: {
   }
 
   async function generateAI() {
-    if (!form.title) { showToast("Validation", "Enter a title first", "error"); return; }
+    if (!form.title?.trim()) { showToast("Validation", "Enter the title first", "error"); return; }
     setAiLoading(true);
     try {
       const res = await fetch("/api/ai/generate-article", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ title: form.title, category: form.category }),
+        body: JSON.stringify({ title: form.title }),
       });
       const json = await res.json();
+      if (!res.ok) throw new Error(json?.message ?? "Failed to generate content");
+      const gen = json?.data ?? json;
       setForm(prev => ({
         ...prev,
         // Indonesian
-        title:            json.title            ?? prev.title,
-        content:          json.content          ?? prev.content,
-        excerpt:          json.excerpt          ?? prev.excerpt,
-        seo_title:        json.seoTitle         ?? prev.seo_title,
-        seo_description:  json.seoDescription   ?? prev.seo_description,
-        seo_keywords:     json.seoKeywords      ?? prev.seo_keywords,
+        title:            gen?.title            ?? prev.title,
+        content:          gen?.content          ?? prev.content,
+        excerpt:          gen?.excerpt          ?? prev.excerpt,
+        seo_title:        gen?.seoTitle         ?? prev.seo_title,
+        seo_description:  gen?.seoDescription   ?? prev.seo_description,
+        seo_keywords:     gen?.seoKeywords      ?? prev.seo_keywords,
         // English
-        title_en:           json.titleEn          ?? prev.title_en,
-        content_en:         json.contentEn        ?? prev.content_en,
-        excerpt_en:         json.excerptEn        ?? prev.excerpt_en,
-        seo_title_en:       json.seoTitleEn       ?? prev.seo_title_en,
-        seo_description_en: json.seoDescriptionEn ?? prev.seo_description_en,
-        seo_keywords_en:    json.seoKeywordsEn    ?? prev.seo_keywords_en,
+        title_en:           gen?.titleEn          ?? prev.title_en,
+        content_en:         gen?.contentEn        ?? prev.content_en,
+        excerpt_en:         gen?.excerptEn        ?? prev.excerpt_en,
+        seo_title_en:       gen?.seoTitleEn       ?? prev.seo_title_en,
+        seo_description_en: gen?.seoDescriptionEn ?? prev.seo_description_en,
+        seo_keywords_en:    gen?.seoKeywordsEn    ?? prev.seo_keywords_en,
       }));
       showToast("AI", "All fields generated — ID, EN & SEO", "success");
-    } catch {
-      showToast("AI Error", "Failed to generate content", "error");
+    } catch (e) {
+      showToast("AI Error", e instanceof Error ? e.message : "Failed to generate content", "error");
     } finally {
       setAiLoading(false);
     }
@@ -159,9 +161,22 @@ function ArticleModal({ article, onClose, onSaved }: {
               {isEdit ? "Edit Article" : "New Article"}
             </span>
           </div>
-          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-bg text-gray-400 hover:text-gray-700 transition cursor-pointer">
-            <X className="w-5 h-5" />
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => generateAI()}
+              disabled={aiLoading || !form.title?.trim()}
+              title="Generate all fields (ID, EN & SEO) from the title"
+              className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-gradient-to-r from-primary to-primary/80 text-white text-xs font-bold shadow-soft hover:brightness-105 transition cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              {aiLoading
+                ? <><Loader2 className="w-4 h-4 animate-spin" /> Generating…</>
+                : <><Sparkles className="w-4 h-4" /> Generate AI</>
+              }
+            </button>
+            <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-bg text-gray-400 hover:text-gray-700 transition cursor-pointer">
+              <X className="w-5 h-5" />
+            </button>
+          </div>
         </div>
 
         {/* Modal body — 2 column */}
@@ -193,18 +208,6 @@ function ArticleModal({ article, onClose, onSaved }: {
                   </div>
                 </div>
               </div>
-
-              {/* AI Generate */}
-              <button
-                onClick={() => generateAI()}
-                disabled={aiLoading || !form.title?.trim()}
-                className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-primary/10 hover:bg-primary/20 border border-primary/20 text-primary font-bold text-sm transition cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
-              >
-                {aiLoading
-                  ? <><Loader2 className="w-4 h-4 animate-spin" /> Generating content...</>
-                  : <><Sparkles className="w-4 h-4" /> Generate Content Using AI</>
-                }
-              </button>
 
               {/* Language tabs */}
               <div>
