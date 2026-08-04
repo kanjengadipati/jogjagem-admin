@@ -17,6 +17,8 @@ const STATUS_OPTIONS = [
   { value: "draft", label: "Draft" },
   { value: "active", label: "Active" },
   { value: "upcoming", label: "Upcoming" },
+  { value: "popular", label: "Popular" },
+  { value: "limited", label: "Limited" },
   { value: "completed", label: "Completed" },
   { value: "cancelled", label: "Cancelled" },
 ];
@@ -221,6 +223,8 @@ export default function EventsPage() {
     s === "cancelled" ? "bg-danger/10 text-danger"   :
     s === "completed" ? "bg-info/10 text-info"       :
     s === "draft"     ? "bg-gray-100 text-gray-400"  :
+    s === "popular"   ? "bg-primary/10 text-primary" :
+    s === "limited"   ? "bg-warning/10 text-warning" :
                         "bg-warning/10 text-warning";
 
   return (
