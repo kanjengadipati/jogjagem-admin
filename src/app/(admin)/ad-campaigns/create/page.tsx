@@ -12,7 +12,7 @@ import type { Business } from "@/types";
 
 const PLACEMENTS = [
   { value: "homepage_hero_aicard", label: "Homepage Hero AIPick Card (hero pick card 50:50)" },
-  { value: "homepage_hero_tranding", label: "Homepage Hero Trending (carousel #3 & #8)" },
+  { value: "homepage_hero_trending", label: "Homepage Hero Trending (carousel #3 & #8)" },
   { value: "homepage_category_banner", label: "Homepage Category Banner (below category filters)" },
   { value: "listing_top", label: "Listing Top Banner" },
   { value: "listing_native", label: "Listing Native Card (inline in grid)" },

@@ -12,7 +12,7 @@ import type { HouseAd } from "@/types";
 
 const PLACEMENTS: { value: string; label: string; desc: string }[] = [
   { value: "homepage_hero_aicard", label: "Homepage Hero (AIPick Card)", desc: "Card sponsor 'Jogjagem's Pick' di hero (50:50 coin-flip)" },
-  { value: "homepage_hero_tranding", label: "Homepage Hero Trending", desc: "Posisi #3 & #8 di carousel Trending" },
+  { value: "homepage_hero_trending", label: "Homepage Hero Trending", desc: "Posisi #3 & #8 di carousel Trending" },
   { value: "homepage_category_banner", label: "Homepage Category Banner", desc: "Full-width banner di bawah filter kategori halaman utama" },
   { value: "listing_top",        label: "Listing Top",         desc: "Posisi #5 & #10 di grid Destinasi Populer" },
   { value: "listing_native",     label: "Listing Native",      desc: "Card sponsor di carousel Trending & Festival" },

@@ -11,7 +11,7 @@ import type { AdCampaign } from "@/types";
 
 const PLACEMENT_LABELS: Record<string, string> = {
   homepage_hero_aicard: "Homepage Hero AIPick Card",
-  homepage_hero_tranding: "Homepage Hero Trending",
+  homepage_hero_trending: "Homepage Hero Trending",
   homepage_category_banner: "Homepage Category Banner",
   listing_top: "Listing Top Banner",
   listing_native: "Listing Native Card",
