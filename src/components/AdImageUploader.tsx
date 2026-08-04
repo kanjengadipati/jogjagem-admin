@@ -12,7 +12,9 @@ import { Upload, X, Loader2, ZoomIn } from "lucide-react";
  * `object-fit: cover` in AdBanner.tsx / HouseAd.tsx never has to guess.
  */
 const PLACEMENT_SPECS: Record<string, { width: number; height: number; label: string }> = {
-  homepage_hero:      { width: 1600, height: 500, label: "16:5 — 1600×500px" },
+  homepage_hero_aicard:     { width: 1600, height: 500, label: "16:5 — 1600×500px" },
+  homepage_hero_tranding:   { width: 1600, height: 500, label: "16:5 — 1600×500px" },
+  homepage_category_banner: { width: 1600, height: 500, label: "16:5 — 1600×500px" },
   destination_detail: { width: 1200, height: 375, label: "16:5 wide — 1200×375px" },
   listing_top:        { width: 800,  height: 300, label: "native card — 800×300px" },
   listing_native:     { width: 480,  height: 360, label: "native card — 480×360px" },

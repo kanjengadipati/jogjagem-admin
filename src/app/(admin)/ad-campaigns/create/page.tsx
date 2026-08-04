@@ -11,7 +11,9 @@ import { ArrowLeft, CheckCircle, ExternalLink, Loader2, Megaphone } from "lucide
 import type { Business } from "@/types";
 
 const PLACEMENTS = [
-  { value: "homepage_hero", label: "Homepage Hero (below category filters)" },
+  { value: "homepage_hero_aicard", label: "Homepage Hero AIPick Card (hero pick card 50:50)" },
+  { value: "homepage_hero_tranding", label: "Homepage Hero Trending (carousel #3 & #8)" },
+  { value: "homepage_category_banner", label: "Homepage Category Banner (below category filters)" },
   { value: "listing_top", label: "Listing Top Banner" },
   { value: "listing_native", label: "Listing Native Card (inline in grid)" },
   { value: "destination_detail", label: "Destination Detail Page" },
@@ -51,7 +53,7 @@ export default function CreateAdCampaignPage() {
   const [businessesLoading, setBusinessesLoading] = useState(true);
   const [form, setForm] = useState({
     business_id: "",
-    placement: "homepage_hero",
+    placement: "homepage_hero_aicard",
     image_url: "",
     target_url: "",
     category: "",

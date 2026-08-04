@@ -50,14 +50,18 @@ interface NewPromoForm {
 }
 
 const PLACEMENT_LABELS: Record<string, string> = {
-  homepage_hero: "Homepage Hero",
+  homepage_hero_aicard: "Homepage Hero AIPick Card",
+  homepage_hero_tranding: "Homepage Hero Trending",
+  homepage_category_banner: "Homepage Category Banner",
   listing_top: "Listing Top Banner",
   listing_native: "Listing Native Card",
   destination_detail: "Destination Detail Sidebar",
 };
 
 const PLACEMENT_DESCRIPTIONS: Record<string, string> = {
-  homepage_hero: "Banner besar di halaman utama — visibilitas tertinggi",
+  homepage_hero_aicard: "Card sponsor 'Jogjagem's Pick' di hero (50:50 coin-flip)",
+  homepage_hero_tranding: "Card sponsor di carousel Trending (posisi #3 & #8)",
+  homepage_category_banner: "Banner full-width di bawah filter kategori halaman utama",
   listing_top: "Card sponsor di grid Destinasi Populer (posisi #1 & #5)",
   listing_native: "Card sponsor di carousel Trending & Festival",
   destination_detail: "Banner di halaman detail destinasi",
