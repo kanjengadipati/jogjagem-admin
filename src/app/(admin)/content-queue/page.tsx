@@ -6,7 +6,7 @@ import { useToast } from "@/components/Toast";
 import {
   Sparkles, CheckCircle2, XCircle, RefreshCw, Loader2,
   FileText, Globe, Star, MapPin, AlertTriangle, Clock,
-  ChevronDown, ChevronUp, Wand2, List, Database,
+  ChevronDown, ChevronUp, Wand2, List, Database, Pencil,
 } from "lucide-react";
 
 interface Destination {
@@ -190,6 +190,62 @@ export default function ContentQueuePage() {
     } finally {
       setActionLoading(null);
     }
+  }
+
+  // Inline edit state per destination
+  const [editingDraft, setEditingDraft] = useState<Record<string, Partial<Destination>>>({});
+  const [savingInline, setSavingInline] = useState<string | null>(null);
+
+  function startEdit(id: string, dest: Destination) {
+    setEditingDraft(p => ({
+      ...p,
+      [id]: {
+        description:      dest.description,
+        description_en:   dest.description_en,
+        story:            dest.story,
+        story_en:         dest.story_en,
+        tagline:          dest.tagline,
+        tagline_en:       dest.tagline_en,
+        seo_title:        dest.seo_title,
+        seo_title_en:     dest.seo_title_en,
+        seo_description:  dest.seo_description,
+        seo_description_en: dest.seo_description_en,
+        seo_keywords:     dest.seo_keywords,
+        seo_keywords_en:  dest.seo_keywords_en,
+      },
+    }));
+  }
+
+  function cancelEdit(id: string) {
+    setEditingDraft(p => { const n = { ...p }; delete n[id]; return n; });
+  }
+
+  async function saveInline(id: string) {
+    const draft = editingDraft[id];
+    if (!draft) return;
+    setSavingInline(id);
+    try {
+      const res = await fetch(`/api/destinations/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(draft),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data?.message || "Save failed");
+      // Merge updated fields back into queue items
+      setItems(prev => prev.map(d => d.id === id ? { ...d, ...draft } : d));
+      cancelEdit(id);
+      showToast("Saved", "Content updated", "success");
+      await loadQueue();
+    } catch (err) {
+      showToast("Error", err instanceof Error ? err.message : "Save failed", "error");
+    } finally {
+      setSavingInline(null);
+    }
+  }
+
+  function setField(id: string, key: keyof Destination, value: string) {
+    setEditingDraft(p => ({ ...p, [id]: { ...p[id], [key]: value } }));
   }
 
   const filteredItems = items.filter(i => {
@@ -407,72 +463,94 @@ export default function ContentQueuePage() {
                             </button>
                           </div>
                         </div>
-                        {isExp && (
-                          <div className="px-5 pb-5 space-y-4 bg-stone-50/60 border-t border-stone-100 pt-4">
-                            {/* Description */}
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                              {dest.description && (
-                                <div className="space-y-1">
-                                  <p className="text-[10px] font-bold text-stone-500 uppercase tracking-wider flex items-center gap-1"><FileText className="w-3 h-3" /> Description (ID)</p>
-                                  <p className="text-xs text-stone-700 leading-relaxed line-clamp-5 bg-white p-3 rounded-xl border border-stone-200">{dest.description}</p>
+                        {isExp && (() => {
+                          const draft = editingDraft[dest.id];
+                          const isEditing = !!draft;
+                          const val = (key: keyof Destination) =>
+                            isEditing ? (draft[key] as string ?? "") : (dest[key] as string ?? "");
+
+                          const EditableField = ({
+                            label, fieldId, fieldEn, multiline = false,
+                          }: {
+                            label: string;
+                            fieldId: keyof Destination;
+                            fieldEn: keyof Destination;
+                            multiline?: boolean;
+                          }) => (
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                              {[
+                                { key: fieldId, lang: "ID", flag: "🇮🇩" },
+                                { key: fieldEn, lang: "EN", flag: "🇬🇧" },
+                              ].map(({ key, lang, flag }) => (
+                                <div key={lang} className="space-y-1">
+                                  <p className="text-[10px] font-bold text-stone-500 uppercase tracking-wider">{flag} {label} ({lang})</p>
+                                  {isEditing ? (
+                                    multiline ? (
+                                      <textarea
+                                        rows={4}
+                                        value={val(key)}
+                                        onChange={e => setField(dest.id, key, e.target.value)}
+                                        className="w-full text-xs text-stone-700 leading-relaxed bg-white p-3 rounded-xl border border-purple-300 focus:outline-none focus:ring-2 focus:ring-purple-400/30 resize-none"
+                                      />
+                                    ) : (
+                                      <input
+                                        type="text"
+                                        value={val(key)}
+                                        onChange={e => setField(dest.id, key, e.target.value)}
+                                        className="w-full text-xs text-stone-700 bg-white px-3 py-2 rounded-xl border border-purple-300 focus:outline-none focus:ring-2 focus:ring-purple-400/30"
+                                      />
+                                    )
+                                  ) : (
+                                    multiline ? (
+                                      <p className="text-xs text-stone-700 leading-relaxed line-clamp-5 bg-white p-3 rounded-xl border border-stone-200">{val(key) || <span className="text-stone-300 italic">Empty</span>}</p>
+                                    ) : (
+                                      <p className="text-xs font-semibold text-stone-800 bg-white px-3 py-1.5 rounded-lg border border-stone-200 truncate">"{val(key) || <span className="text-stone-300 italic">Empty</span>}"</p>
+                                    )
+                                  )}
                                 </div>
-                              )}
-                              {dest.description_en && (
-                                <div className="space-y-1">
-                                  <p className="text-[10px] font-bold text-stone-500 uppercase tracking-wider flex items-center gap-1"><Globe className="w-3 h-3" /> Description (EN)</p>
-                                  <p className="text-xs text-stone-700 leading-relaxed line-clamp-5 bg-white p-3 rounded-xl border border-stone-200">{dest.description_en}</p>
+                              ))}
+                            </div>
+                          );
+
+                          return (
+                            <div className="px-5 pb-5 space-y-4 bg-stone-50/60 border-t border-stone-100 pt-4">
+                              {/* Edit/Cancel toolbar */}
+                              <div className="flex items-center justify-between">
+                                <p className="text-[10px] font-bold text-stone-400 uppercase tracking-wider">Content Preview</p>
+                                <div className="flex items-center gap-2">
+                                  {isEditing ? (
+                                    <>
+                                      <button onClick={() => cancelEdit(dest.id)}
+                                        className="px-3 py-1.5 rounded-lg text-[10px] font-bold text-stone-500 hover:bg-stone-200 transition-colors cursor-pointer">
+                                        Cancel
+                                      </button>
+                                      <button onClick={() => saveInline(dest.id)} disabled={savingInline === dest.id}
+                                        className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white text-[10px] font-bold cursor-pointer">
+                                        {savingInline === dest.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <CheckCircle2 className="w-3 h-3" />}
+                                        Save
+                                      </button>
+                                    </>
+                                  ) : (
+                                    <button onClick={() => startEdit(dest.id, dest)}
+                                      className="flex items-center gap-1 px-3 py-1.5 rounded-lg border border-stone-200 text-stone-600 hover:bg-white text-[10px] font-bold cursor-pointer transition-colors">
+                                      <Pencil className="w-3 h-3" /> Edit Content
+                                    </button>
+                                  )}
                                 </div>
-                              )}
-                            </div>
-                            {/* Story */}
-                            {(dest.story || dest.story_en) && (
-                              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                                {dest.story && (
-                                  <div className="space-y-1">
-                                    <p className="text-[10px] font-bold text-stone-500 uppercase tracking-wider">Story (ID)</p>
-                                    <p className="text-xs text-stone-700 leading-relaxed line-clamp-4 bg-white p-3 rounded-xl border border-stone-200 italic">{dest.story}</p>
-                                  </div>
-                                )}
-                                {dest.story_en && (
-                                  <div className="space-y-1">
-                                    <p className="text-[10px] font-bold text-stone-500 uppercase tracking-wider">Story (EN)</p>
-                                    <p className="text-xs text-stone-700 leading-relaxed line-clamp-4 bg-white p-3 rounded-xl border border-stone-200 italic">{dest.story_en}</p>
-                                  </div>
-                                )}
                               </div>
-                            )}
-                            {/* Tagline */}
-                            {(dest.tagline || dest.tagline_en) && (
-                              <div className="flex gap-4 flex-wrap">
-                                {dest.tagline && (
-                                  <div className="space-y-0.5">
-                                    <p className="text-[10px] font-bold text-stone-500 uppercase tracking-wider">Tagline (ID)</p>
-                                    <p className="text-xs font-semibold text-stone-800 bg-white px-3 py-1.5 rounded-lg border border-stone-200">"{dest.tagline}"</p>
-                                  </div>
-                                )}
-                                {dest.tagline_en && (
-                                  <div className="space-y-0.5">
-                                    <p className="text-[10px] font-bold text-stone-500 uppercase tracking-wider">Tagline (EN)</p>
-                                    <p className="text-xs font-semibold text-stone-800 bg-white px-3 py-1.5 rounded-lg border border-stone-200">"{dest.tagline_en}"</p>
-                                  </div>
-                                )}
-                              </div>
-                            )}
-                            {/* SEO */}
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-2 border-t border-stone-100">
-                              <div className="space-y-1.5">
-                                {dest.seo_title && <p className="text-[10px] text-stone-500"><span className="font-bold">SEO Title (ID):</span> {dest.seo_title}</p>}
-                                {dest.seo_description && <p className="text-[10px] text-stone-500"><span className="font-bold">Meta Desc (ID):</span> {dest.seo_description}</p>}
-                                {dest.seo_keywords && <p className="text-[10px] text-stone-400"><span className="font-bold text-stone-500">Keywords (ID):</span> {dest.seo_keywords}</p>}
-                              </div>
-                              <div className="space-y-1.5">
-                                {dest.seo_title_en && <p className="text-[10px] text-stone-500"><span className="font-bold">SEO Title (EN):</span> {dest.seo_title_en}</p>}
-                                {dest.seo_description_en && <p className="text-[10px] text-stone-500"><span className="font-bold">Meta Desc (EN):</span> {dest.seo_description_en}</p>}
-                                {dest.seo_keywords_en && <p className="text-[10px] text-stone-400"><span className="font-bold text-stone-500">Keywords (EN):</span> {dest.seo_keywords_en}</p>}
+
+                              <EditableField label="Description" fieldId="description" fieldEn="description_en" multiline />
+                              <EditableField label="Story" fieldId="story" fieldEn="story_en" multiline />
+                              <EditableField label="Tagline" fieldId="tagline" fieldEn="tagline_en" />
+                              <div className="pt-2 border-t border-stone-100 space-y-3">
+                                <p className="text-[10px] font-bold text-stone-400 uppercase tracking-wider">SEO</p>
+                                <EditableField label="SEO Title" fieldId="seo_title" fieldEn="seo_title_en" />
+                                <EditableField label="Meta Description" fieldId="seo_description" fieldEn="seo_description_en" />
+                                <EditableField label="Keywords" fieldId="seo_keywords" fieldEn="seo_keywords_en" />
                               </div>
                             </div>
-                          </div>
-                        )}
+                          );
+                        })()}
                       </div>
                     );
                   })}
@@ -526,7 +604,7 @@ export default function ContentQueuePage() {
                     const variant = selectedVariant[dest.id] ?? "narrative";
                     const isActing = actionLoading === `${dest.id}:generate`;
                     return (
-                      <div key={dest.id} className={`flex items-center gap-4 px-5 py-3.5 ${isReady ? "hover:bg-stone-50/50" : "opacity-60"} transition-colors`}>
+                      <div key={dest.id} className="flex items-center gap-4 px-5 py-3.5 hover:bg-stone-50/50 transition-colors">
                         <div className="flex-1 min-w-0 space-y-1">
                           <div className="flex items-center gap-2">
                             <span className="text-sm font-bold text-stone-900 truncate max-w-[220px]">{dest.name}</span>
@@ -541,19 +619,22 @@ export default function ContentQueuePage() {
                           <select
                             value={variant}
                             onChange={(e) => setSelectedVariant(p => ({ ...p, [dest.id]: e.target.value }))}
-                            disabled={!isReady}
-                            className="text-[10px] font-semibold px-2 py-1.5 rounded-lg border border-stone-200 bg-stone-50 focus:outline-none focus:ring-1 focus:ring-purple-400 cursor-pointer disabled:cursor-not-allowed"
+                            className="text-[10px] font-semibold px-2 py-1.5 rounded-lg border border-stone-200 bg-stone-50 focus:outline-none focus:ring-1 focus:ring-purple-400 cursor-pointer"
                           >
                             {VARIANTS.map(v => <option key={v.value} value={v.value}>{v.label}</option>)}
                           </select>
                           <button
                             onClick={() => doAction(dest.id, "generate", { variant }, true)}
-                            disabled={!isReady || !!actionLoading}
-                            title={!isReady ? `Only ${score}/8 fields — needs at least 4` : "Generate AI draft"}
-                            className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-purple-600 hover:bg-purple-700 disabled:opacity-40 disabled:cursor-not-allowed text-white text-[10px] font-bold cursor-pointer transition-colors"
+                            disabled={!!actionLoading}
+                            title={!isReady ? `Low data (${score}/8 fields) — AI will research missing info` : "Generate AI draft"}
+                            className={`flex items-center gap-1 px-3 py-1.5 rounded-xl text-[10px] font-bold cursor-pointer transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${
+                              !isReady
+                                ? "bg-amber-500 hover:bg-amber-600 text-white"
+                                : "bg-purple-600 hover:bg-purple-700 text-white"
+                            }`}
                           >
                             {isActing ? <Loader2 className="w-3 h-3 animate-spin" /> : <Sparkles className="w-3 h-3" />}
-                            Generate
+                            {!isReady ? "AI Fill" : "Generate"}
                           </button>
                         </div>
                       </div>
