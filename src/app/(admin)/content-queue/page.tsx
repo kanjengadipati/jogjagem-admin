@@ -17,6 +17,8 @@ interface Destination {
   status: string;
   content_status: string;
   template_variant: string;
+  content_score: number;
+  content_verdict: string; // EXCELLENT | GOOD | NEEDS WORK | ""
   description: string;
   description_en?: string;
   story?: string;
@@ -91,6 +93,21 @@ function FactScoreBar({ score }: { score: number }) {
   );
 }
 
+function QualityBadge({ score, verdict }: { score: number; verdict: string }) {
+  const cfg =
+    verdict === "EXCELLENT" || score >= 80
+      ? { color: "bg-emerald-100 text-emerald-800 border-emerald-200", icon: "✦" }
+      : verdict === "GOOD" || score >= 60
+      ? { color: "bg-blue-100 text-blue-800 border-blue-200", icon: "●" }
+      : { color: "bg-amber-100 text-amber-800 border-amber-200", icon: "⚠" };
+  return (
+    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold border ${cfg.color}`}
+      title={verdict || "Quality score"}>
+      {cfg.icon} {score}/100
+    </span>
+  );
+}
+
 type Tab = "queue" | "available";
 
 export default function ContentQueuePage() {
@@ -102,11 +119,13 @@ export default function ContentQueuePage() {
   const [loadingQueue, setLoadingQueue] = useState(true);
   const [expanded, setExpanded] = useState<string | null>(null);
   const [filterStatus, setFilterStatus] = useState<string>("all");
+  const [filterScore, setFilterScore]   = useState<"all" | "high" | "low">("all");
 
   // Available tab state
   const [available, setAvailable] = useState<Destination[]>([]);
   const [loadingAvail, setLoadingAvail] = useState(false);
   const [availFilter, setAvailFilter] = useState("");
+  const [showNeedsData, setShowNeedsData] = useState(false);
 
   // Shared
   const [actionLoading, setActionLoading] = useState<string | null>(null);
@@ -173,9 +192,14 @@ export default function ContentQueuePage() {
     }
   }
 
-  const filteredItems = filterStatus === "all"
-    ? items
-    : items.filter(i => (i.content_status || "") === filterStatus);
+  const filteredItems = items.filter(i => {
+    const statusMatch = filterStatus === "all" || (i.content_status || "") === filterStatus;
+    const score = i.content_score ?? 0;
+    const scoreMatch = filterScore === "all"
+      || (filterScore === "high" && score >= 60)
+      || (filterScore === "low"  && score <  60);
+    return statusMatch && scoreMatch;
+  });
 
   const statusCounts = items.reduce((acc, i) => {
     const s = i.content_status || "";
@@ -186,17 +210,25 @@ export default function ContentQueuePage() {
   const [availPage, setAvailPage] = useState(1);
   const AVAIL_PAGE_SIZE = 25;
 
-  const filteredAvail = available.filter(d =>
-    !availFilter || d.name.toLowerCase().includes(availFilter.toLowerCase()) ||
-    d.sub_region?.toLowerCase().includes(availFilter.toLowerCase()) ||
-    d.category?.toLowerCase().includes(availFilter.toLowerCase())
-  );
+  const filteredAvail = available.filter(d => {
+    const textMatch = !availFilter ||
+      d.name.toLowerCase().includes(availFilter.toLowerCase()) ||
+      d.sub_region?.toLowerCase().includes(availFilter.toLowerCase()) ||
+      d.category?.toLowerCase().includes(availFilter.toLowerCase());
+    const scoreMatch = !showNeedsData || factScore(d) < 4;
+    // Also apply the shared score filter (map 60/100 threshold → 5/8 for fact score)
+    const qualityMatch = filterScore === "all"
+      || (filterScore === "high" && factScore(d) >= 5)
+      || (filterScore === "low"  && factScore(d) <  5);
+    return textMatch && scoreMatch && qualityMatch;
+  });
 
   const availTotalPages = Math.max(1, Math.ceil(filteredAvail.length / AVAIL_PAGE_SIZE));
   const pagedAvail = filteredAvail.slice((availPage - 1) * AVAIL_PAGE_SIZE, availPage * AVAIL_PAGE_SIZE);
 
   // Reset to page 1 when filter changes
   const handleAvailFilter = (v: string) => { setAvailFilter(v); setAvailPage(1); };
+  const handleToggleNeedsData = () => { setShowNeedsData(p => !p); setAvailPage(1); };
 
   const readyCount = available.filter(d => factScore(d) >= 4).length;
 
@@ -252,6 +284,32 @@ export default function ContentQueuePage() {
           </button>
         </div>
 
+        {/* ── Quality score filter — berlaku di kedua tab ── */}
+        <div className="flex items-center gap-2">
+          <span className="text-[10px] font-bold text-stone-400 uppercase tracking-wider">Quality:</span>
+          {([
+            { value: "all",  label: "All" },
+            { value: "high", label: "✦ Good+ (≥60)" },
+            { value: "low",  label: "⚠ Needs Work (<60)" },
+          ] as const).map(({ value, label }) => (
+            <button
+              key={value}
+              onClick={() => setFilterScore(value)}
+              className={`px-3 py-1.5 rounded-full text-[11px] font-bold border transition-all cursor-pointer ${
+                filterScore === value
+                  ? "bg-stone-900 text-white border-stone-900"
+                  : value === "low"
+                    ? "bg-amber-50 text-amber-700 border-amber-200 hover:opacity-80"
+                    : value === "high"
+                      ? "bg-emerald-50 text-emerald-700 border-emerald-200 hover:opacity-80"
+                      : "bg-stone-50 text-stone-500 border-stone-200 hover:opacity-80"
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+
         {/* ── QUEUE TAB ── */}
         {activeTab === "queue" && (
           <>
@@ -275,6 +333,8 @@ export default function ContentQueuePage() {
                   </button>
                 );
               })}
+
+              {/* Score filter moved to global bar above */}
             </div>
 
             <div className="bg-white rounded-3xl border border-stone-200 shadow-xs overflow-hidden">
@@ -306,7 +366,7 @@ export default function ContentQueuePage() {
                             <div className="flex items-center gap-3 text-[10px] text-stone-400">
                               <span className="flex items-center gap-1"><MapPin className="w-2.5 h-2.5" />{dest.sub_region}</span>
                               <span className="capitalize">{dest.category}</span>
-                              {dest.rating > 0 && <span className="flex items-center gap-0.5"><Star className="w-2.5 h-2.5 fill-amber-400 text-amber-400" />{dest.rating.toFixed(1)}</span>}
+                              <QualityBadge score={dest.content_score ?? 0} verdict={dest.content_verdict ?? ""} />
                               <span className="flex items-center gap-1"><Clock className="w-2.5 h-2.5" />{new Date(dest.updated_at).toLocaleDateString("id-ID")}</span>
                             </div>
                           </div>
@@ -435,7 +495,18 @@ export default function ContentQueuePage() {
               />
               <div className="text-xs text-stone-400 shrink-0">
                 <span className="font-bold text-emerald-600">{readyCount}</span> ready ·{" "}
-                <span className="font-bold text-amber-600">{available.length - readyCount}</span> need more data
+                <button
+                  onClick={handleToggleNeedsData}
+                  className={`font-bold transition-colors cursor-pointer underline decoration-dashed underline-offset-2 ${
+                    showNeedsData ? "text-amber-700 decoration-amber-500" : "text-amber-600 hover:text-amber-700"
+                  }`}
+                  title={showNeedsData ? "Show all" : "Filter: need more data only"}
+                >
+                  {available.length - readyCount} need more data
+                </button>
+                {showNeedsData && (
+                  <button onClick={handleToggleNeedsData} className="ml-1 text-[10px] text-stone-400 hover:text-stone-600 cursor-pointer">✕ clear</button>
+                )}
               </div>
             </div>
 

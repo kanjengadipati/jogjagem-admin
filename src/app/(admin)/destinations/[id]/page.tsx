@@ -64,6 +64,8 @@ type FormState = {
   seo_description_en: string;
   og_image_url: string;
   status: string;
+  content_score?: number;
+  content_verdict?: string;
 };
 
 const EMPTY_FORM: FormState = {
@@ -211,6 +213,8 @@ export default function DestinationDetailPage() {
   const [deleting, setDeleting] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [aiLoading, setAiLoading] = useState(false);
+  // savedScore: the last score persisted to DB (from API response after save)
+  const [savedScore, setSavedScore] = useState<{ score: number; verdict: string } | null>(null);
   const [uploading, setUploading] = useState(false);
   const [tab, setTab] = useState<Tab>("overview");
   const [lang, setLang] = useState<"id" | "en">("id");
