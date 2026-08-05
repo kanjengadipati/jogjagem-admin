@@ -9,15 +9,12 @@ import CoverImageUpload from "@/components/CoverImageUpload";
 import { useToast } from "@/components/Toast";
 import { ArrowLeft, CheckCircle, ExternalLink, Loader2, Megaphone } from "lucide-react";
 import type { Business } from "@/types";
+import { AD_PLACEMENTS, SELLABLE_PLACEMENTS } from "@/lib/adPlacements";
 
-const PLACEMENTS = [
-  { value: "homepage_hero_aicard", label: "Homepage Hero AIPick Card (hero pick card 50:50)" },
-  { value: "homepage_hero_trending", label: "Homepage Hero Trending (carousel #3 & #8)" },
-  { value: "homepage_category_banner", label: "Homepage Category Banner (below category filters)" },
-  { value: "listing_top", label: "Listing Top Banner" },
-  { value: "listing_native", label: "Listing Native Card (inline in grid)" },
-  { value: "destination_detail", label: "Destination Detail Page" },
-];
+const PLACEMENTS = SELLABLE_PLACEMENTS.map((value) => ({
+  value,
+  label: AD_PLACEMENTS[value].name,
+}));
 
 const CATEGORIES = [
   { value: "", label: "All Categories" },

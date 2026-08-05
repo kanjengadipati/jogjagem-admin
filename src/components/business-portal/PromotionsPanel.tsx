@@ -26,6 +26,7 @@ import {
 } from "lucide-react";
 import type { AdCampaign } from "@/types";
 import { useActiveBusiness } from "@/hooks/useActiveBusiness";
+import { PLACEMENT_NAMES, PLACEMENT_DESCRIPTIONS } from "@/lib/adPlacements";
 
 interface Promotion {
   id: string;
@@ -51,24 +52,6 @@ interface NewPromoForm {
 
 const FRONTEND_URL =
   process.env.NEXT_PUBLIC_FRONTEND_URL || "http://localhost:3001";
-
-const PLACEMENT_LABELS: Record<string, string> = {
-  homepage_hero_aicard: "Homepage Hero AIPick Card",
-  homepage_hero_trending: "Homepage Hero Trending",
-  homepage_category_banner: "Homepage Category Banner",
-  listing_top: "Listing Top Banner",
-  listing_native: "Listing Native Card",
-  destination_detail: "Destination Detail Sidebar",
-};
-
-const PLACEMENT_DESCRIPTIONS: Record<string, string> = {
-  homepage_hero_aicard: "Card sponsor 'Jogjagem's Pick' di hero (50:50 coin-flip)",
-  homepage_hero_trending: "Card sponsor di carousel Trending (posisi #3 & #8)",
-  homepage_category_banner: "Banner full-width di bawah filter kategori halaman utama",
-  listing_top: "Card sponsor di grid Destinasi Populer (posisi #1 & #5)",
-  listing_native: "Card sponsor di carousel Trending & Festival",
-  destination_detail: "Banner di halaman detail destinasi",
-};
 
 function statusBadge(status?: string) {
   if (!status || status === "active" || status === "approved")
@@ -516,7 +499,7 @@ export default function PromotionsPanel() {
                         </span>
                       </div>
                       <div className="text-[10px] font-bold text-amber-700 bg-amber-100 px-2 py-0.5 rounded-lg w-fit">
-                        {PLACEMENT_LABELS[c.placement] ?? c.placement}
+                        {PLACEMENT_NAMES[c.placement] ?? c.placement}
                       </div>
                       {PLACEMENT_DESCRIPTIONS[c.placement] && (
                         <p className="text-[10px] text-stone-400">
@@ -602,7 +585,7 @@ export default function PromotionsPanel() {
             <span>Slot Iklan Tersedia</span>
           </h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {Object.entries(PLACEMENT_LABELS).map(([key, label]) => (
+            {Object.entries(PLACEMENT_NAMES).map(([key, label]) => (
               <div
                 key={key}
                 className="p-4 rounded-2xl border border-stone-200 bg-stone-50/50 flex items-start justify-between gap-3"

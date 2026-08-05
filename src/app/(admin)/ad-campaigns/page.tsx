@@ -8,15 +8,7 @@ import { useToast } from "@/components/Toast";
 import { SnapCheckoutButton } from "@/components/SnapCheckoutButton";
 import { Megaphone, Search, Loader2, Trash2, Plus, Calendar, MousePointerClick, Eye, Power } from "lucide-react";
 import type { AdCampaign } from "@/types";
-
-const PLACEMENT_LABELS: Record<string, string> = {
-  homepage_hero_aicard: "Homepage Hero AIPick Card",
-  homepage_hero_trending: "Homepage Hero Trending",
-  homepage_category_banner: "Homepage Category Banner",
-  listing_top: "Listing Top Banner",
-  listing_native: "Listing Native Card",
-  destination_detail: "Destination Detail",
-};
+import { PLACEMENT_NAMES } from "@/lib/adPlacements";
 
 const PAYMENT_STATUS_STYLES: Record<string, string> = {
   paid: "bg-success/10 text-success",
@@ -169,7 +161,7 @@ export default function AdCampaignsPage() {
           >
             <option value="">All Placements</option>
             {placements.map((p) => (
-              <option key={p} value={p}>{PLACEMENT_LABELS[p] ?? p}</option>
+              <option key={p} value={p}>{PLACEMENT_NAMES[p] ?? p}</option>
             ))}
           </select>
           <select
@@ -210,7 +202,7 @@ export default function AdCampaignsPage() {
                     </div>
                   )}
                   <span className="absolute top-3 left-3 text-[10px] font-bold text-primary bg-white/90 backdrop-blur-sm px-2.5 py-0.5 rounded-lg shadow-sm">
-                    {PLACEMENT_LABELS[c.placement] ?? c.placement}
+                    {PLACEMENT_NAMES[c.placement] ?? c.placement}
                   </span>
                   <span className={`absolute top-3 right-3 text-[10px] font-bold px-2 py-0.5 rounded-full ${
                     c.is_active ? "bg-success/10 text-success" : "bg-gray-100 text-gray-500"

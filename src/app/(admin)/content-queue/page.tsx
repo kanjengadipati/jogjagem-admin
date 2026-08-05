@@ -19,7 +19,16 @@ interface Destination {
   template_variant: string;
   description: string;
   description_en?: string;
+  story?: string;
+  story_en?: string;
+  tagline?: string;
+  tagline_en?: string;
   seo_title?: string;
+  seo_title_en?: string;
+  seo_description?: string;
+  seo_description_en?: string;
+  seo_keywords?: string;
+  seo_keywords_en?: string;
   rating: number;
   review_count: number;
   updated_at: string;
@@ -339,20 +348,69 @@ export default function ContentQueuePage() {
                           </div>
                         </div>
                         {isExp && (
-                          <div className="px-5 pb-4 space-y-3 bg-stone-50/60 border-t border-stone-100">
-                            {dest.description && (
-                              <div className="space-y-1">
-                                <p className="text-[10px] font-bold text-stone-500 uppercase tracking-wider flex items-center gap-1"><FileText className="w-3 h-3" /> Description (ID)</p>
-                                <p className="text-xs text-stone-700 leading-relaxed line-clamp-4 bg-white p-3 rounded-xl border border-stone-200">{dest.description}</p>
+                          <div className="px-5 pb-5 space-y-4 bg-stone-50/60 border-t border-stone-100 pt-4">
+                            {/* Description */}
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                              {dest.description && (
+                                <div className="space-y-1">
+                                  <p className="text-[10px] font-bold text-stone-500 uppercase tracking-wider flex items-center gap-1"><FileText className="w-3 h-3" /> Description (ID)</p>
+                                  <p className="text-xs text-stone-700 leading-relaxed line-clamp-5 bg-white p-3 rounded-xl border border-stone-200">{dest.description}</p>
+                                </div>
+                              )}
+                              {dest.description_en && (
+                                <div className="space-y-1">
+                                  <p className="text-[10px] font-bold text-stone-500 uppercase tracking-wider flex items-center gap-1"><Globe className="w-3 h-3" /> Description (EN)</p>
+                                  <p className="text-xs text-stone-700 leading-relaxed line-clamp-5 bg-white p-3 rounded-xl border border-stone-200">{dest.description_en}</p>
+                                </div>
+                              )}
+                            </div>
+                            {/* Story */}
+                            {(dest.story || dest.story_en) && (
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                {dest.story && (
+                                  <div className="space-y-1">
+                                    <p className="text-[10px] font-bold text-stone-500 uppercase tracking-wider">Story (ID)</p>
+                                    <p className="text-xs text-stone-700 leading-relaxed line-clamp-4 bg-white p-3 rounded-xl border border-stone-200 italic">{dest.story}</p>
+                                  </div>
+                                )}
+                                {dest.story_en && (
+                                  <div className="space-y-1">
+                                    <p className="text-[10px] font-bold text-stone-500 uppercase tracking-wider">Story (EN)</p>
+                                    <p className="text-xs text-stone-700 leading-relaxed line-clamp-4 bg-white p-3 rounded-xl border border-stone-200 italic">{dest.story_en}</p>
+                                  </div>
+                                )}
                               </div>
                             )}
-                            {dest.description_en && (
-                              <div className="space-y-1">
-                                <p className="text-[10px] font-bold text-stone-500 uppercase tracking-wider flex items-center gap-1"><Globe className="w-3 h-3" /> Description (EN)</p>
-                                <p className="text-xs text-stone-700 leading-relaxed line-clamp-4 bg-white p-3 rounded-xl border border-stone-200">{dest.description_en}</p>
+                            {/* Tagline */}
+                            {(dest.tagline || dest.tagline_en) && (
+                              <div className="flex gap-4 flex-wrap">
+                                {dest.tagline && (
+                                  <div className="space-y-0.5">
+                                    <p className="text-[10px] font-bold text-stone-500 uppercase tracking-wider">Tagline (ID)</p>
+                                    <p className="text-xs font-semibold text-stone-800 bg-white px-3 py-1.5 rounded-lg border border-stone-200">"{dest.tagline}"</p>
+                                  </div>
+                                )}
+                                {dest.tagline_en && (
+                                  <div className="space-y-0.5">
+                                    <p className="text-[10px] font-bold text-stone-500 uppercase tracking-wider">Tagline (EN)</p>
+                                    <p className="text-xs font-semibold text-stone-800 bg-white px-3 py-1.5 rounded-lg border border-stone-200">"{dest.tagline_en}"</p>
+                                  </div>
+                                )}
                               </div>
                             )}
-                            {dest.seo_title && <p className="text-[10px] text-stone-500"><strong>SEO Title:</strong> {dest.seo_title}</p>}
+                            {/* SEO */}
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-2 border-t border-stone-100">
+                              <div className="space-y-1.5">
+                                {dest.seo_title && <p className="text-[10px] text-stone-500"><span className="font-bold">SEO Title (ID):</span> {dest.seo_title}</p>}
+                                {dest.seo_description && <p className="text-[10px] text-stone-500"><span className="font-bold">Meta Desc (ID):</span> {dest.seo_description}</p>}
+                                {dest.seo_keywords && <p className="text-[10px] text-stone-400"><span className="font-bold text-stone-500">Keywords (ID):</span> {dest.seo_keywords}</p>}
+                              </div>
+                              <div className="space-y-1.5">
+                                {dest.seo_title_en && <p className="text-[10px] text-stone-500"><span className="font-bold">SEO Title (EN):</span> {dest.seo_title_en}</p>}
+                                {dest.seo_description_en && <p className="text-[10px] text-stone-500"><span className="font-bold">Meta Desc (EN):</span> {dest.seo_description_en}</p>}
+                                {dest.seo_keywords_en && <p className="text-[10px] text-stone-400"><span className="font-bold text-stone-500">Keywords (EN):</span> {dest.seo_keywords_en}</p>}
+                              </div>
+                            </div>
                           </div>
                         )}
                       </div>
@@ -405,7 +463,6 @@ export default function ContentQueuePage() {
                           <div className="flex items-center gap-3 text-[10px] text-stone-400">
                             <span className="flex items-center gap-1"><MapPin className="w-2.5 h-2.5" />{dest.sub_region || "—"}</span>
                             <span className="capitalize">{dest.category}</span>
-                            {dest.rating > 0 && <span className="flex items-center gap-0.5"><Star className="w-2.5 h-2.5 fill-amber-400 text-amber-400" />{dest.rating.toFixed(1)}</span>}
                             <FactScoreBar score={score} />
                           </div>
                         </div>
