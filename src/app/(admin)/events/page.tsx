@@ -373,7 +373,10 @@ export default function EventsPage() {
                     title={selected.has(ev.id) ? "Remove from selection" : "Select event"}
                     className={`w-7 h-7 rounded-lg flex items-center justify-center bg-white/95 border shadow-sm transition cursor-pointer ${selected.has(ev.id) ? "border-primary bg-primary/10" : "border-gray-200 hover:border-primary/40"}`}
                   >
-                    {selected.has(ev.id) && <Check className="w-3.5 h-3.5 text-primary" />}
+                    {selected.has(ev.id)
+                      ? <Check className="w-3.5 h-3.5 text-primary" />
+                      : <CheckSquare className="w-3.5 h-3.5 text-gray-300" />
+                    }
                   </button>
                   <button
                     onClick={() => setConfirm({ ids: [ev.id], label: ev.title })}
