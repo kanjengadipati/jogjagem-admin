@@ -240,6 +240,10 @@ export default function DestinationDetailPage() {
         const data: Destination = d?.data ?? null;
         setDest(data);
         if (data) {
+          // Initialize savedScore from DB values if available
+          if (data.content_score != null) {
+            setSavedScore({ score: data.content_score, verdict: data.content_verdict ?? "" });
+          }
           setForm({
             name: data.name ?? "",
             name_en: data.name_en ?? "",
@@ -422,7 +426,13 @@ export default function DestinationDetailPage() {
       if (res.ok) {
         const saved = await res.json().catch(() => null);
         const updated: Destination | null = saved?.data ?? saved ?? null;
-        if (updated) setDest(updated);
+        if (updated) {
+          setDest(updated);
+          // Update savedScore from API response (backend recalculates on every save)
+          if (updated.content_score != null) {
+            setSavedScore({ score: updated.content_score, verdict: updated.content_verdict ?? "" });
+          }
+        }
         showToast("Saved", "Destination updated successfully", "success");
       } else {
         const errorData = await res.json().catch(() => ({}));
@@ -1265,15 +1275,33 @@ export default function DestinationDetailPage() {
 
             <div className="bg-white p-6 rounded-card border border-border shadow-soft space-y-4">
               <h4 className="text-xs font-bold text-gray-400 uppercase tracking-widest font-display">Content Quality Score</h4>
+
+              {/* Live score (from form state) */}
               <div className="flex items-center gap-4">
                 <div className={`w-16 h-16 rounded-full border-4 flex items-center justify-center font-mono font-extrabold text-xl ${contentScore.total >= 80 ? "border-success text-success" : contentScore.total >= 60 ? "border-warning text-warning" : "border-danger text-danger"}`}>
                   {contentScore.total}
                 </div>
                 <div>
                   <span className="text-xs font-bold text-gray-800 block">{contentScore.verdict}</span>
-                  <span className="text-[10px] text-gray-400">Kelengkapan konten halaman ini</span>
+                  <span className="text-[10px] text-gray-400">Live (unsaved)</span>
                 </div>
               </div>
+
+              {/* Saved score from DB */}
+              {savedScore && savedScore.score !== contentScore.total && (
+                <div className="flex items-center gap-3 px-3 py-2 bg-stone-50 rounded-xl border border-stone-200">
+                  <div className={`w-8 h-8 rounded-full border-2 flex items-center justify-center font-mono font-bold text-xs ${savedScore.score >= 80 ? "border-success text-success" : savedScore.score >= 60 ? "border-warning text-warning" : "border-danger text-danger"}`}>
+                    {savedScore.score}
+                  </div>
+                  <div>
+                    <span className="text-[10px] font-bold text-gray-600 block">{savedScore.verdict}</span>
+                    <span className="text-[9px] text-gray-400">Saved to DB</span>
+                  </div>
+                </div>
+              )}
+              {savedScore && savedScore.score === contentScore.total && (
+                <p className="text-[10px] text-emerald-600 font-semibold">✓ Synced with DB ({savedScore.score}/100)</p>
+              )}
 
               <div className="space-y-2.5">
                 {contentScore.categories.map((cat) => {

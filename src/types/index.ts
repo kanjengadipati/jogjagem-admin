@@ -60,6 +60,8 @@ export interface Destination {
   video_url?: string;
   google_maps_url?: string;
   status?: string;
+  content_score?: number;
+  content_verdict?: string;
   created_at?: string;
   updated_at?: string;
 }
