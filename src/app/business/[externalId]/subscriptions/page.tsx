@@ -1,1 +1,1 @@
-export { default } from "@/app/partner/subscriptions/page";
+export { default } from "@/components/business-portal/SubscriptionsPanel";

@@ -15,6 +15,9 @@ export default async function Home() {
   if (payload?.role === "partner" || payload?.role === "business_owner") {
     redirect("/business");
   }
+  if (payload?.role !== "admin" && payload?.role !== "superadmin") {
+    redirect("/logout");
+  }
 
   redirect("/dashboard");
 }

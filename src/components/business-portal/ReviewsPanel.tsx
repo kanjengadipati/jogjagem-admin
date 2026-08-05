@@ -15,7 +15,7 @@ interface Review {
   reply?: string;
 }
 
-export default function BusinessReviewsPage() {
+export default function ReviewsPanel() {
   const { showToast } = useToast();
   const { active: business, externalId } = useActiveBusiness();
   const [reviews, setReviews] = useState<Review[]>([]);

@@ -1,1 +1,1 @@
-export { default } from "@/app/partner/reviews/page";
+export { default } from "@/components/business-portal/ReviewsPanel";

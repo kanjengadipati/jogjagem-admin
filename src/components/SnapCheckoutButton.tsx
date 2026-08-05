@@ -68,7 +68,7 @@ export function InvoiceEmailModal({
         <div className="p-5 space-y-4">
           <div>
             <label className="block text-xs font-semibold text-gray-700 mb-1.5">
-              Email Partner <span className="text-danger">*</span>
+              Email Anda <span className="text-danger">*</span>
             </label>
             <div className="relative">
               <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-400 pointer-events-none">

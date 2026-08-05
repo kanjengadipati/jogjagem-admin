@@ -1,1 +1,1 @@
-export { default } from "@/app/partner/listings/page";
+export { default } from "@/components/business-portal/ListingsPanel";

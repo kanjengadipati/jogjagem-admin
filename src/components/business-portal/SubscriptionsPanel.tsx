@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import PartnerHeader from "@/components/PartnerHeader";
+import BusinessHeader from "@/components/BusinessHeader";
 import { useToast } from "@/components/Toast";
 import { CreditCard, CheckCircle2, Shield, ArrowUpRight, Zap, Loader2, AlertCircle } from "lucide-react";
 import { SnapCheckoutButton } from "@/components/SnapCheckoutButton";
@@ -60,7 +60,7 @@ function fmtPrice(n: number) {
   return "Rp " + n.toLocaleString("id-ID");
 }
 
-export default function PartnerSubscriptionsPage() {
+export default function SubscriptionsPanel() {
   const { showToast } = useToast();
   const { active: business, externalId } = useActiveBusiness();
   const [subscription, setSubscription] = useState<Subscription | null>(null);
@@ -98,7 +98,7 @@ export default function PartnerSubscriptionsPage() {
   if (loading) {
     return (
       <>
-        <PartnerHeader />
+        <BusinessHeader />
         <main className="flex-1 overflow-y-auto bg-[#F9F9FB] p-6 md:p-8 space-y-6">
           <div className="flex items-center justify-center py-24 text-stone-400 gap-3">
             <Loader2 className="w-5 h-5 animate-spin" />
@@ -111,7 +111,7 @@ export default function PartnerSubscriptionsPage() {
 
   return (
     <>
-      <PartnerHeader />
+      <BusinessHeader />
       <main className="flex-1 overflow-y-auto bg-[#F9F9FB] p-6 md:p-8 space-y-6">
         <div>
           <h1 className="text-xl font-bold text-stone-900 font-display">Langganan</h1>
@@ -228,4 +228,3 @@ export default function PartnerSubscriptionsPage() {
     </>
   );
 }
-

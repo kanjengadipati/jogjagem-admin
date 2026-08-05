@@ -1,1 +1,1 @@
-export { default } from "@/app/partner/settings/page";
+export { default } from "@/components/business-portal/SettingsPanel";

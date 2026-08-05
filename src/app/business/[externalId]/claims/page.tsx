@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
-import PartnerHeader from "@/components/PartnerHeader";
+import BusinessHeader from "@/components/BusinessHeader";
 import { FileCheck, Loader2, CheckCircle2, XCircle, Clock } from "lucide-react";
 
 interface ListingClaim {
@@ -63,7 +63,7 @@ export default function BusinessClaimsPage() {
 
   return (
     <>
-      <PartnerHeader />
+      <BusinessHeader />
       <main className="flex-1 overflow-y-auto bg-[#F9F9FB] p-5 md:p-8 space-y-6">
         <div>
           <h1 className="text-xl font-bold text-stone-900 font-display flex items-center gap-2">

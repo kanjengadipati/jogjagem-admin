@@ -30,6 +30,21 @@ interface BusinessOption {
   status: string;
 }
 
+const PLAN_BADGES: Record<string, { label: string; className: string }> = {
+  pro: {
+    label: "PRO",
+    className: "bg-amber-100 text-[#B5781E]",
+  },
+  business_plus: {
+    label: "BUSINESS+",
+    className: "bg-violet-100 text-violet-700",
+  },
+  enterprise: {
+    label: "ENTERPRISE",
+    className: "bg-stone-900 text-amber-400",
+  },
+};
+
 export default function BusinessSidebar() {
   const pathname = usePathname();
   const router = useRouter();
@@ -40,6 +55,7 @@ export default function BusinessSidebar() {
   const { isMobileOpen, toggleMobileSidebar } = useSidebar();
   const [businesses, setBusinesses] = useState<BusinessOption[]>([]);
   const [selectedBiz, setSelectedBiz] = useState<BusinessOption | null>(null);
+  const [plan, setPlan] = useState<string>("free");
 
   useEffect(() => {
     async function loadBiz() {
@@ -89,6 +105,28 @@ export default function BusinessSidebar() {
       if (found) setSelectedBiz(found);
     }
   }, [externalId, businesses]);
+
+  useEffect(() => {
+    if (!selectedBiz || selectedBiz.id === "default") {
+      setPlan("free");
+      return;
+    }
+    let cancelled = false;
+    fetch(`/api/businesses/me/${selectedBiz.id}/subscription`)
+      .then((r) => r.json())
+      .then((json) => {
+        const data = json?.data ?? json;
+        if (!cancelled && data && typeof data === "object" && data.plan) {
+          setPlan(data.plan);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setPlan("free");
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedBiz]);
 
   const handleLinkClick = (e: React.MouseEvent, locked: boolean) => {
     if (locked) {
@@ -200,9 +238,13 @@ export default function BusinessSidebar() {
                   <h1 className="font-display font-extrabold text-sm text-stone-900 tracking-tight">
                     JOGJAGEM
                   </h1>
-                  <span className="px-1.5 py-0.5 rounded-md bg-amber-100 text-[#B5781E] text-[9px] font-extrabold uppercase">
-                    PRO
-                  </span>
+                  {PLAN_BADGES[plan] && (
+                    <span
+                      className={`px-1.5 py-0.5 rounded-md text-[9px] font-extrabold uppercase ${PLAN_BADGES[plan].className}`}
+                    >
+                      {PLAN_BADGES[plan].label}
+                    </span>
+                  )}
                 </div>
                 <p className="text-[10px] text-stone-400 font-semibold tracking-wide uppercase">
                   Business Portal

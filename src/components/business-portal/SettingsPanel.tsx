@@ -15,7 +15,7 @@ interface Profile {
   role?: string;
 }
 
-export default function PartnerSettingsPage() {
+export default function SettingsPanel() {
   const { showToast } = useToast();
   const { active: activeBiz } = useActiveBusiness();
   const [profile, setProfile] = useState<Profile | null>(null);

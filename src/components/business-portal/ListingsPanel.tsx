@@ -1,10 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Image from "next/image";
-import PartnerHeader from "@/components/PartnerHeader";
+import BusinessHeader from "@/components/BusinessHeader";
 import { useToast } from "@/components/Toast";
-import { MapPin, Plus, CheckCircle2, Loader2, Tag, Info } from "lucide-react";
+import { MapPin, Plus, Tag, Info, Loader2 } from "lucide-react";
 import { useActiveBusiness } from "@/hooks/useActiveBusiness";
 
 interface OwnedListing {
@@ -24,7 +23,7 @@ const CATEGORY_TITLES: Record<string, string> = {
 
 const JASA_CATEGORIES = ["Jasa", "Lainnya"];
 
-export default function PartnerListingsPage() {
+export default function ListingsPanel() {
   const { showToast } = useToast();
   const { active: business, loading: loadingBiz, externalId } = useActiveBusiness();
   const [listings, setListings] = useState<OwnedListing[]>([]);
@@ -59,7 +58,7 @@ export default function PartnerListingsPage() {
 
   return (
     <>
-      <PartnerHeader />
+      <BusinessHeader />
       <main className="flex-1 overflow-y-auto bg-[#F9F9FB] p-6 md:p-8 space-y-6">
         <div className="flex items-center justify-between gap-4">
           <div>

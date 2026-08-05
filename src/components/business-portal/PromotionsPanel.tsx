@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import PartnerHeader from "@/components/PartnerHeader";
+import BusinessHeader from "@/components/BusinessHeader";
 import { useToast } from "@/components/Toast";
 import { SnapCheckoutButton } from "@/components/SnapCheckoutButton";
 import {
@@ -48,6 +48,9 @@ interface NewPromoForm {
   start_date: string;
   end_date: string;
 }
+
+const FRONTEND_URL =
+  process.env.NEXT_PUBLIC_FRONTEND_URL || "http://localhost:3001";
 
 const PLACEMENT_LABELS: Record<string, string> = {
   homepage_hero_aicard: "Homepage Hero AIPick Card",
@@ -103,7 +106,7 @@ function fmtPrice(amount?: number, currency?: string) {
   return `${currency ?? "IDR"} ${amount.toLocaleString("id-ID")}`;
 }
 
-export default function PartnerMarketingPage() {
+export default function PromotionsPanel() {
   const { showToast } = useToast();
   const { active: business, externalId } = useActiveBusiness();
 
@@ -290,7 +293,7 @@ export default function PartnerMarketingPage() {
   // ── Render ─────────────────────────────────────────────────────────────────
   return (
     <>
-      <PartnerHeader />
+      <BusinessHeader />
       <main className="flex-1 overflow-y-auto bg-[#F9F9FB] p-5 md:p-8 space-y-6">
 
         {/* ── Header ── */}
@@ -455,7 +458,7 @@ export default function PartnerMarketingPage() {
               <span>Kampanye Iklan</span>
             </h2>
             <Link
-              href="/ads"
+              href={`${FRONTEND_URL}/ads`}
               className="flex items-center gap-1 text-[11px] font-bold text-amber-700 hover:text-amber-900 transition-colors"
             >
               Pasang iklan baru <ChevronRight className="w-3.5 h-3.5" />
@@ -477,7 +480,7 @@ export default function PartnerMarketingPage() {
                 Tampilkan bisnis Anda ke lebih banyak traveler
               </p>
               <Link
-                href="/ads"
+                href={`${FRONTEND_URL}/ads`}
                 className="inline-flex items-center gap-1.5 text-xs font-bold text-white bg-[#B57A21] hover:bg-[#9B671A] px-4 py-2 rounded-xl transition-colors"
               >
                 <Zap className="w-3.5 h-3.5" /> Pasang Iklan Sekarang
@@ -611,7 +614,7 @@ export default function PartnerMarketingPage() {
                   </p>
                 </div>
                 <Link
-                  href={`/ads?placement=${key}`}
+                  href={`${FRONTEND_URL}/ads?placement=${key}`}
                   className="shrink-0 flex items-center gap-1 text-[10px] font-bold text-amber-700 bg-amber-50 hover:bg-amber-100 border border-amber-200 px-2.5 py-1.5 rounded-xl transition-colors"
                 >
                   Pilih <ChevronRight className="w-3 h-3" />

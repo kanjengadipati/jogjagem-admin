@@ -17,7 +17,14 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
   if (existingToken) {
     const payload = decodeJwtPayload(existingToken);
     const role = payload?.role;
-    redirect(role === "partner" || role === "business_owner" ? "/business" : "/dashboard");
+    if (role === "partner" || role === "business_owner") {
+      redirect("/business");
+    }
+    if (role === "admin" || role === "superadmin") {
+      redirect("/dashboard");
+    }
+    // Regular user cannot access this admin app — clear the session to break the loop
+    redirect("/logout");
   }
 
   return <LoginForm />;

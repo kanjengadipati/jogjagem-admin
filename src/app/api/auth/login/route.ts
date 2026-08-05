@@ -43,7 +43,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Redirect or indicate dashboard/listings based on role
-    const redirectUrl = role === "partner" ? "/partner" : "/dashboard";
+    const redirectUrl = role === "partner" ? "/business" : "/dashboard";
     const response = NextResponse.json({ ok: true, redirectUrl });
     const domain = process.env.NODE_ENV === "production"
       ? (process.env.NEXT_PUBLIC_COOKIE_DOMAIN || ".jogjagem.com")

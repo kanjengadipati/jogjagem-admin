@@ -22,6 +22,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
   const body = await req.json().catch(() => ({}));
   const { status, data } = await api(`/destinations/${encodeURIComponent(id)}`, {
     method: "PUT",
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
   });
   return NextResponse.json(data, { status });

@@ -59,6 +59,12 @@ export const menuGroups: MenuGroup[] = [
     ],
   },
   {
+    title: "Content",
+    items: [
+      { name: "Content Queue",  icon: "wand-2",     path: "/content-queue", activeId: "content-queue", badge: "AI", badgeColor: "warning" },
+    ],
+  },
+  {
     title: "Administration",
     items: [
       { name: "User Management", icon: "user-cog", path: "/users",    activeId: "users",    roles: ["superadmin"] },
