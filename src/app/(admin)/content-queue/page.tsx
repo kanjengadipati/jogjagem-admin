@@ -33,7 +33,7 @@ interface Destination {
   seo_keywords_en?: string;
   rating: number;
   review_count: number;
-  updated_at: string;
+  updated_at: string | null;
   ticket_price?: string;
   opening_hours?: string;
   best_time?: string;
@@ -424,7 +424,7 @@ export default function ContentQueuePage() {
                               <span className="flex items-center gap-1"><MapPin className="w-2.5 h-2.5" />{dest.sub_region}</span>
                               <span className="capitalize">{dest.category}</span>
                               <QualityBadge score={dest.content_score ?? 0} verdict={dest.content_verdict ?? ""} />
-                              <span className="flex items-center gap-1"><Clock className="w-2.5 h-2.5" />{new Date(dest.updated_at).toLocaleDateString("id-ID")}</span>
+                              <span className="flex items-center gap-1"><Clock className="w-2.5 h-2.5" />{dest.updated_at ? new Date(dest.updated_at).toLocaleDateString("id-ID") : "—"}</span>
                             </div>
                           </div>
                           <div className="flex items-center gap-2 shrink-0">
