@@ -8,8 +8,6 @@ const PUBLIC_PATHS = ["/login", "/logout", "/api/auth"];
 export function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
   const isPartnerPortal =
-    pathname === "/partner" ||
-    pathname.startsWith("/partner/") ||
     pathname === "/business" ||
     pathname.startsWith("/business/");
 
@@ -55,8 +53,8 @@ export function middleware(req: NextRequest) {
       return NextResponse.redirect(new URL('/business', req.url));
     }
   } else {
-    // Admin/Superadmin: restrict root /partner or /business without business ID
-    if (pathname === '/partner' || pathname === '/business') {
+    // Admin/Superadmin: restrict root /business without business ID
+    if (pathname === '/business') {
       return NextResponse.redirect(new URL('/dashboard', req.url));
     }
   }
