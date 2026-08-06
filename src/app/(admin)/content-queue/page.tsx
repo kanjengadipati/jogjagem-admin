@@ -606,40 +606,124 @@ export default function ContentQueuePage() {
                     const isReady = score >= 4;
                     const variant = selectedVariant[dest.id] ?? "narrative";
                     const isActing = actionLoading === `${dest.id}:generate`;
+                    const isExp = expanded === dest.id;
                     return (
-                      <div key={dest.id} className="flex items-center gap-4 px-5 py-3.5 hover:bg-stone-50/50 transition-colors">
-                        <div className="flex-1 min-w-0 space-y-1">
-                          <div className="flex items-center gap-2">
-                            <span className="text-sm font-bold text-stone-900 truncate max-w-[220px]">{dest.name}</span>
+                      <div key={dest.id} className="hover:bg-stone-50/50 transition-colors">
+                        <div className="flex items-center gap-4 px-5 py-3.5">
+                          <div className="flex-1 min-w-0 space-y-1">
+                            <div className="flex items-center gap-2">
+                              <span className="text-sm font-bold text-stone-900 truncate max-w-[220px]">{dest.name}</span>
+                            </div>
+                            <div className="flex items-center gap-3 text-[10px] text-stone-400">
+                              <span className="flex items-center gap-1"><MapPin className="w-2.5 h-2.5" />{dest.sub_region || "—"}</span>
+                              <span className="capitalize">{dest.category}</span>
+                              <FactScoreBar score={score} />
+                            </div>
                           </div>
-                          <div className="flex items-center gap-3 text-[10px] text-stone-400">
-                            <span className="flex items-center gap-1"><MapPin className="w-2.5 h-2.5" />{dest.sub_region || "—"}</span>
-                            <span className="capitalize">{dest.category}</span>
-                            <FactScoreBar score={score} />
+                          <div className="flex items-center gap-2 shrink-0">
+                            <select
+                              value={variant}
+                              onChange={(e) => setSelectedVariant(p => ({ ...p, [dest.id]: e.target.value }))}
+                              className="text-[10px] font-semibold px-2 py-1.5 rounded-lg border border-stone-200 bg-stone-50 focus:outline-none focus:ring-1 focus:ring-purple-400 cursor-pointer"
+                            >
+                              {VARIANTS.map(v => <option key={v.value} value={v.value}>{v.label}</option>)}
+                            </select>
+                            <button
+                              onClick={() => doAction(dest.id, "generate", { variant }, true)}
+                              disabled={!!actionLoading}
+                              title={!isReady ? `Low data (${score}/10 fields) — AI will research missing info` : "Generate AI draft"}
+                              className={`flex items-center gap-1 px-3 py-1.5 rounded-xl text-[10px] font-bold cursor-pointer transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${
+                                !isReady
+                                  ? "bg-amber-500 hover:bg-amber-600 text-white"
+                                  : "bg-purple-600 hover:bg-purple-700 text-white"
+                              }`}
+                            >
+                              {isActing ? <Loader2 className="w-3 h-3 animate-spin" /> : <Sparkles className="w-3 h-3" />}
+                              {!isReady ? "AI Fill" : "Generate"}
+                            </button>
+                            {/* Expand to view/edit existing content */}
+                            <button onClick={() => setExpanded(isExp ? null : dest.id)}
+                              className="p-1.5 rounded-xl hover:bg-stone-100 text-stone-400 hover:text-stone-700 cursor-pointer"
+                              title="View / edit content">
+                              {isExp ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+                            </button>
                           </div>
                         </div>
-                        <div className="flex items-center gap-2 shrink-0">
-                          <select
-                            value={variant}
-                            onChange={(e) => setSelectedVariant(p => ({ ...p, [dest.id]: e.target.value }))}
-                            className="text-[10px] font-semibold px-2 py-1.5 rounded-lg border border-stone-200 bg-stone-50 focus:outline-none focus:ring-1 focus:ring-purple-400 cursor-pointer"
-                          >
-                            {VARIANTS.map(v => <option key={v.value} value={v.value}>{v.label}</option>)}
-                          </select>
-                          <button
-                            onClick={() => doAction(dest.id, "generate", { variant }, true)}
-                            disabled={!!actionLoading}
-                            title={!isReady ? `Low data (${score}/10 fields) — AI will research missing info` : "Generate AI draft"}
-                            className={`flex items-center gap-1 px-3 py-1.5 rounded-xl text-[10px] font-bold cursor-pointer transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${
-                              !isReady
-                                ? "bg-amber-500 hover:bg-amber-600 text-white"
-                                : "bg-purple-600 hover:bg-purple-700 text-white"
-                            }`}
-                          >
-                            {isActing ? <Loader2 className="w-3 h-3 animate-spin" /> : <Sparkles className="w-3 h-3" />}
-                            {!isReady ? "AI Fill" : "Generate"}
-                          </button>
-                        </div>
+                        {isExp && (() => {
+                          const draft = editingDraft[dest.id];
+                          const isEditing = !!draft;
+                          const val = (key: keyof Destination) =>
+                            isEditing ? (draft[key] as string ?? "") : (dest[key] as string ?? "");
+
+                          const EditableField = ({
+                            label, fieldId, fieldEn, multiline = false,
+                          }: {
+                            label: string;
+                            fieldId: keyof Destination;
+                            fieldEn: keyof Destination;
+                            multiline?: boolean;
+                          }) => (
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                              {[
+                                { key: fieldId, lang: "ID", flag: "🇮🇩" },
+                                { key: fieldEn, lang: "EN", flag: "🇬🇧" },
+                              ].map(({ key, lang, flag }) => (
+                                <div key={lang} className="space-y-1">
+                                  <p className="text-[10px] font-bold text-stone-500 uppercase tracking-wider">{flag} {label} ({lang})</p>
+                                  {isEditing ? (
+                                    multiline ? (
+                                      <textarea rows={4} value={val(key)} onChange={e => setField(dest.id, key, e.target.value)}
+                                        className="w-full text-xs text-stone-700 bg-white p-3 rounded-xl border border-purple-300 focus:outline-none focus:ring-2 focus:ring-purple-400/30 resize-none" />
+                                    ) : (
+                                      <input type="text" value={val(key)} onChange={e => setField(dest.id, key, e.target.value)}
+                                        className="w-full text-xs text-stone-700 bg-white px-3 py-2 rounded-xl border border-purple-300 focus:outline-none focus:ring-2 focus:ring-purple-400/30" />
+                                    )
+                                  ) : (
+                                    multiline ? (
+                                      <p className="text-xs text-stone-700 leading-relaxed line-clamp-5 bg-white p-3 rounded-xl border border-stone-200">{val(key) || <span className="text-stone-300 italic">Empty</span>}</p>
+                                    ) : (
+                                      <p className="text-xs font-semibold text-stone-800 bg-white px-3 py-1.5 rounded-lg border border-stone-200 truncate">"{val(key) || <span className="text-stone-300 italic">Empty</span>}"</p>
+                                    )
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                          );
+
+                          return (
+                            <div className="px-5 pb-5 space-y-4 bg-stone-50/60 border-t border-stone-100 pt-4">
+                              <div className="flex items-center justify-between">
+                                <p className="text-[10px] font-bold text-stone-400 uppercase tracking-wider">Content</p>
+                                <div className="flex items-center gap-2">
+                                  {isEditing ? (
+                                    <>
+                                      <button onClick={() => cancelEdit(dest.id)}
+                                        className="px-3 py-1.5 rounded-lg text-[10px] font-bold text-stone-500 hover:bg-stone-200 transition-colors cursor-pointer">Cancel</button>
+                                      <button onClick={() => saveInline(dest.id)} disabled={savingInline === dest.id}
+                                        className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white text-[10px] font-bold cursor-pointer">
+                                        {savingInline === dest.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <CheckCircle2 className="w-3 h-3" />} Save
+                                      </button>
+                                    </>
+                                  ) : (
+                                    <button onClick={() => startEdit(dest.id, dest)}
+                                      className="flex items-center gap-1 px-3 py-1.5 rounded-lg border border-stone-200 text-stone-600 hover:bg-white text-[10px] font-bold cursor-pointer transition-colors">
+                                      <Pencil className="w-3 h-3" /> Edit Content
+                                    </button>
+                                  )}
+                                </div>
+                              </div>
+                              <EditableField label="Description" fieldId="description" fieldEn="description_en" multiline />
+                              <EditableField label="Story" fieldId="story" fieldEn="story_en" multiline />
+                              <EditableField label="Tagline" fieldId="tagline" fieldEn="tagline_en" />
+                              <div className="pt-2 border-t border-stone-100 space-y-3">
+                                <p className="text-[10px] font-bold text-stone-400 uppercase tracking-wider">SEO</p>
+                                <EditableField label="SEO Title" fieldId="seo_title" fieldEn="seo_title_en" />
+                                <EditableField label="Meta Description" fieldId="seo_description" fieldEn="seo_description_en" />
+                                <EditableField label="Keywords" fieldId="seo_keywords" fieldEn="seo_keywords_en" />
+                              </div>
+                            </div>
+                          );
+                        })()}
                       </div>
                     );
                   })}
