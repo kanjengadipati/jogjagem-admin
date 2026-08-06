@@ -580,30 +580,172 @@ export default function PromotionsPanel() {
 
         {/* ── Slot Iklan Tersedia ── */}
         <div className="bg-white p-6 rounded-3xl border border-stone-200/80 shadow-xs space-y-4">
-          <h2 className="text-sm font-bold text-stone-900 font-display flex items-center gap-2">
-            <Zap className="w-4 h-4 text-amber-600" />
-            <span>Slot Iklan Tersedia</span>
-          </h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {Object.entries(PLACEMENT_NAMES).map(([key, label]) => (
-              <div
-                key={key}
-                className="p-4 rounded-2xl border border-stone-200 bg-stone-50/50 flex items-start justify-between gap-3"
-              >
-                <div className="flex-1 min-w-0">
-                  <div className="text-xs font-bold text-stone-900">{label}</div>
-                  <p className="text-[10px] text-stone-400 mt-0.5">
-                    {PLACEMENT_DESCRIPTIONS[key]}
-                  </p>
+          <div className="flex items-center justify-between">
+            <h2 className="text-sm font-bold text-stone-900 font-display flex items-center gap-2">
+              <Zap className="w-4 h-4 text-amber-600" />
+              <span>Slot Iklan Tersedia</span>
+            </h2>
+            <Link
+              href={`${FRONTEND_URL}/ads`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-[11px] font-bold text-amber-700 hover:text-amber-900 transition-colors flex items-center gap-1"
+            >
+              Lihat semua <ChevronRight className="w-3 h-3" />
+            </Link>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {/* ── helper: build prefill URL with business data ── */}
+            {(() => {
+              const prefill = business ? new URLSearchParams({
+                action: 'register',
+                ...(business.name     && { biz_name:     business.name }),
+                ...(business.category && { biz_category: business.category }),
+                ...(business.phone    && { biz_phone:    business.phone }),
+                ...(business.website  && { biz_website:  business.website }),
+                ...(business.description && { biz_description: business.description }),
+              }) : new URLSearchParams({ action: 'register' });
+
+              const slotUrl = (placement: string) => {
+                prefill.set('placement', placement);
+                return `${FRONTEND_URL}/business?${prefill.toString()}`;
+              };
+
+              return (<>
+            <div className="rounded-2xl border border-stone-200 overflow-hidden bg-stone-50/30 flex flex-col">
+              <div className="bg-[#16140f] px-3 pt-3 pb-2.5 relative">
+                <div className="pr-[60px] space-y-1.5 mb-2">
+                  <div className="h-1.5 w-[55%] bg-white/20 rounded-full" />
+                  <div className="h-1.5 w-[72%] bg-white/20 rounded-full" />
+                </div>
+                <div className="absolute top-2.5 right-2.5 w-[52px] bg-white rounded-lg overflow-hidden shadow">
+                  <div className="h-7 bg-gray-200" />
+                  <div className="px-1 py-0.5 flex items-center gap-0.5">
+                    <Megaphone className="w-2 h-2 text-amber-500 shrink-0" />
+                    <span className="text-[6px] font-bold text-stone-600">disponsori</span>
+                  </div>
+                </div>
+                <div className="flex gap-1 pb-1 overflow-hidden">
+                  {Array.from({ length: 7 }).map((_, i) => (
+                    <div key={i} className={`shrink-0 rounded ${i === 2 || i === 6 ? 'border border-amber-400 bg-[#2a2510]' : 'bg-[#252219]'}`}
+                      style={{ width: 24, height: 32 }} />
+                  ))}
+                </div>
+              </div>
+              <div className="p-3 flex-1 flex flex-col gap-2">
+                <div>
+                  <p className="text-xs font-bold text-stone-900">Hero — AI Pick</p>
+                  <p className="text-[10px] text-stone-400 mt-0.5 line-clamp-2">Pick card 50:50 + posisi #3 & #8 di carousel Trending</p>
                 </div>
                 <Link
-                  href={`${FRONTEND_URL}/ads?placement=${key}`}
-                  className="shrink-0 flex items-center gap-1 text-[10px] font-bold text-amber-700 bg-amber-50 hover:bg-amber-100 border border-amber-200 px-2.5 py-1.5 rounded-xl transition-colors"
+                  href={slotUrl('homepage_hero_aicard')}
+                  className="mt-auto flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#B57A21] hover:bg-[#9B671A] text-white text-[10px] font-bold transition-colors"
                 >
-                  Pilih <ChevronRight className="w-3 h-3" />
+                  <Megaphone className="w-3 h-3" /> Pasang Iklan
                 </Link>
               </div>
-            ))}
+            </div>
+
+            {/* ── 2. Destinasi Populer Grid ── */}
+            <div className="rounded-2xl border border-stone-200 overflow-hidden bg-stone-50/30 flex flex-col">
+              <div className="p-2.5 bg-[#F5F0E8]">
+                <div className="grid grid-cols-4 gap-1 mb-1">
+                  {Array.from({ length: 4 }).map((_, i) => (
+                    <div key={i} className="rounded bg-gray-200" style={{ height: 36 }} />
+                  ))}
+                </div>
+                <div className="grid grid-cols-4 gap-1 mb-1">
+                  <div className="rounded border border-amber-400 bg-amber-50 relative" style={{ height: 36 }}>
+                    <span className="absolute top-0.5 left-0.5 text-[6px] font-extrabold bg-amber-400 text-stone-900 rounded px-0.5">AD</span>
+                  </div>
+                  {Array.from({ length: 3 }).map((_, i) => (
+                    <div key={i} className="rounded bg-gray-200" style={{ height: 36 }} />
+                  ))}
+                </div>
+                <div className="grid grid-cols-4 gap-1">
+                  {Array.from({ length: 4 }).map((_, i) => (
+                    <div key={i} className="rounded bg-gray-200" style={{ height: 36 }} />
+                  ))}
+                </div>
+              </div>
+              <div className="p-3 flex-1 flex flex-col gap-2">
+                <div>
+                  <p className="text-xs font-bold text-stone-900">Destinasi Populer Grid</p>
+                  <p className="text-[10px] text-stone-400 mt-0.5 line-clamp-2">Posisi #5 & #10 di grid Destinasi Populer homepage</p>
+                </div>
+                <Link
+                  href={slotUrl('listing_top')}
+                  className="mt-auto flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#B57A21] hover:bg-[#9B671A] text-white text-[10px] font-bold transition-colors"
+                >
+                  <Megaphone className="w-3 h-3" /> Pasang Iklan
+                </Link>
+              </div>
+            </div>
+
+            {/* ── 3. Destination Detail Sponsorship ── */}
+            <div className="rounded-2xl border border-stone-200 overflow-hidden bg-stone-50/30 flex flex-col">
+              <div className="p-2.5 bg-[#F5F0E8] space-y-1.5">
+                <div className="h-5 w-full bg-gray-300 rounded" />
+                <div className="h-1.5 w-3/4 bg-gray-200 rounded" />
+                <div className="h-8 bg-amber-500/80 rounded flex items-center justify-center">
+                  <span className="text-[8px] text-white font-bold">✦ Iklanmu di sini</span>
+                </div>
+                <div className="h-1.5 w-1/2 bg-gray-200 rounded" />
+              </div>
+              <div className="p-3 flex-1 flex flex-col gap-2">
+                <div>
+                  <p className="text-xs font-bold text-stone-900">Destination Detail</p>
+                  <p className="text-[10px] text-stone-400 mt-0.5 line-clamp-2">Banner eksklusif di halaman detail destinasi populer</p>
+                </div>
+                <Link
+                  href={slotUrl('destination_detail')}
+                  className="mt-auto flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#B57A21] hover:bg-[#9B671A] text-white text-[10px] font-bold transition-colors"
+                >
+                  <Megaphone className="w-3 h-3" /> Pasang Iklan
+                </Link>
+              </div>
+            </div>
+
+            {/* ── 4. Native Ad — Festival & Destinasi ── */}
+            <div className="rounded-2xl border border-stone-200 overflow-hidden bg-stone-50/30 flex flex-col">
+              <div className="p-2.5 bg-[#F5F0E8]">
+                <div className="grid grid-cols-2 gap-1.5">
+                  <div className="space-y-1">
+                    <div className="h-6 bg-gray-200 rounded" />
+                    <div className="h-1 w-3/4 bg-gray-200 rounded" />
+                  </div>
+                  <div className="border border-amber-400 rounded p-0.5 space-y-1">
+                    <div className="h-6 bg-amber-500/70 rounded flex items-center justify-center">
+                      <span className="text-[7px] text-white font-bold">Iklanmu</span>
+                    </div>
+                    <div className="h-1 w-3/4 bg-gray-200 rounded" />
+                  </div>
+                  <div className="space-y-1">
+                    <div className="h-6 bg-gray-200 rounded" />
+                    <div className="h-1 w-3/5 bg-gray-200 rounded" />
+                  </div>
+                  <div className="space-y-1">
+                    <div className="h-6 bg-gray-200 rounded" />
+                    <div className="h-1 w-2/3 bg-gray-200 rounded" />
+                  </div>
+                </div>
+              </div>
+              <div className="p-3 flex-1 flex flex-col gap-2">
+                <div>
+                  <p className="text-xs font-bold text-stone-900">Native Ad — Festival</p>
+                  <p className="text-[10px] text-stone-400 mt-0.5 line-clamp-2">Card sponsor di carousel Festival & Trending</p>
+                </div>
+                <Link
+                  href={slotUrl('listing_native')}
+                  className="mt-auto flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#B57A21] hover:bg-[#9B671A] text-white text-[10px] font-bold transition-colors"
+                >
+                  <Megaphone className="w-3 h-3" /> Pasang Iklan
+                </Link>
+              </div>
+            </div>
+            </>);
+            })()}
           </div>
         </div>
       </main>
