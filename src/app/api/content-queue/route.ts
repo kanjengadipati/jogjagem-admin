@@ -11,6 +11,6 @@ async function getApi() {
 
 export async function GET() {
   const api = await getApi();
-  const { status, data } = await api("/auth/admin/content-queue");
+  const { status, data } = await api("/admin/content-queue");
   return NextResponse.json(data, { status });
 }

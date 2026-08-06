@@ -17,7 +17,7 @@ export async function POST(
   const { id, action } = await params;
   const api = await getApi();
   const body = await req.json().catch(() => ({}));
-  const { status, data } = await api(`/auth/admin/content-queue/${id}/${action}`, {
+  const { status, data } = await api(`/admin/content-queue/${id}/${action}`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
