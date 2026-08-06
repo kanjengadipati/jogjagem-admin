@@ -275,11 +275,9 @@ export default function ContentQueuePage() {
       d.sub_region?.toLowerCase().includes(availFilter.toLowerCase()) ||
       d.category?.toLowerCase().includes(availFilter.toLowerCase());
     const scoreMatch = !showNeedsData || factScore(d) < 4;
-    // Also apply the shared score filter (5/10 threshold for fact density)
-    const qualityMatch = filterScore === "all"
-      || (filterScore === "high" && factScore(d) >= 5)
-      || (filterScore === "low"  && factScore(d) <  5);
-    return textMatch && scoreMatch && qualityMatch;
+    // Quality filter (0-100 scale) does NOT apply to Available tab —
+    // these destinations have no content_score yet. Use "need more data" toggle instead.
+    return textMatch && scoreMatch;
   });
 
   const availTotalPages = Math.max(1, Math.ceil(filteredAvail.length / AVAIL_PAGE_SIZE));
@@ -448,12 +446,13 @@ export default function ContentQueuePage() {
                                 {isActing("regenerate") ? <Loader2 className="w-3 h-3 animate-spin" /> : <RefreshCw className="w-3 h-3" />} Regen
                               </button>
                             )}
-                            {(dest.content_status === "draft" || dest.content_status === "review") && (
-                              <button onClick={() => doAction(dest.id, "approve")} disabled={!!actionLoading}
-                                className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white text-[10px] font-bold cursor-pointer">
-                                {isActing("approve") ? <Loader2 className="w-3 h-3 animate-spin" /> : <CheckCircle2 className="w-3 h-3" />} Approve
-                              </button>
-                            )}
+                             {(dest.content_status === "draft" || dest.content_status === "review") && (
+                               <button onClick={() => doAction(dest.id, "approve")} disabled={!!actionLoading || dest.content_score < 60}
+                                 title={dest.content_score < 60 ? "Quality gate: score < 60 required to publish" : "Approve content"}
+                                 className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white text-[10px] font-bold cursor-pointer">
+                                 {isActing("approve") ? <Loader2 className="w-3 h-3 animate-spin" /> : <CheckCircle2 className="w-3 h-3" />} Approve
+                               </button>
+                             )}
                             {dest.content_status && dest.content_status !== "rejected" && dest.content_status !== "" && (
                               <button onClick={() => doAction(dest.id, "reject", { reason: "Rejected via admin UI" })} disabled={!!actionLoading}
                                 className="p-1.5 rounded-xl hover:bg-red-50 text-stone-400 hover:text-red-500 cursor-pointer" title="Reject">
