@@ -10,6 +10,12 @@ const SNAP_JS_URL =
     ? "https://app.midtrans.com/snap/snap.js"
     : "https://app.sandbox.midtrans.com/snap/snap.js";
 
+// Halaman Syarat & Ketentuan + Kebijakan Privasi hanya ada di repo frontend
+// (jogjagem), bukan di admin. Pakai absolute URL agar link tidak resolve ke
+// domain admin dan 404.
+const FRONTEND_URL =
+  process.env.NEXT_PUBLIC_FRONTEND_URL || "http://localhost:3001";
+
 declare global {
   interface Window {
     snap?: {
@@ -213,11 +219,19 @@ export function SnapCheckoutButton({
         />
         <span className="text-[10px] text-stone-500 leading-tight">
           Saya setuju dengan{" "}
-          <a href="/syarat-ketentuan" target="_blank" className="text-[#B8912A] hover:underline">
+          <a
+            href={`${FRONTEND_URL}/syarat-ketentuan`}
+            target="_blank"
+            className="text-[#B8912A] hover:underline"
+          >
             Syarat & Ketentuan
           </a>{" "}
           dan{" "}
-          <a href="/kebijakan-privasi" target="_blank" className="text-[#B8912A] hover:underline">
+          <a
+            href={`${FRONTEND_URL}/kebijakan-privasi`}
+            target="_blank"
+            className="text-[#B8912A] hover:underline"
+          >
             Kebijakan Privasi
           </a>{" "}
           Jogjagem.

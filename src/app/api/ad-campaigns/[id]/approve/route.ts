@@ -9,27 +9,14 @@ async function getApi() {
   return fetchWithAuth(token);
 }
 
-export async function GET(
+export async function POST(
   _req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
   const api = await getApi();
-  const { status, data } = await api(`/businesses/me/${id}/ad-campaigns`);
-  return NextResponse.json(data, { status });
-}
-
-export async function POST(
-  req: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  const { id } = await params;
-  const api = await getApi();
-  const body = await req.json();
-  const { status, data } = await api(`/businesses/me/${id}/ad-campaigns`, {
+  const { status, data } = await api(`/ads/campaigns/${id}/approve`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
   });
   return NextResponse.json(data, { status });
 }

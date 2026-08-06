@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import BusinessHeader from "@/components/BusinessHeader";
+import CoverImageUpload from "@/components/CoverImageUpload";
 import { useToast } from "@/components/Toast";
 import { SnapCheckoutButton } from "@/components/SnapCheckoutButton";
 import {
@@ -21,12 +22,38 @@ import {
   ChevronRight,
   Clock,
   CheckCircle2,
+  XCircle,
   AlertCircle,
   Zap,
 } from "lucide-react";
 import type { AdCampaign } from "@/types";
 import { useActiveBusiness } from "@/hooks/useActiveBusiness";
-import { PLACEMENT_NAMES, PLACEMENT_DESCRIPTIONS } from "@/lib/adPlacements";
+import {
+  AD_PLACEMENTS,
+  PLACEMENT_NAMES,
+  PLACEMENT_DESCRIPTIONS,
+  SELLABLE_PLACEMENTS,
+  computePrice,
+  formatPrice,
+} from "@/lib/adPlacements";
+
+const CATEGORIES = [
+  { value: "", label: "Semua Kategori" },
+  { value: "Temple", label: "Temple" },
+  { value: "Beach", label: "Beach" },
+  { value: "Nature", label: "Nature" },
+  { value: "Heritage", label: "Heritage" },
+  { value: "Cultural", label: "Cultural" },
+  { value: "Culinary", label: "Culinary" },
+  { value: "Shopping", label: "Shopping" },
+  { value: "Adventure", label: "Adventure" },
+  { value: "hidden-gem", label: "Hidden Gem" },
+  { value: "family", label: "Family" },
+  { value: "weekend", label: "Weekend" },
+  { value: "sunset", label: "Sunset" },
+  { value: "sunrise", label: "Sunrise" },
+  { value: "camping", label: "Camping" },
+];
 
 interface Promotion {
   id: string;
@@ -49,6 +76,24 @@ interface NewPromoForm {
   start_date: string;
   end_date: string;
 }
+
+interface NewAdForm {
+  placement: string;
+  target_url: string;
+  category: string;
+  start_at: string;
+  end_at: string;
+  image_url: string;
+}
+
+const EMPTY_AD_FORM: NewAdForm = {
+  placement: "homepage_hero_aicard",
+  target_url: "",
+  category: "",
+  start_at: "",
+  end_at: "",
+  image_url: "",
+};
 
 const FRONTEND_URL =
   process.env.NEXT_PUBLIC_FRONTEND_URL || "http://localhost:3001";
@@ -116,6 +161,11 @@ export default function PromotionsPanel() {
     end_date: "",
   });
 
+  // Modal buat kampanye iklan (self-service)
+  const [showAdModal, setShowAdModal] = useState(false);
+  const [savingAd, setSavingAd] = useState(false);
+  const [adForm, setAdForm] = useState<NewAdForm>(EMPTY_AD_FORM);
+
   // ── Load data ──────────────────────────────────────────────────────────────
   useEffect(() => {
     if (!business) {
@@ -140,39 +190,43 @@ export default function PromotionsPanel() {
     load();
   }, [business, externalId]);
 
-  useEffect(() => {
+  const loadCampaigns = useCallback(async () => {
     if (!business) {
       setLoadingCampaigns(false);
       return;
     }
     const id = externalId || business.id;
-    // Fetch campaigns scoped to this business via the self-service endpoint
-    fetch(`/api/businesses/me/${id}/ad-campaigns`)
-      .then((r) => r.json())
-      .then((d) => {
-        const list: AdCampaign[] = d?.data ?? [];
-        setCampaigns(list);
-        // Fetch payment status per campaign
-        list.forEach((c) => {
-          fetch(
-            `/api/payments?subject_type=ad_campaign&subject_external_id=${c.id}`
-          )
-            .then((r) => r.json())
-            .then((d) => {
-              const latest = d?.data?.[0];
-              if (latest?.status) {
-                setPaymentBySubject((prev) => ({
-                  ...prev,
-                  [c.id]: latest.status,
-                }));
-              }
-            })
-            .catch(() => {});
-        });
-      })
-      .catch(() => {})
-      .finally(() => setLoadingCampaigns(false));
+    try {
+      const res = await fetch(`/api/businesses/me/${id}/ad-campaigns`);
+      const d = await res.json();
+      const list: AdCampaign[] = d?.data ?? [];
+      setCampaigns(list);
+      list.forEach((c) => {
+        fetch(
+          `/api/payments?subject_type=ad_campaign&subject_external_id=${c.id}`
+        )
+          .then((r) => r.json())
+          .then((d) => {
+            const latest = d?.data?.[0];
+            if (latest?.status) {
+              setPaymentBySubject((prev) => ({
+                ...prev,
+                [c.id]: latest.status,
+              }));
+            }
+          })
+          .catch(() => {});
+      });
+    } catch {
+      // kampanye di-load ulang saat buka halaman berikutnya
+    } finally {
+      setLoadingCampaigns(false);
+    }
   }, [business, externalId]);
+
+  useEffect(() => {
+    loadCampaigns();
+  }, [loadCampaigns]);
 
   // ── Stats ──────────────────────────────────────────────────────────────────
   const activePromos = promotions.filter(
@@ -272,6 +326,60 @@ export default function PromotionsPanel() {
       showToast("Error", "Gagal memperbarui status kampanye", "error");
     }
   }
+
+  // ── Self-service ad campaign ───────────────────────────────────────────────
+  function openAdModal(placement: string) {
+    if (isPending) {
+      showToast("Bisnis masih dalam peninjauan", "info");
+      return;
+    }
+    setAdForm({ ...EMPTY_AD_FORM, placement });
+    setShowAdModal(true);
+  }
+
+  async function handleSaveAd() {
+    if (!partnerId) return;
+    if (!adForm.placement || !adForm.target_url.trim() || !adForm.image_url) {
+      showToast("Error", "Target URL dan gambar iklan wajib diisi", "error");
+      return;
+    }
+    setSavingAd(true);
+    try {
+      const res = await fetch(
+        `/api/businesses/me/${partnerId}/ad-campaigns`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            placement: adForm.placement,
+            image_url: adForm.image_url,
+            target_url: adForm.target_url,
+            category: adForm.category || undefined,
+            start_at: adForm.start_at ? new Date(adForm.start_at).toISOString() : undefined,
+            end_at: adForm.end_at ? new Date(adForm.end_at).toISOString() : undefined,
+          }),
+        }
+      );
+      const d = await res.json();
+      if (res.ok) {
+        setShowAdModal(false);
+        setAdForm(EMPTY_AD_FORM);
+        showToast("Berhasil", "Kampanye iklan berhasil dibuat", "success");
+        await loadCampaigns();
+      } else {
+        showToast("Error", d?.message ?? "Gagal membuat kampanye iklan", "error");
+      }
+    } catch {
+      showToast("Error", "Gagal menghubungi server", "error");
+    } finally {
+      setSavingAd(false);
+    }
+  }
+
+  const adPrice = computePrice(adForm.placement, adForm.start_at, adForm.end_at);
+  const adPlacementMeta = AD_PLACEMENTS[adForm.placement];
+  // Approval is mandatory for every sellable slot (spec: approval wajib).
+  const needsReview = true;
 
   // ── Render ─────────────────────────────────────────────────────────────────
   return (
@@ -440,12 +548,12 @@ export default function PromotionsPanel() {
               <Sparkles className="w-4 h-4 text-amber-600" />
               <span>Kampanye Iklan</span>
             </h2>
-            <Link
-              href={`${FRONTEND_URL}/ads`}
-              className="flex items-center gap-1 text-[11px] font-bold text-amber-700 hover:text-amber-900 transition-colors"
+            <button
+              onClick={() => openAdModal("homepage_hero_aicard")}
+              className="flex items-center gap-1 text-[11px] font-bold text-amber-700 hover:text-amber-900 transition-colors cursor-pointer"
             >
               Pasang iklan baru <ChevronRight className="w-3.5 h-3.5" />
-            </Link>
+            </button>
           </div>
 
           {loadingCampaigns ? (
@@ -462,12 +570,12 @@ export default function PromotionsPanel() {
               <p className="text-[11px] text-stone-400 mb-3">
                 Tampilkan bisnis Anda ke lebih banyak traveler
               </p>
-              <Link
-                href={`${FRONTEND_URL}/ads`}
-                className="inline-flex items-center gap-1.5 text-xs font-bold text-white bg-[#B57A21] hover:bg-[#9B671A] px-4 py-2 rounded-xl transition-colors"
+              <button
+                onClick={() => openAdModal("homepage_hero_aicard")}
+                className="inline-flex items-center gap-1.5 text-xs font-bold text-white bg-[#B57A21] hover:bg-[#9B671A] px-4 py-2 rounded-xl transition-colors cursor-pointer"
               >
                 <Zap className="w-3.5 h-3.5" /> Pasang Iklan Sekarang
-              </Link>
+              </button>
             </div>
           ) : (
             <div className="space-y-4">
@@ -521,6 +629,15 @@ export default function PromotionsPanel() {
                           {c.clicks ?? 0}
                         </span>
                       </div>
+
+                      {payStatus === "rejected" && c.rejection_reason && (
+                        <div className="flex items-start gap-1.5 text-[10px] text-red-700 bg-red-50 border border-red-200 rounded-xl px-2.5 py-2">
+                          <AlertCircle className="w-3 h-3 shrink-0 mt-0.5" />
+                          <span>
+                            <strong>Alasan penolakan:</strong> {c.rejection_reason}
+                          </span>
+                        </div>
+                      )}
                     </div>
 
                     {/* Aksi kanan */}
@@ -534,6 +651,14 @@ export default function PromotionsPanel() {
                           {payStatus === "paid" ? (
                             <span className="flex items-center gap-1 text-[10px] font-bold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full">
                               <CheckCircle2 className="w-3 h-3" /> Lunas
+                            </span>
+                          ) : payStatus === "pending_review" ? (
+                            <span className="flex items-center gap-1 text-[10px] font-bold text-amber-700 bg-amber-100 px-2 py-0.5 rounded-full">
+                              <Clock className="w-3 h-3" /> Menunggu Review
+                            </span>
+                          ) : payStatus === "rejected" ? (
+                            <span className="flex items-center gap-1 text-[10px] font-bold text-red-700 bg-red-100 px-2 py-0.5 rounded-full">
+                              <XCircle className="w-3 h-3" /> Ditolak
                             </span>
                           ) : (
                             <SnapCheckoutButton
@@ -596,23 +721,7 @@ export default function PromotionsPanel() {
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {/* ── helper: build prefill URL with business data ── */}
-            {(() => {
-              const prefill = business ? new URLSearchParams({
-                action: 'register',
-                ...(business.name     && { biz_name:     business.name }),
-                ...(business.category && { biz_category: business.category }),
-                ...(business.phone    && { biz_phone:    business.phone }),
-                ...(business.website  && { biz_website:  business.website }),
-                ...(business.description && { biz_description: business.description }),
-              }) : new URLSearchParams({ action: 'register' });
-
-              const slotUrl = (placement: string) => {
-                prefill.set('placement', placement);
-                return `${FRONTEND_URL}/business?${prefill.toString()}`;
-              };
-
-              return (<>
+            {/* ── 1. Hero — AI Pick ── */}
             <div className="rounded-2xl border border-stone-200 overflow-hidden bg-stone-50/30 flex flex-col">
               <div className="bg-[#16140f] px-3 pt-3 pb-2.5 relative">
                 <div className="pr-[60px] space-y-1.5 mb-2">
@@ -638,12 +747,12 @@ export default function PromotionsPanel() {
                   <p className="text-xs font-bold text-stone-900">Hero — AI Pick</p>
                   <p className="text-[10px] text-stone-400 mt-0.5 line-clamp-2">Pick card 50:50 + posisi #3 & #8 di carousel Trending</p>
                 </div>
-                <Link
-                  href={slotUrl('homepage_hero_aicard')}
-                  className="mt-auto flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#B57A21] hover:bg-[#9B671A] text-white text-[10px] font-bold transition-colors"
+                <button
+                  onClick={() => openAdModal("homepage_hero_aicard")}
+                  className="mt-auto flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#B57A21] hover:bg-[#9B671A] text-white text-[10px] font-bold transition-colors cursor-pointer"
                 >
                   <Megaphone className="w-3 h-3" /> Pasang Iklan
-                </Link>
+                </button>
               </div>
             </div>
 
@@ -674,12 +783,12 @@ export default function PromotionsPanel() {
                   <p className="text-xs font-bold text-stone-900">Destinasi Populer Grid</p>
                   <p className="text-[10px] text-stone-400 mt-0.5 line-clamp-2">Posisi #5 & #10 di grid Destinasi Populer homepage</p>
                 </div>
-                <Link
-                  href={slotUrl('listing_top')}
-                  className="mt-auto flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#B57A21] hover:bg-[#9B671A] text-white text-[10px] font-bold transition-colors"
+                <button
+                  onClick={() => openAdModal("listing_top")}
+                  className="mt-auto flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#B57A21] hover:bg-[#9B671A] text-white text-[10px] font-bold transition-colors cursor-pointer"
                 >
                   <Megaphone className="w-3 h-3" /> Pasang Iklan
-                </Link>
+                </button>
               </div>
             </div>
 
@@ -698,12 +807,12 @@ export default function PromotionsPanel() {
                   <p className="text-xs font-bold text-stone-900">Destination Detail</p>
                   <p className="text-[10px] text-stone-400 mt-0.5 line-clamp-2">Banner eksklusif di halaman detail destinasi populer</p>
                 </div>
-                <Link
-                  href={slotUrl('destination_detail')}
-                  className="mt-auto flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#B57A21] hover:bg-[#9B671A] text-white text-[10px] font-bold transition-colors"
+                <button
+                  onClick={() => openAdModal("destination_detail")}
+                  className="mt-auto flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#B57A21] hover:bg-[#9B671A] text-white text-[10px] font-bold transition-colors cursor-pointer"
                 >
                   <Megaphone className="w-3 h-3" /> Pasang Iklan
-                </Link>
+                </button>
               </div>
             </div>
 
@@ -736,16 +845,14 @@ export default function PromotionsPanel() {
                   <p className="text-xs font-bold text-stone-900">Native Ad — Festival</p>
                   <p className="text-[10px] text-stone-400 mt-0.5 line-clamp-2">Card sponsor di carousel Festival & Trending</p>
                 </div>
-                <Link
-                  href={slotUrl('listing_native')}
-                  className="mt-auto flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#B57A21] hover:bg-[#9B671A] text-white text-[10px] font-bold transition-colors"
+                <button
+                  onClick={() => openAdModal("listing_native")}
+                  className="mt-auto flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#B57A21] hover:bg-[#9B671A] text-white text-[10px] font-bold transition-colors cursor-pointer"
                 >
                   <Megaphone className="w-3 h-3" /> Pasang Iklan
-                </Link>
+                </button>
               </div>
             </div>
-            </>);
-            })()}
           </div>
         </div>
       </main>
@@ -908,6 +1015,195 @@ export default function PromotionsPanel() {
                   </>
                 ) : (
                   "Simpan Promosi"
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Modal Buat Kampanye Iklan (self-service) ── */}
+      {showAdModal && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm"
+          onClick={() => setShowAdModal(false)}
+        >
+          <div
+            className="bg-white rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden max-h-[90vh] flex flex-col"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="flex items-center justify-between px-6 pt-6 pb-4 border-b border-stone-100">
+              <h3 className="text-sm font-bold text-stone-900 font-display flex items-center gap-2">
+                <Megaphone className="w-4 h-4 text-amber-600" />
+                Pasang Iklan Baru
+              </h3>
+              <button
+                onClick={() => setShowAdModal(false)}
+                className="p-1.5 rounded-xl hover:bg-stone-100 text-stone-400 hover:text-stone-700 transition-colors cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Body */}
+            <div className="p-6 space-y-4 overflow-y-auto">
+              <div>
+                <label className="text-[11px] font-bold text-stone-600 block mb-1.5">
+                  Slot Iklan <span className="text-red-500">*</span>
+                </label>
+                <select
+                  value={adForm.placement}
+                  onChange={(e) =>
+                    setAdForm((f) => ({ ...f, placement: e.target.value }))
+                  }
+                  className="w-full text-xs px-3.5 py-2.5 rounded-xl border border-stone-200 focus:border-amber-400 focus:ring-2 focus:ring-amber-200 outline-none transition cursor-pointer"
+                >
+                  {SELLABLE_PLACEMENTS.map((p) => (
+                    <option key={p} value={p}>
+                      {AD_PLACEMENTS[p].name}
+                    </option>
+                  ))}
+                </select>
+                {adPlacementMeta && (
+                  <p className="text-[10px] text-stone-400 mt-1.5 leading-relaxed">
+                    {adPlacementMeta.description}
+                  </p>
+                )}
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="text-[11px] font-bold text-stone-600 block mb-1.5">
+                    Tanggal Mulai
+                  </label>
+                  <input
+                    type="date"
+                    value={adForm.start_at}
+                    onChange={(e) =>
+                      setAdForm((f) => ({ ...f, start_at: e.target.value }))
+                    }
+                    className="w-full text-xs px-3.5 py-2.5 rounded-xl border border-stone-200 focus:border-amber-400 focus:ring-2 focus:ring-amber-200 outline-none transition"
+                  />
+                </div>
+                <div>
+                  <label className="text-[11px] font-bold text-stone-600 block mb-1.5">
+                    Tanggal Berakhir
+                  </label>
+                  <input
+                    type="date"
+                    value={adForm.end_at}
+                    onChange={(e) =>
+                      setAdForm((f) => ({ ...f, end_at: e.target.value }))
+                    }
+                    className="w-full text-xs px-3.5 py-2.5 rounded-xl border border-stone-200 focus:border-amber-400 focus:ring-2 focus:ring-amber-200 outline-none transition"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="text-[11px] font-bold text-stone-600 block mb-1.5">
+                  Target URL <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="url"
+                  value={adForm.target_url}
+                  onChange={(e) =>
+                    setAdForm((f) => ({ ...f, target_url: e.target.value }))
+                  }
+                  placeholder="https://bisnis-anda.com/promo"
+                  className="w-full text-xs px-3.5 py-2.5 rounded-xl border border-stone-200 focus:border-amber-400 focus:ring-2 focus:ring-amber-200 outline-none transition"
+                />
+              </div>
+
+              <div>
+                <label className="text-[11px] font-bold text-stone-600 block mb-1.5">
+                  Kategori
+                </label>
+                <select
+                  value={adForm.category}
+                  onChange={(e) =>
+                    setAdForm((f) => ({ ...f, category: e.target.value }))
+                  }
+                  className="w-full text-xs px-3.5 py-2.5 rounded-xl border border-stone-200 focus:border-amber-400 focus:ring-2 focus:ring-amber-200 outline-none transition cursor-pointer"
+                >
+                  {CATEGORIES.map((category) => (
+                    <option key={category.value || "all"} value={category.value}>
+                      {category.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="text-[11px] font-bold text-stone-600 block mb-1.5">
+                  Gambar Kreatif <span className="text-red-500">*</span>
+                </label>
+                <CoverImageUpload
+                  value={adForm.image_url}
+                  onChange={(url) =>
+                    setAdForm((f) => ({ ...f, image_url: url }))
+                  }
+                  label="Creative Image"
+                  folder="explore-jogja/ad-campaigns"
+                  aspectClassName={
+                    adForm.placement === "listing_native"
+                      ? "aspect-[3/4]"
+                      : "aspect-[16/6]"
+                  }
+                />
+                {adPlacementMeta && (
+                  <p className="text-[10px] text-stone-400 mt-1.5">
+                    Rekomendasi ukuran: {adPlacementMeta.imageSpec.label}
+                  </p>
+                )}
+              </div>
+
+              <div className="rounded-2xl bg-[#FAF3E6] border border-[#F2E3C6] px-4 py-3 flex items-center justify-between gap-3">
+                <div className="text-[11px] font-bold text-[#6B440A]">
+                  Estimasi biaya
+                  {adForm.start_at && adForm.end_at ? (
+                    <span className="block text-[10px] font-medium text-[#8F5D15]">
+                      {fmtDate(adForm.start_at)} – {fmtDate(adForm.end_at)}
+                    </span>
+                  ) : (
+                    <span className="block text-[10px] font-medium text-[#8F5D15]">
+                      per bulan
+                    </span>
+                  )}
+                </div>
+                <div className="text-sm font-extrabold text-[#6B440A]">
+                  {formatPrice(adPrice)}
+                </div>
+              </div>
+
+              {needsReview && (
+                <div className="flex items-start gap-2 text-[11px] text-amber-700 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2">
+                  <Clock className="w-3.5 h-3.5 shrink-0 mt-0.5" />
+                  Slot ini akan direview admin dulu sebelum pembayaran dibuka.
+                </div>
+              )}
+            </div>
+
+            {/* Footer */}
+            <div className="px-6 pb-6 flex gap-3 border-t border-stone-100 pt-4">
+              <button
+                onClick={() => setShowAdModal(false)}
+                className="flex-1 py-2.5 rounded-2xl border border-stone-200 text-xs font-bold text-stone-600 hover:bg-stone-50 transition-colors cursor-pointer"
+              >
+                Batal
+              </button>
+              <button
+                onClick={handleSaveAd}
+                disabled={savingAd || !partnerId}
+                className="flex-1 py-2.5 rounded-2xl bg-[#B57A21] hover:bg-[#9B671A] disabled:opacity-50 text-white text-xs font-bold flex items-center justify-center gap-2 transition-all cursor-pointer"
+              >
+                {savingAd ? (
+                  <>
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" /> Menyimpan...
+                  </>
+                ) : (
+                  "Buat Kampanye"
                 )}
               </button>
             </div>

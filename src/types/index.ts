@@ -133,6 +133,11 @@ export interface AdCampaign {
   price_amount?: number;
   price_currency?: string;
   payment_status?: string;
+  approved_at?: string;
+  approved_by?: string;
+  rejection_reason?: string;
+  rejected_at?: string;
+  rejected_by?: string;
 }
 
 export interface HouseAd {
