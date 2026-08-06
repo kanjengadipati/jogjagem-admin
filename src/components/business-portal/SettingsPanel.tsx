@@ -98,7 +98,7 @@ export default function SettingsPanel() {
     try {
       const targetId = isBusiness ? (business?.external_id || String(business?.id)) : business?.id;
       if (targetId) {
-        const endpoint = isBusiness ? `/api/businesses/me/${targetId}` : `/api/partners/me/${targetId}`;
+        const endpoint = `/api/businesses/me/${targetId}`;
         const res = await fetch(endpoint, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },

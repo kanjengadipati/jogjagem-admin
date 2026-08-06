@@ -140,7 +140,6 @@ export default function PromotionsPanel() {
 
   // ── State ──────────────────────────────────────────────────────────────────
   const [partnerId, setPartnerId] = useState<string | null>(null);
-  const [isBusiness, setIsBusiness] = useState(false);
   const [promotions, setPromotions] = useState<Promotion[]>([]);
   const [campaigns, setCampaigns] = useState<AdCampaign[]>([]);
   const [paymentBySubject, setPaymentBySubject] = useState<
@@ -176,7 +175,6 @@ export default function PromotionsPanel() {
       if (!business) return;
       const id = externalId || business.id;
       setPartnerId(id);
-      setIsBusiness(true);
       try {
         const promoRes = await fetch(`/api/businesses/me/${id}/promotions`);
         const promoData = await promoRes.json();
@@ -253,7 +251,7 @@ export default function PromotionsPanel() {
     }
     setSavingPromo(true);
     try {
-      const endpoint = isBusiness ? `/api/businesses/me/${partnerId}/promotions` : `/api/partners/me/${partnerId}/promotions`;
+      const endpoint = `/api/businesses/me/${partnerId}/promotions`;
       const res = await fetch(endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -293,7 +291,7 @@ export default function PromotionsPanel() {
   async function handleDeletePromo(id: string) {
     if (!partnerId) return;
     if (!confirm("Hapus promosi ini?")) return;
-    const endpoint = isBusiness ? `/api/businesses/me/${partnerId}/promotions/${id}` : `/api/partners/me/${partnerId}/promotions/${id}`;
+    const endpoint = `/api/businesses/me/${partnerId}/promotions/${id}`;
     const res = await fetch(endpoint, {
       method: "DELETE",
     });
