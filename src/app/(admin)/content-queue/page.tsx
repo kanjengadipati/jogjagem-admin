@@ -39,6 +39,7 @@ interface Destination {
   best_time?: string;
   latitude?: number;
   longitude?: number;
+  fact_density_score?: number;
 }
 
 const CONTENT_STATUS_CONFIG: Record<string, { label: string; color: string }> = {
@@ -56,8 +57,10 @@ const VARIANTS = [
   { value: "itinerary_first",  label: "Itinerary-First",  desc: "What to do narrative day plan" },
 ];
 
-// Fact density: count populated key fields (mirrors backend gate, min 4)
+// Fact density (max 10): use the canonical score from the backend API when
+// available, falling back to a local recount only if the field is missing.
 function factScore(d: Destination): number {
+  if (typeof d.fact_density_score === "number") return d.fact_density_score;
   let s = 0;
   if (d.ticket_price?.trim())  s++;
   if (d.opening_hours?.trim()) s++;
@@ -81,14 +84,14 @@ function StatusBadge({ status }: { status: string }) {
 }
 
 function FactScoreBar({ score }: { score: number }) {
-  const pct = Math.min(score / 8, 1) * 100;
+  const pct = Math.min(score / 10, 1) * 100;
   const color = score >= 4 ? "bg-emerald-500" : "bg-amber-400";
   return (
-    <div className="flex items-center gap-1.5" title={`${score}/8 fields populated`}>
+    <div className="flex items-center gap-1.5" title={`${score}/10 fields populated`}>
       <div className="w-16 h-1.5 rounded-full bg-stone-200 overflow-hidden">
         <div className={`h-full rounded-full ${color}`} style={{ width: `${pct}%` }} />
       </div>
-      <span className={`text-[9px] font-bold ${score >= 4 ? "text-emerald-600" : "text-amber-600"}`}>{score}/8</span>
+      <span className={`text-[9px] font-bold ${score >= 4 ? "text-emerald-600" : "text-amber-600"}`}>{score}/10</span>
     </div>
   );
 }
@@ -272,7 +275,7 @@ export default function ContentQueuePage() {
       d.sub_region?.toLowerCase().includes(availFilter.toLowerCase()) ||
       d.category?.toLowerCase().includes(availFilter.toLowerCase());
     const scoreMatch = !showNeedsData || factScore(d) < 4;
-    // Also apply the shared score filter (map 60/100 threshold → 5/8 for fact score)
+    // Also apply the shared score filter (5/10 threshold for fact density)
     const qualityMatch = filterScore === "all"
       || (filterScore === "high" && factScore(d) >= 5)
       || (filterScore === "low"  && factScore(d) <  5);
@@ -626,7 +629,7 @@ export default function ContentQueuePage() {
                           <button
                             onClick={() => doAction(dest.id, "generate", { variant }, true)}
                             disabled={!!actionLoading}
-                            title={!isReady ? `Low data (${score}/8 fields) — AI will research missing info` : "Generate AI draft"}
+                            title={!isReady ? `Low data (${score}/10 fields) — AI will research missing info` : "Generate AI draft"}
                             className={`flex items-center gap-1 px-3 py-1.5 rounded-xl text-[10px] font-bold cursor-pointer transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${
                               !isReady
                                 ? "bg-amber-500 hover:bg-amber-600 text-white"
