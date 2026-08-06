@@ -21,6 +21,7 @@ import {
   Crown,
   ArrowRight,
   FileCheck,
+  Users,
 } from "lucide-react";
 
 interface BusinessOption {
@@ -159,6 +160,12 @@ export default function BusinessSidebar() {
       name: "Klaim Bisnis",
       icon: FileCheck,
       path: selectedBiz?.id && selectedBiz.id !== "default" ? `/business/${selectedBiz.id}/claims` : "/business/claims",
+      locked: false,
+    },
+    {
+      name: "Tim",
+      icon: Users,
+      path: selectedBiz?.id && selectedBiz.id !== "default" ? `/business/${selectedBiz.id}/team` : "/business/team",
       locked: false,
     },
     {
