@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { useToast } from "@/components/Toast";
 import BusinessHeader from "@/components/BusinessHeader";
 import {
@@ -28,16 +28,32 @@ interface ListingStats {
   promotions: number;
   reviews: number;
   avgRating: number;
+  listings: number;
+  activeListings: number;
 }
 
 export default function BusinessDashboardPage() {
   const { showToast } = useToast();
+  const router = useRouter();
   const routeParams = useParams();
   const routeExternalId = routeParams?.externalId as string | undefined;
   const [businesses, setBusinesses] = useState<BusinessInfo[]>([]);
   const [selectedBiz, setSelectedBiz] = useState<BusinessInfo | null>(null);
   const [stats, setStats] = useState<Record<string, ListingStats>>({});
   const [loading, setLoading] = useState(true);
+
+  // Deep link dari web portal: /business/{id}/dashboard?placement=ecosystem_*
+  // langsung arahkan ke panel promosi dengan slot yang dipilih.
+  useEffect(() => {
+    if (!selectedBiz) return;
+    const placement = new URLSearchParams(window.location.search).get(
+      "placement"
+    );
+    if (!placement) return;
+    router.replace(
+      `/business/${selectedBiz.id}/promotions?placement=${encodeURIComponent(placement)}`
+    );
+  }, [selectedBiz, router]);
 
   useEffect(() => {
     let cancelled = false;
@@ -66,14 +82,19 @@ export default function BusinessDashboardPage() {
           await Promise.all(
             list.map(async (biz) => {
               try {
-                const [promoRes, reviewRes] = await Promise.all([
+                const [promoRes, reviewRes, listingRes] = await Promise.all([
                   fetch(`/api/businesses/me/${biz.id}/promotions`),
                   fetch(`/api/businesses/me/${biz.id}/reviews`),
+                  fetch(`/api/businesses/me/${biz.id}/listings`),
                 ]);
                 const promoData = await promoRes.json();
                 const reviewData = await reviewRes.json();
+                const listingData = await listingRes.json();
                 const promos = promoData?.data ?? [];
                 const reviews = reviewData?.data ?? [];
+                const owned = Array.isArray(listingData?.data)
+                  ? listingData.data
+                  : [];
                 const withRating = reviews.filter((r: any) => (r.rating || 0) > 0);
                 statsMap[biz.id] = {
                   promotions: promos.length,
@@ -82,9 +103,19 @@ export default function BusinessDashboardPage() {
                     withRating.length > 0
                       ? withRating.reduce((s: number, r: any) => s + (r.rating || 0), 0) / withRating.length
                       : 0,
+                  listings: owned.length,
+                  activeListings: owned.filter(
+                    (l: any) => !l.status || l.status === "approved" || l.status === "active"
+                  ).length,
                 };
               } catch {
-                statsMap[biz.id] = { promotions: 0, reviews: 0, avgRating: 0 };
+                statsMap[biz.id] = {
+                  promotions: 0,
+                  reviews: 0,
+                  avgRating: 0,
+                  listings: 0,
+                  activeListings: 0,
+                };
               }
             })
           );
@@ -103,7 +134,11 @@ export default function BusinessDashboardPage() {
     };
   }, [routeExternalId]);
 
-  const activeListings = businesses.filter((b) => b.status === "approved").length;
+  const totalListings = Object.values(stats).reduce((s, v) => s + v.listings, 0);
+  const activeListings = Object.values(stats).reduce(
+    (s, v) => s + v.activeListings,
+    0
+  );
   const isPending = selectedBiz?.status === "pending" || businesses.length === 0 || selectedBiz?.status === "draft";
 
   if (loading) {
@@ -148,7 +183,7 @@ export default function BusinessDashboardPage() {
           <div className="bg-white p-5 rounded-3xl border border-stone-200/80 shadow-xs space-y-4">
             <div className="text-xs font-bold text-stone-500">Total listings</div>
             <div className="text-3xl font-extrabold text-stone-900 mt-1 font-display">
-              {businesses.length}
+              {totalListings}
             </div>
             <div className="text-[11px] font-medium text-stone-400 mt-1">Listing</div>
           </div>
@@ -189,7 +224,7 @@ export default function BusinessDashboardPage() {
 
             <div className="space-y-3">
               <Link
-                href="/business/listings"
+                href={selectedBiz ? `/business/${selectedBiz.id}/listings` : "/business/listings"}
                 className="p-4 rounded-2xl border border-stone-200/90 bg-stone-50/50 flex items-center justify-between gap-4 hover:bg-stone-100/80 transition-all"
               >
                 <div className="flex items-center gap-3.5">
@@ -207,7 +242,7 @@ export default function BusinessDashboardPage() {
               </Link>
 
               <Link
-                href="/business/promotions"
+                href={selectedBiz ? `/business/${selectedBiz.id}/promotions` : "/business/promotions"}
                 className="p-4 rounded-2xl border border-[#F3E5C8] bg-[#FFFDF8] flex items-center justify-between gap-4 hover:bg-[#FAF3E6] transition-all"
               >
                 <div className="flex items-center gap-3.5">
@@ -225,7 +260,7 @@ export default function BusinessDashboardPage() {
               </Link>
 
               <Link
-                href="/business/reviews"
+                href={selectedBiz ? `/business/${selectedBiz.id}/reviews` : "/business/reviews"}
                 className="p-4 rounded-2xl border border-blue-100 bg-blue-50/40 flex items-center justify-between gap-4 hover:bg-blue-50/80 transition-all"
               >
                 <div className="flex items-center gap-3.5">
@@ -246,7 +281,18 @@ export default function BusinessDashboardPage() {
 
           {/* Right Card: Business Info */}
           <div className="bg-white p-6 rounded-3xl border border-stone-200/80 shadow-xs space-y-4">
-            <div className="text-sm font-extrabold text-stone-900">Informasi Bisnis</div>
+            <div className="flex items-center justify-between">
+              <div className="text-sm font-extrabold text-stone-900">Informasi Bisnis</div>
+              {selectedBiz && (
+                <Link
+                  href={`/business/${selectedBiz.id}/settings`}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-stone-100/80 hover:bg-amber-50 border border-stone-200 hover:border-amber-300 text-[11px] font-bold text-stone-600 hover:text-[#B5781E] transition-all"
+                >
+                  <Settings className="w-3.5 h-3.5" />
+                  <span>Edit</span>
+                </Link>
+              )}
+            </div>
             {selectedBiz ? (
               <div className="space-y-3">
                 <div>

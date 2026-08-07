@@ -26,23 +26,11 @@ export async function PUT(
   const { id } = await params;
   const body = await req.json().catch(() => ({}));
   const api = await getApi();
-  
-  // Try updating business via /businesses/me/:id first
-  const res1 = await api(`/businesses/me/${id}`, {
+  const { status, data } = await api(`/businesses/me/${id}`, {
     method: "PUT",
     body: JSON.stringify(body),
   });
-
-  if (res1.status >= 200 && res1.status < 300) {
-    return NextResponse.json(res1.data, { status: res1.status });
-  }
-
-  // Fallback to legacy /partners/me/:id endpoint if businesses endpoint fails or ID is a partner ID
-  const res2 = await api(`/partners/me/${id}`, {
-    method: "PUT",
-    body: JSON.stringify(body),
-  });
-  return NextResponse.json(res2.data, { status: res2.status });
+  return NextResponse.json(data, { status });
 }
 
 export async function DELETE(

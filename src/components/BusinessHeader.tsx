@@ -2,12 +2,18 @@
 
 import { useState, useEffect } from "react";
 import { Bell, ChevronDown, LogOut, Settings, Menu, ChevronRight } from "lucide-react";
+import { useParams } from "next/navigation";
 import { useSidebar } from "@/contexts/SidebarContext";
 
 export default function BusinessHeader() {
   const [showProfile, setShowProfile] = useState(false);
   const [showNotif, setShowNotif] = useState(false);
   const { toggleMobileSidebar } = useSidebar();
+  const params = useParams();
+  const externalId = typeof params?.externalId === "string" ? params.externalId : undefined;
+  const settingsHref = externalId
+    ? `/business/${externalId}/settings`
+    : "/business/settings";
   const [user, setUser] = useState({
     name: "Pemilik Bisnis",
     role: "Business Owner",
@@ -118,7 +124,7 @@ export default function BusinessHeader() {
           {showProfile && (
             <div className="absolute right-0 mt-2 w-48 bg-white rounded-2xl shadow-lg border border-stone-200 p-2 z-50">
               <a
-                href="/business/settings"
+                href={settingsHref}
                 className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold text-stone-700 hover:bg-stone-50"
               >
                 <Settings className="w-4 h-4 text-stone-500" />

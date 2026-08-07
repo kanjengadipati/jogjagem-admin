@@ -16,6 +16,24 @@ interface TeamMember {
   is_current_user: boolean;
 }
 
+interface PendingInvite {
+  id: number;
+  email: string;
+  role: string;
+  status: string;
+  expires_at: string;
+  invited_by_name?: string;
+  created_at: string;
+}
+
+interface InviteResult {
+  type: "existing" | "invite";
+  token?: string;
+  invite_url?: string;
+  email?: string;
+  role?: string;
+}
+
 const ROLE_META: Record<string, { label: string; badge: string; icon: typeof Crown }> = {
   owner: {
     label: "Pemilik",
@@ -39,22 +57,37 @@ export default function TeamPanel() {
   const [role, setRole] = useState("admin");
   const [submitting, setSubmitting] = useState(false);
   const [removingId, setRemovingId] = useState<number | null>(null);
+  const [pendingInvites, setPendingInvites] = useState<PendingInvite[]>([]);
+  const [loadingInvites, setLoadingInvites] = useState(false);
+  const [inviteResult, setInviteResult] = useState<InviteResult | null>(null);
+  const [copied, setCopied] = useState(false);
+  const [revokingId, setRevokingId] = useState<number | null>(null);
 
   const load = useCallback(async () => {
     if (!business) {
       setLoading(false);
+      setLoadingInvites(false);
       return;
     }
+    const id = externalId || business.id;
+    setLoading(true);
+    setLoadingInvites(true);
     try {
-      const id = externalId || business.id;
-      const res = await fetch(`/api/businesses/me/${id}/members`);
-      const json = await res.json();
-      const list: TeamMember[] = json?.data ?? [];
-      setMembers(Array.isArray(list) ? list : []);
+      const [membersRes, invitesRes] = await Promise.all([
+        fetch(`/api/businesses/me/${id}/members`),
+        fetch(`/api/businesses/me/${id}/members/invites`),
+      ]);
+      const membersJson = await membersRes.json();
+      const invitesJson = await invitesRes.json();
+      const memberList: TeamMember[] = membersJson?.data ?? [];
+      const inviteList: PendingInvite[] = invitesJson?.data ?? [];
+      setMembers(Array.isArray(memberList) ? memberList : []);
+      setPendingInvites(Array.isArray(inviteList) ? inviteList : []);
     } catch {
       showToast("Error", "Gagal memuat anggota tim", "error");
     } finally {
       setLoading(false);
+      setLoadingInvites(false);
     }
   }, [business, externalId, showToast]);
 
@@ -79,7 +112,13 @@ export default function TeamPanel() {
       });
       const json = await res.json();
       if (res.ok && json?.status === "success") {
-        showToast("Berhasil", "Anggota berhasil ditambahkan", "success");
+        const data: InviteResult | undefined = json?.data;
+        if (data?.type === "invite" && data.invite_url) {
+          setInviteResult(data);
+          setCopied(false);
+        } else {
+          showToast("Berhasil", json?.message || "Anggota berhasil ditambahkan", "success");
+        }
         setEmail("");
         setShowInvite(false);
         await load();
@@ -91,6 +130,42 @@ export default function TeamPanel() {
       showToast("Error", "Gagal menambahkan anggota", "error");
     } finally {
       setSubmitting(false);
+    }
+  }
+
+  const copyInviteLink = async () => {
+    if (!inviteResult?.invite_url) return;
+    try {
+      await navigator.clipboard.writeText(inviteResult.invite_url);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      showToast("Error", "Gagal menyalin link", "error");
+    }
+  };
+
+  async function revokeInvite(inviteId: number) {
+    if (!business) return;
+    if (!window.confirm("Batalkan undangan ini?")) return;
+    const id = externalId || business.id;
+    setRevokingId(inviteId);
+    try {
+      const res = await fetch(
+        `/api/businesses/me/${id}/members/invites/${inviteId}`,
+        { method: "DELETE" }
+      );
+      const json = await res.json();
+      if (res.ok && json?.status === "success") {
+        showToast("Berhasil", "Undangan dibatalkan", "success");
+        await load();
+      } else {
+        const msg = json?.message || "Gagal membatalkan undangan";
+        showToast("Error", msg, "error");
+      }
+    } catch {
+      showToast("Error", "Gagal membatalkan undangan", "error");
+    } finally {
+      setRevokingId(null);
     }
   }
 
@@ -221,6 +296,58 @@ export default function TeamPanel() {
           </div>
         )}
 
+        {pendingInvites.length > 0 && (
+          <div className="bg-white rounded-3xl border border-stone-200/80 shadow-xs p-5 space-y-3">
+            <div className="flex items-center justify-between">
+              <h2 className="text-sm font-bold text-stone-900 font-display">
+                Undangan Tertunda
+              </h2>
+              <span className="px-2 py-0.5 rounded-full bg-amber-100 text-[#B5781E] text-[10px] font-extrabold">
+                {pendingInvites.length}
+              </span>
+            </div>
+            <div className="divide-y divide-stone-100">
+              {pendingInvites.map((invite) => (
+                <div
+                  key={invite.id}
+                  className="flex items-center justify-between gap-4 py-3"
+                >
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="w-10 h-10 rounded-2xl bg-amber-50 text-[#B5781E] flex items-center justify-center shrink-0">
+                      <Mail className="w-4 h-4" />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-sm font-bold text-stone-900 truncate">
+                        {invite.email}
+                      </p>
+                      <p className="text-[11px] text-stone-400 font-medium mt-0.5">
+                        {ROLE_META[invite.role]?.label ?? invite.role} ·{" "}
+                        {invite.expires_at
+                          ? `Berlaku hingga ${new Date(
+                              invite.expires_at
+                            ).toLocaleDateString("id-ID")}`
+                          : "Belum kedaluwarsa"}
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => revokeInvite(invite.id)}
+                    disabled={revokingId === invite.id}
+                    className="text-[11px] font-bold text-rose-600 hover:bg-rose-50 px-3 py-1.5 rounded-xl transition-all cursor-pointer disabled:opacity-50 flex items-center gap-1.5"
+                  >
+                    {revokingId === invite.id ? (
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    ) : (
+                      <X className="w-3.5 h-3.5" />
+                    )}
+                    Batalkan
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         {!canManage && !loading && members.length > 0 && (
           <div className="text-[11px] text-stone-500 bg-white border border-stone-200/80 rounded-2xl px-4 py-3">
             Hanya pemilik bisnis yang dapat menambah atau menghapus anggota.
@@ -263,7 +390,8 @@ export default function TeamPanel() {
                   className="w-full px-4 py-3 rounded-2xl border border-stone-200 text-xs font-semibold text-stone-800 focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-400"
                 />
                 <p className="text-[10px] text-stone-400 mt-1.5">
-                  Anggota harus sudah memiliki akun Jogjagem.
+                  Anggota yang sudah terdaftar langsung ditambahkan. Jika belum
+                  terdaftar, mereka akan menerima link undangan.
                 </p>
               </div>
 
@@ -321,6 +449,54 @@ export default function TeamPanel() {
                 )}
               </button>
             </form>
+          </div>
+        )}
+
+        {inviteResult && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <div
+              className="absolute inset-0 bg-stone-900/50 backdrop-blur-xs"
+              onClick={() => setInviteResult(null)}
+            />
+            <div className="relative w-full max-w-md bg-white rounded-3xl shadow-2xl p-6 space-y-4">
+              <div className="flex items-center justify-between">
+                <h2 className="text-base font-bold text-stone-900 font-display">
+                  Bagikan Link Undangan
+                </h2>
+                <button
+                  onClick={() => setInviteResult(null)}
+                  className="w-8 h-8 rounded-xl text-stone-400 hover:text-stone-700 hover:bg-stone-100 flex items-center justify-center cursor-pointer"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+              <p className="text-xs text-stone-500 font-medium leading-relaxed">
+                Undangan untuk <b>{inviteResult.email}</b> sebagai{" "}
+                <b>{ROLE_META[inviteResult.role ?? ""]?.label ?? inviteResult.role}</b>{" "}
+                belum diterima. Kirimkan link ini kepada mereka. Link berlaku
+                selama 7 hari.
+              </p>
+              <div className="flex items-center gap-2 p-3 rounded-2xl bg-stone-50 border border-stone-200">
+                <input
+                  readOnly
+                  value={inviteResult.invite_url}
+                  onFocus={(e) => e.currentTarget.select()}
+                  className="flex-1 min-w-0 bg-transparent text-[11px] font-semibold text-stone-600 focus:outline-none truncate"
+                />
+                <button
+                  onClick={copyInviteLink}
+                  className="shrink-0 px-3 py-2 rounded-xl bg-[#B57A21] hover:bg-[#9B671A] text-white text-[11px] font-bold transition-all cursor-pointer"
+                >
+                  {copied ? "Tersalin!" : "Salin"}
+                </button>
+              </div>
+              <button
+                onClick={() => setInviteResult(null)}
+                className="w-full py-3 rounded-2xl bg-stone-900 hover:bg-stone-800 text-white text-xs font-bold transition-all cursor-pointer"
+              >
+                Selesai
+              </button>
+            </div>
           </div>
         )}
       </main>

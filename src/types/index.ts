@@ -127,6 +127,10 @@ export interface AdCampaign {
   start_at?: string;
   end_at?: string;
   weight?: number;
+  listing_type?: string;
+  listing_external_id?: string;
+  target_dest_ids?: string[];
+  sort_order?: number;
   impressions?: number;
   clicks?: number;
   is_active?: boolean;

@@ -17,6 +17,7 @@ import {
   Trash2,
   Calendar,
   MousePointerClick,
+  MapPin,
   Power,
   X,
   ChevronRight,
@@ -55,6 +56,23 @@ const CATEGORIES = [
   { value: "camping", label: "Camping" },
 ];
 
+// Listing type per ecosystem placement (backend source of truth:
+// adcampaign/ecosystem.go listingTable()).
+const ECOSYSTEM_LISTING_TYPES: Record<string, { type: string; label: string }> = {
+  ecosystem_stay: { type: "hotel", label: "Hotel" },
+  ecosystem_eat: { type: "restaurant", label: "Restoran / Kafe" },
+  ecosystem_experience: { type: "rental", label: "Rental / Agen" },
+  ecosystem_shop: { type: "souvenir", label: "Toko Souvenir" },
+  ecosystem_move: { type: "rental", label: "Rental / Transport" },
+  ecosystem_guide: { type: "guide", label: "Guide Lokal" },
+};
+
+const ECOSYSTEM_PLACEMENTS = Object.keys(ECOSYSTEM_LISTING_TYPES);
+
+function isEcosystemPlacement(placement: string) {
+  return ECOSYSTEM_PLACEMENTS.includes(placement);
+}
+
 interface Promotion {
   id: string;
   title: string;
@@ -84,6 +102,15 @@ interface NewAdForm {
   start_at: string;
   end_at: string;
   image_url: string;
+  listing_type: string;
+  listing_external_id: string;
+}
+
+interface OwnedListing {
+  listing_type: string;
+  id: string;
+  name: string;
+  status?: string;
 }
 
 const EMPTY_AD_FORM: NewAdForm = {
@@ -93,6 +120,8 @@ const EMPTY_AD_FORM: NewAdForm = {
   start_at: "",
   end_at: "",
   image_url: "",
+  listing_type: "",
+  listing_external_id: "",
 };
 
 const FRONTEND_URL =
@@ -164,6 +193,9 @@ export default function PromotionsPanel() {
   const [showAdModal, setShowAdModal] = useState(false);
   const [savingAd, setSavingAd] = useState(false);
   const [adForm, setAdForm] = useState<NewAdForm>(EMPTY_AD_FORM);
+  const [ownListings, setOwnListings] = useState<OwnedListing[]>([]);
+  const [ownListingsLoading, setOwnListingsLoading] = useState(false);
+  const [placementParam, setPlacementParam] = useState<string | null>(null);
 
   // ── Load data ──────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -225,6 +257,12 @@ export default function PromotionsPanel() {
   useEffect(() => {
     loadCampaigns();
   }, [loadCampaigns]);
+
+  // Preload listing milik bisnis agar nama listing tampil di daftar kampanye
+  // ecosystem dan langsung tersedia saat modal dibuka.
+  useEffect(() => {
+    if (partnerId) loadOwnListings();
+  }, [partnerId]);
 
   // ── Stats ──────────────────────────────────────────────────────────────────
   const activePromos = promotions.filter(
@@ -326,6 +364,36 @@ export default function PromotionsPanel() {
   }
 
   // ── Self-service ad campaign ───────────────────────────────────────────────
+  async function loadOwnListings() {
+    if (!partnerId) return;
+    setOwnListingsLoading(true);
+    try {
+      const res = await fetch(`/api/businesses/me/${partnerId}/listings`);
+      const d = await res.json();
+      setOwnListings(d?.data ?? []);
+    } catch {
+      setOwnListings([]);
+    } finally {
+      setOwnListingsLoading(false);
+    }
+  }
+
+  // Deep link dari web portal (?placement=ecosystem_*) — langsung buka modal
+  // dengan slot yang dipilih setelah data bisnis termuat.
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const p = params.get("placement");
+    if (p) setPlacementParam(p);
+  }, []);
+
+  useEffect(() => {
+    if (!placementParam) return;
+    if (!SELLABLE_PLACEMENTS.includes(placementParam)) return;
+    if (!partnerId) return;
+    openAdModal(placementParam);
+    setPlacementParam(null);
+  }, [placementParam, partnerId]);
+
   function openAdModal(placement: string) {
     if (isPending) {
       showToast("Bisnis masih dalam peninjauan", "info");
@@ -333,29 +401,44 @@ export default function PromotionsPanel() {
     }
     setAdForm({ ...EMPTY_AD_FORM, placement });
     setShowAdModal(true);
+    if (isEcosystemPlacement(placement)) {
+      loadOwnListings();
+    }
   }
 
   async function handleSaveAd() {
     if (!partnerId) return;
-    if (!adForm.placement || !adForm.target_url.trim() || !adForm.image_url) {
+    const ecosystem = isEcosystemPlacement(adForm.placement);
+    if (ecosystem) {
+      if (!adForm.listing_external_id) {
+        showToast("Error", "Pilih listing yang ingin dipromosikan", "error");
+        return;
+      }
+    } else if (!adForm.target_url.trim() || !adForm.image_url) {
       showToast("Error", "Target URL dan gambar iklan wajib diisi", "error");
       return;
     }
     setSavingAd(true);
     try {
+      const body: Record<string, unknown> = {
+        placement: adForm.placement,
+        start_at: adForm.start_at ? new Date(adForm.start_at).toISOString() : undefined,
+        end_at: adForm.end_at ? new Date(adForm.end_at).toISOString() : undefined,
+      };
+      if (ecosystem) {
+        body.listing_type = adForm.listing_type;
+        body.listing_external_id = adForm.listing_external_id;
+      } else {
+        body.image_url = adForm.image_url;
+        body.target_url = adForm.target_url;
+        body.category = adForm.category || undefined;
+      }
       const res = await fetch(
         `/api/businesses/me/${partnerId}/ad-campaigns`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            placement: adForm.placement,
-            image_url: adForm.image_url,
-            target_url: adForm.target_url,
-            category: adForm.category || undefined,
-            start_at: adForm.start_at ? new Date(adForm.start_at).toISOString() : undefined,
-            end_at: adForm.end_at ? new Date(adForm.end_at).toISOString() : undefined,
-          }),
+          body: JSON.stringify(body),
         }
       );
       const d = await res.json();
@@ -378,6 +461,11 @@ export default function PromotionsPanel() {
   const adPlacementMeta = AD_PLACEMENTS[adForm.placement];
   // Approval is mandatory for every sellable slot (spec: approval wajib).
   const needsReview = true;
+  const ecosystem = isEcosystemPlacement(adForm.placement);
+  const ecosystemListingType = ECOSYSTEM_LISTING_TYPES[adForm.placement]?.type;
+  const ecosystemListings = ecosystemListingType
+    ? ownListings.filter((l) => l.listing_type === ecosystemListingType)
+    : [];
 
   // ── Render ─────────────────────────────────────────────────────────────────
   return (
@@ -611,6 +699,19 @@ export default function PromotionsPanel() {
                         <p className="text-[10px] text-stone-400">
                           {PLACEMENT_DESCRIPTIONS[c.placement]}
                         </p>
+                      )}
+                      {c.listing_external_id && (
+                        <div className="flex items-center gap-1.5 text-[10px] text-stone-500">
+                          <MapPin className="w-3 h-3 shrink-0" />
+                          <span className="truncate">
+                            Mempromosikan:{" "}
+                            <strong className="text-stone-700">
+                              {ownListings.find(
+                                (l) => l.id === c.listing_external_id
+                              )?.name ?? c.listing_external_id}
+                            </strong>
+                          </span>
+                        </div>
                       )}
                       <div className="flex items-center gap-3 text-[10px] text-stone-500 pt-0.5">
                         {(c.start_at || c.end_at) && (
@@ -852,6 +953,72 @@ export default function PromotionsPanel() {
               </div>
             </div>
           </div>
+
+          {/* ── Rail Ecosystem (Halaman Destinasi) ── */}
+          <div className="pt-2">
+            <div className="flex items-center justify-between mb-3">
+              <div>
+                <h3 className="text-xs font-bold text-stone-900 font-display">
+                  Rail Ecosystem — Halaman Detail Destinasi
+                </h3>
+                <p className="text-[10px] text-stone-400 mt-0.5">
+                  Card sponsor di rail "Rekomendasi Kebutuhan Traveler". Listing
+                  yang dipromosikan harus sudah diklaim bisnis Anda.
+                </p>
+              </div>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {ECOSYSTEM_PLACEMENTS.map((placement) => {
+                const meta = AD_PLACEMENTS[placement];
+                return (
+                  <div
+                    key={placement}
+                    className="rounded-2xl border border-stone-200 overflow-hidden bg-stone-50/30 flex flex-col"
+                  >
+                    <div className="p-2.5 bg-[#F5F0E8]">
+                      <div className="flex items-center gap-2 mb-1.5">
+                        <div className="w-8 h-8 rounded-lg bg-white border border-amber-200 flex items-center justify-center text-[#B57A21] shrink-0">
+                          <Megaphone className="w-3.5 h-3.5" />
+                        </div>
+                        <span className="text-[9px] font-bold text-stone-500 uppercase tracking-wide">
+                          {ECOSYSTEM_LISTING_TYPES[placement].label}
+                        </span>
+                      </div>
+                      <div className="flex gap-1 pb-1">
+                        {Array.from({ length: 5 }).map((_, i) => (
+                          <div
+                            key={i}
+                            className={`rounded ${
+                              i === 0
+                                ? "border border-amber-400 bg-amber-50"
+                                : "bg-gray-200"
+                            }`}
+                            style={{ width: 24, height: 24 }}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                    <div className="p-3 flex-1 flex flex-col gap-2">
+                      <div>
+                        <p className="text-xs font-bold text-stone-900">
+                          {meta.name}
+                        </p>
+                        <p className="text-[10px] text-stone-400 mt-0.5 line-clamp-2">
+                          {meta.description}
+                        </p>
+                      </div>
+                      <button
+                        onClick={() => openAdModal(placement)}
+                        className="mt-auto flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#B57A21] hover:bg-[#9B671A] text-white text-[10px] font-bold transition-colors cursor-pointer"
+                      >
+                        <Megaphone className="w-3 h-3" /> Pasang Iklan
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
         </div>
       </main>
 
@@ -1052,9 +1219,18 @@ export default function PromotionsPanel() {
                 </label>
                 <select
                   value={adForm.placement}
-                  onChange={(e) =>
-                    setAdForm((f) => ({ ...f, placement: e.target.value }))
-                  }
+                  onChange={(e) => {
+                    const p = e.target.value;
+                    setAdForm((f) => ({
+                      ...f,
+                      placement: p,
+                      listing_type: isEcosystemPlacement(p)
+                        ? ECOSYSTEM_LISTING_TYPES[p].type
+                        : "",
+                      listing_external_id: "",
+                    }));
+                    if (isEcosystemPlacement(p)) loadOwnListings();
+                  }}
                   className="w-full text-xs px-3.5 py-2.5 rounded-xl border border-stone-200 focus:border-amber-400 focus:ring-2 focus:ring-amber-200 outline-none transition cursor-pointer"
                 >
                   {SELLABLE_PLACEMENTS.map((p) => (
@@ -1069,6 +1245,50 @@ export default function PromotionsPanel() {
                   </p>
                 )}
               </div>
+
+              {ecosystem && (
+                <div>
+                  <label className="text-[11px] font-bold text-stone-600 block mb-1.5">
+                    Listing yang Dipromosikan{" "}
+                    <span className="text-red-500">*</span>
+                  </label>
+                  {ownListingsLoading ? (
+                    <div className="flex items-center gap-2 text-[11px] text-stone-400 py-2.5">
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" /> Memuat
+                      listing...
+                    </div>
+                  ) : (
+                    <select
+                      value={adForm.listing_external_id}
+                      onChange={(e) =>
+                        setAdForm((f) => ({
+                          ...f,
+                          listing_external_id: e.target.value,
+                        }))
+                      }
+                      className="w-full text-xs px-3.5 py-2.5 rounded-xl border border-stone-200 focus:border-amber-400 focus:ring-2 focus:ring-amber-200 outline-none transition cursor-pointer"
+                    >
+                      <option value="">
+                        Pilih {ECOSYSTEM_LISTING_TYPES[adForm.placement]?.label.toLowerCase()}...
+                      </option>
+                      {ecosystemListings.map((l) => (
+                        <option key={l.id} value={l.id}>
+                          {l.name}
+                        </option>
+                      ))}
+                    </select>
+                  )}
+                  {!ownListingsLoading && ecosystemListings.length === 0 && (
+                    <p className="flex items-start gap-1.5 text-[10px] text-amber-700 bg-amber-50 border border-amber-200 rounded-xl px-2.5 py-2 mt-1.5">
+                      <AlertCircle className="w-3 h-3 shrink-0 mt-0.5" />
+                      Belum ada listing{" "}
+                      {ECOSYSTEM_LISTING_TYPES[adForm.placement]?.label.toLowerCase()}{" "}
+                      terhubung ke bisnis ini. Klaim listing Anda di menu My
+                      Listings terlebih dahulu.
+                    </p>
+                  )}
+                </div>
+              )}
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
@@ -1099,63 +1319,69 @@ export default function PromotionsPanel() {
                 </div>
               </div>
 
-              <div>
-                <label className="text-[11px] font-bold text-stone-600 block mb-1.5">
-                  Target URL <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="url"
-                  value={adForm.target_url}
-                  onChange={(e) =>
-                    setAdForm((f) => ({ ...f, target_url: e.target.value }))
-                  }
-                  placeholder="https://bisnis-anda.com/promo"
-                  className="w-full text-xs px-3.5 py-2.5 rounded-xl border border-stone-200 focus:border-amber-400 focus:ring-2 focus:ring-amber-200 outline-none transition"
-                />
-              </div>
+              {!ecosystem && (
+                <div>
+                  <label className="text-[11px] font-bold text-stone-600 block mb-1.5">
+                    Target URL <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="url"
+                    value={adForm.target_url}
+                    onChange={(e) =>
+                      setAdForm((f) => ({ ...f, target_url: e.target.value }))
+                    }
+                    placeholder="https://bisnis-anda.com/promo"
+                    className="w-full text-xs px-3.5 py-2.5 rounded-xl border border-stone-200 focus:border-amber-400 focus:ring-2 focus:ring-amber-200 outline-none transition"
+                  />
+                </div>
+              )}
 
-              <div>
-                <label className="text-[11px] font-bold text-stone-600 block mb-1.5">
-                  Kategori
-                </label>
-                <select
-                  value={adForm.category}
-                  onChange={(e) =>
-                    setAdForm((f) => ({ ...f, category: e.target.value }))
-                  }
-                  className="w-full text-xs px-3.5 py-2.5 rounded-xl border border-stone-200 focus:border-amber-400 focus:ring-2 focus:ring-amber-200 outline-none transition cursor-pointer"
-                >
-                  {CATEGORIES.map((category) => (
-                    <option key={category.value || "all"} value={category.value}>
-                      {category.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
+              {!ecosystem && (
+                <div>
+                  <label className="text-[11px] font-bold text-stone-600 block mb-1.5">
+                    Kategori
+                  </label>
+                  <select
+                    value={adForm.category}
+                    onChange={(e) =>
+                      setAdForm((f) => ({ ...f, category: e.target.value }))
+                    }
+                    className="w-full text-xs px-3.5 py-2.5 rounded-xl border border-stone-200 focus:border-amber-400 focus:ring-2 focus:ring-amber-200 outline-none transition cursor-pointer"
+                  >
+                    {CATEGORIES.map((category) => (
+                      <option key={category.value || "all"} value={category.value}>
+                        {category.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
 
-              <div>
-                <label className="text-[11px] font-bold text-stone-600 block mb-1.5">
-                  Gambar Kreatif <span className="text-red-500">*</span>
-                </label>
-                <CoverImageUpload
-                  value={adForm.image_url}
-                  onChange={(url) =>
-                    setAdForm((f) => ({ ...f, image_url: url }))
-                  }
-                  label="Creative Image"
-                  folder="explore-jogja/ad-campaigns"
-                  aspectClassName={
-                    adForm.placement === "listing_native"
-                      ? "aspect-[3/4]"
-                      : "aspect-[16/6]"
-                  }
-                />
-                {adPlacementMeta && (
-                  <p className="text-[10px] text-stone-400 mt-1.5">
-                    Rekomendasi ukuran: {adPlacementMeta.imageSpec.label}
-                  </p>
-                )}
-              </div>
+              {!ecosystem && (
+                <div>
+                  <label className="text-[11px] font-bold text-stone-600 block mb-1.5">
+                    Gambar Kreatif <span className="text-red-500">*</span>
+                  </label>
+                  <CoverImageUpload
+                    value={adForm.image_url}
+                    onChange={(url) =>
+                      setAdForm((f) => ({ ...f, image_url: url }))
+                    }
+                    label="Creative Image"
+                    folder="explore-jogja/ad-campaigns"
+                    aspectClassName={
+                      adForm.placement === "listing_native"
+                        ? "aspect-[3/4]"
+                        : "aspect-[16/6]"
+                    }
+                  />
+                  {adPlacementMeta && (
+                    <p className="text-[10px] text-stone-400 mt-1.5">
+                      Rekomendasi ukuran: {adPlacementMeta.imageSpec.label}
+                    </p>
+                  )}
+                </div>
+              )}
 
               <div className="rounded-2xl bg-[#FAF3E6] border border-[#F2E3C6] px-4 py-3 flex items-center justify-between gap-3">
                 <div className="text-[11px] font-bold text-[#6B440A]">

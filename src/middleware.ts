@@ -46,7 +46,6 @@ export function middleware(req: NextRequest) {
     if (
       !isPartnerPortal &&
       !req.nextUrl.pathname.startsWith('/api/businesses') &&
-      !req.nextUrl.pathname.startsWith('/api/partners/me') &&
       !req.nextUrl.pathname.startsWith('/api/me') &&
       !req.nextUrl.pathname.startsWith('/api/auth')
     ) {

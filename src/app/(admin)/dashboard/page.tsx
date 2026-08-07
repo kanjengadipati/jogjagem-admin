@@ -97,7 +97,7 @@ function QuickActions() {
     { label: "Kelola Pengguna", icon: Users, path: "/users" },
     { label: "Hotels", icon: Layers, path: "/hotels" },
     { label: "Promosi", icon: Zap, path: "/promotions" },
-    { label: "Approval Mitra", icon: Briefcase, path: "/partners/pending" },
+    { label: "Approval Bisnis", icon: Briefcase, path: "/businesses" },
   ];
 
   return (
@@ -202,17 +202,17 @@ export default async function DashboardPage() {
     fetchCount(api, "/auth/admin/users?limit=1"),
   ]);
 
-  /* ---------- fetch partner counts ---------- */
-  const partnersRes = await api("/auth/admin/partners");
-  const partnersPayload = partnersRes.data as { data?: { status?: string }[] } | { status?: string }[] | null;
-  const allPartners: { status?: string }[] = Array.isArray(partnersPayload)
-    ? partnersPayload
-    : Array.isArray((partnersPayload as { data?: { status?: string }[] })?.data)
-    ? (partnersPayload as { data: { status?: string }[] }).data
+  /* ---------- fetch business counts ---------- */
+  const bizRes = await api("/auth/admin/businesses");
+  const bizPayload = bizRes.data as { data?: { status?: string }[] } | { status?: string }[] | null;
+  const allBusinesses: { status?: string }[] = Array.isArray(bizPayload)
+    ? bizPayload
+    : Array.isArray((bizPayload as { data?: { status?: string }[] })?.data)
+    ? (bizPayload as { data: { status?: string }[] }).data
     : [];
-  const partnerTotal = allPartners.length;
-  const partnerPending = allPartners.filter((p) => p.status === "pending").length;
-  const partnerApproved = allPartners.filter((p) => p.status === "approved").length;
+  const bizTotal = allBusinesses.length;
+  const bizPending = allBusinesses.filter((b) => b.status === "pending").length;
+  const bizApproved = allBusinesses.filter((b) => b.status === "approved").length;
 
   /* ---------- fetch preview data ---------- */
   const [previewDests, previewEvents, healthRes] = await Promise.all([
@@ -288,9 +288,9 @@ export default async function DashboardPage() {
 
         {/* Partner Stats Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-          <StatCard icon={Briefcase} label="Total Mitra" value={partnerTotal} color="#d97706" bgColor="#fffbeb" borderColor="#d97706" />
-          <StatCard icon={Clock} label="Mitra Pending" value={partnerPending} color="#f59e0b" bgColor="#fef3c7" borderColor="#f59e0b" />
-          <StatCard icon={Briefcase} label="Mitra Aktif" value={partnerApproved} color="#10b981" bgColor="#ecfdf5" borderColor="#10b981" />
+          <StatCard icon={Briefcase} label="Total Bisnis" value={bizTotal} color="#d97706" bgColor="#fffbeb" borderColor="#d97706" />
+          <StatCard icon={Clock} label="Bisnis Pending" value={bizPending} color="#f59e0b" bgColor="#fef3c7" borderColor="#f59e0b" />
+          <StatCard icon={Briefcase} label="Bisnis Aktif" value={bizApproved} color="#10b981" bgColor="#ecfdf5" borderColor="#10b981" />
         </div>
 
         {/* Insights Row */}
@@ -332,13 +332,13 @@ export default async function DashboardPage() {
                 </div>
                 <span className="text-sm font-extrabold text-gray-900">{upcomingCount}</span>
               </div>
-              {partnerPending > 0 && (
-                <Link href="/partners/pending" className="flex items-center justify-between p-3 rounded-xl bg-amber-50 border border-amber-200 hover:bg-amber-100 transition-colors">
+              {bizPending > 0 && (
+                <Link href="/businesses" className="flex items-center justify-between p-3 rounded-xl bg-amber-50 border border-amber-200 hover:bg-amber-100 transition-colors">
                   <div className="flex items-center gap-2">
                     <Clock className="w-4 h-4 text-amber-500" />
-                    <span className="text-xs font-bold text-amber-700 font-display">Mitra Menunggu Review</span>
+                    <span className="text-xs font-bold text-amber-700 font-display">Bisnis Menunggu Review</span>
                   </div>
-                  <span className="text-sm font-extrabold text-amber-700">{partnerPending}</span>
+                  <span className="text-sm font-extrabold text-amber-700">{bizPending}</span>
                 </Link>
               )}
             </div>

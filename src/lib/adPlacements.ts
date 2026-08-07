@@ -60,6 +60,60 @@ export const AD_PLACEMENTS: Record<string, AdPlacementInfo> = {
     price: 400000,
     imageSpec: { width: 1200, height: 375, label: "16:5 wide — 1200×375px" },
   },
+  ecosystem_stay: {
+    name: "Rel Rekomendasi — Menginap",
+    description:
+      "Kartu sponsor di rel 'Rekomendasi Kebutuhan Traveler' tab Menginap (hotel) halaman destinasi. Memakai data listing hotel milik bisnis yang dipilih.",
+    sellable: true,
+    price: 300000,
+    notes: "Wajib pilih listing hotel milik bisnis; target destinasi opsional (kosong = semua).",
+    imageSpec: { width: 400, height: 400, label: "kartu native — pakai foto listing" },
+  },
+  ecosystem_eat: {
+    name: "Rel Rekomendasi — Kuliner",
+    description:
+      "Kartu sponsor di rel 'Rekomendasi Kebutuhan Traveler' tab Kuliner (restoran/kafe) halaman destinasi.",
+    sellable: true,
+    price: 250000,
+    notes: "Wajib pilih listing restoran milik bisnis; target destinasi opsional (kosong = semua).",
+    imageSpec: { width: 400, height: 400, label: "kartu native — pakai foto listing" },
+  },
+  ecosystem_experience: {
+    name: "Rel Rekomendasi — Vibe & Aktivitas",
+    description:
+      "Kartu sponsor di rel 'Rekomendasi Kebutuhan Traveler' tab Vibe & Aktivitas (rental/agen) halaman destinasi.",
+    sellable: true,
+    price: 250000,
+    notes: "Wajib pilih listing rental milik bisnis; target destinasi opsional (kosong = semua).",
+    imageSpec: { width: 400, height: 400, label: "kartu native — pakai foto listing" },
+  },
+  ecosystem_shop: {
+    name: "Rel Rekomendasi — Belanja",
+    description:
+      "Kartu sponsor di rel 'Rekomendasi Kebutuhan Traveler' tab Belanja (souvenir) halaman destinasi.",
+    sellable: true,
+    price: 200000,
+    notes: "Wajib pilih listing souvenir milik bisnis; target destinasi opsional (kosong = semua).",
+    imageSpec: { width: 400, height: 400, label: "kartu native — pakai foto listing" },
+  },
+  ecosystem_move: {
+    name: "Rel Rekomendasi — Transport",
+    description:
+      "Kartu sponsor di rel 'Rekomendasi Kebutuhan Traveler' tab Transport (rental/transport) halaman destinasi.",
+    sellable: true,
+    price: 200000,
+    notes: "Wajib pilih listing rental milik bisnis; target destinasi opsional (kosong = semua).",
+    imageSpec: { width: 400, height: 400, label: "kartu native — pakai foto listing" },
+  },
+  ecosystem_guide: {
+    name: "Rel Rekomendasi — Guide Lokal",
+    description:
+      "Kartu sponsor di rel 'Rekomendasi Kebutuhan Traveler' tab Guide Lokal halaman destinasi.",
+    sellable: true,
+    price: 200000,
+    notes: "Wajib pilih listing guide milik bisnis; target destinasi opsional (kosong = semua).",
+    imageSpec: { width: 400, height: 400, label: "kartu native — pakai foto avatar guide" },
+  },
 };
 
 export const PLACEMENT_NAMES: Record<string, string> = Object.fromEntries(

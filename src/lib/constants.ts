@@ -28,7 +28,7 @@ export const menuGroups: MenuGroup[] = [
       { name: "Events",       icon: "calendar",      path: "/events",          activeId: "events"          },
       { name: "Hotels",       icon: "hotel",         path: "/hotels",          activeId: "hotels"          },
       { name: "Restaurants",  icon: "utensils",      path: "/restaurants",     activeId: "restaurants"     },
-      { name: "Pending Bisnis",  icon: "inbox",        path: "/partner-applications", activeId: "partner-applications", badge: "Review", badgeColor: "warning" },
+      { name: "Pending Bisnis",  icon: "inbox",        path: "/businesses", activeId: "businesses", badge: "Review", badgeColor: "warning" },
       { name: "Business Claims",  icon: "shield-check",  path: "/business-claims",    activeId: "business-claims", badge: "New", badgeColor: "warning" },
       { name: "Guides",       icon: "users",         path: "/guides",          activeId: "guides"          },
       { name: "Souvenirs",    icon: "shopping-bag",  path: "/souvenirs",       activeId: "souvenirs"       },

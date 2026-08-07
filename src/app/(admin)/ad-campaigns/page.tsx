@@ -11,13 +11,24 @@ import {
   Megaphone, Search, Loader2, Trash2, Plus, Calendar,
   MousePointerClick, Eye, Power, Pencil, X, Save, CheckCircle, XCircle, AlertCircle,
 } from "lucide-react";
-import type { AdCampaign, Business } from "@/types";
+import type { AdCampaign, Business, Destination } from "@/types";
 import { PLACEMENT_NAMES, AD_PLACEMENTS, SELLABLE_PLACEMENTS } from "@/lib/adPlacements";
 
 const PLACEMENTS = SELLABLE_PLACEMENTS.map((value) => ({
   value,
   label: AD_PLACEMENTS[value].name,
 }));
+
+const ECOSYSTEM_LISTING_TYPES: Record<string, { type: string; label: string; api: string }> = {
+  ecosystem_stay: { type: "hotel", label: "Hotel", api: "hotels" },
+  ecosystem_eat: { type: "restaurant", label: "Restoran / Kafe", api: "restaurants" },
+  ecosystem_experience: { type: "rental", label: "Rental / Agen", api: "rentals" },
+  ecosystem_shop: { type: "souvenir", label: "Toko Souvenir", api: "souvenirs" },
+  ecosystem_move: { type: "rental", label: "Rental / Transport", api: "rentals" },
+  ecosystem_guide: { type: "guide", label: "Guide Lokal", api: "guides" },
+};
+
+const ECOSYSTEM_PLACEMENTS = Object.keys(ECOSYSTEM_LISTING_TYPES);
 
 const CATEGORIES = [
   { value: "", label: "All Categories" },
@@ -75,6 +86,10 @@ type EditForm = {
   weight: string;
   price_amount: string;
   price_currency: string;
+  listing_type: string;
+  listing_external_id: string;
+  target_dest_ids: string;
+  sort_order: string;
 };
 
 const EMPTY_EDIT: EditForm = {
@@ -87,6 +102,10 @@ const EMPTY_EDIT: EditForm = {
   weight: "1",
   price_amount: "",
   price_currency: "IDR",
+  listing_type: "",
+  listing_external_id: "",
+  target_dest_ids: "",
+  sort_order: "0",
 };
 
 export default function AdCampaignsPage() {
@@ -103,6 +122,19 @@ export default function AdCampaignsPage() {
   const [editingCampaign, setEditingCampaign] = useState<AdCampaign | null>(null);
   const [editForm, setEditForm] = useState<EditForm>(EMPTY_EDIT);
   const [saving, setSaving] = useState(false);
+  const [ecosystemListings, setEcosystemListings] = useState<{ external_id: string; name: string }[]>([]);
+  const [ecosystemListingsLoading, setEcosystemListingsLoading] = useState(false);
+  const [destinations, setDestinations] = useState<Destination[]>([]);
+
+  const isEcosystemEdit = ECOSYSTEM_PLACEMENTS.includes(editForm.placement);
+  const ecosystemEditInfo = ECOSYSTEM_LISTING_TYPES[editForm.placement];
+
+  useEffect(() => {
+    fetch("/api/destinations")
+      .then((r) => r.json())
+      .then((d) => setDestinations((d?.data ?? []) as Destination[]))
+      .catch(() => setDestinations([]));
+  }, []);
 
   function load() {
     setLoading(true);
@@ -182,17 +214,49 @@ export default function AdCampaignsPage() {
   function openEdit(c: AdCampaign) {
     setEditingCampaign(c);
     setEditForm({
-      placement:      c.placement ?? "homepage_hero_aicard",
-      image_url:      c.image_url ?? "",
-      target_url:     c.target_url ?? "",
-      category:       c.category ?? "",
-      start_at:       isoToDate(c.start_at),
-      end_at:         isoToDate(c.end_at),
-      weight:         String(c.weight ?? 1),
-      price_amount:   String(c.price_amount ?? ""),
-      price_currency: c.price_currency ?? "IDR",
+      placement:          c.placement ?? "homepage_hero_aicard",
+      image_url:          c.image_url ?? "",
+      target_url:         c.target_url ?? "",
+      category:           c.category ?? "",
+      start_at:           isoToDate(c.start_at),
+      end_at:             isoToDate(c.end_at),
+      weight:             String(c.weight ?? 1),
+      price_amount:       String(c.price_amount ?? ""),
+      price_currency:     c.price_currency ?? "IDR",
+      listing_type:       c.listing_type ?? "",
+      listing_external_id: c.listing_external_id ?? "",
+      target_dest_ids:    (c.target_dest_ids ?? []).join(","),
+      sort_order:         String(c.sort_order ?? 0),
     });
   }
+
+  // Load listings of the ecosystem type whenever the placement in the edit
+  // modal is an ecosystem slot (covers both opening edit and switching slot).
+  useEffect(() => {
+    if (!editingCampaign || !ECOSYSTEM_PLACEMENTS.includes(editForm.placement) || !ecosystemEditInfo) {
+      setEcosystemListings([]);
+      return;
+    }
+    let cancelled = false;
+    setEcosystemListingsLoading(true);
+    fetch(`/api/${ecosystemEditInfo.api}`)
+      .then((r) => r.json())
+      .then((d) => {
+        if (cancelled) return;
+        const items = (d?.data ?? []) as { external_id?: string; id: string; name: string }[];
+        setEcosystemListings(items.map((it) => ({ external_id: String(it.external_id ?? it.id), name: it.name })));
+      })
+      .catch(() => {
+        if (!cancelled) setEcosystemListings([]);
+      })
+      .finally(() => {
+        if (!cancelled) setEcosystemListingsLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editingCampaign, editForm.placement]);
 
   function closeEdit() {
     setEditingCampaign(null);
@@ -201,25 +265,33 @@ export default function AdCampaignsPage() {
 
   async function saveEdit() {
     if (!editingCampaign) return;
-    if (!editForm.image_url || !editForm.target_url) {
-      showToast("Missing fields", "Image URL and Target URL are required", "error");
+    if (!editForm.target_url || (isEcosystemEdit ? !editForm.listing_external_id : !editForm.image_url)) {
+      showToast("Missing fields", isEcosystemEdit ? "Target URL and listing are required" : "Image URL and Target URL are required", "error");
       return;
     }
     setSaving(true);
     try {
+      const targetDestIds = editForm.target_dest_ids
+        .split(",")
+        .map((s) => s.trim())
+        .filter(Boolean);
       const res = await fetch(`/api/ad-campaigns/${editingCampaign.id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          placement:      editForm.placement,
-          image_url:      editForm.image_url,
-          target_url:     editForm.target_url,
-          category:       editForm.category || undefined,
-          start_at:       editForm.start_at ? new Date(editForm.start_at).toISOString() : undefined,
-          end_at:         editForm.end_at ? new Date(editForm.end_at).toISOString() : undefined,
-          weight:         Number(editForm.weight) || 1,
-          price_amount:   Number(editForm.price_amount) || 0,
-          price_currency: editForm.price_currency || "IDR",
+          placement:        editForm.placement,
+          image_url:        isEcosystemEdit ? editForm.image_url || undefined : editForm.image_url,
+          target_url:       editForm.target_url,
+          category:         editForm.category || undefined,
+          listing_type:     isEcosystemEdit ? ecosystemEditInfo?.type : undefined,
+          listing_external_id: isEcosystemEdit ? editForm.listing_external_id : undefined,
+          target_dest_ids:  isEcosystemEdit ? targetDestIds : undefined,
+          sort_order:       isEcosystemEdit ? Number(editForm.sort_order) || 0 : undefined,
+          start_at:         editForm.start_at ? new Date(editForm.start_at).toISOString() : undefined,
+          end_at:           editForm.end_at ? new Date(editForm.end_at).toISOString() : undefined,
+          weight:           Number(editForm.weight) || 1,
+          price_amount:     Number(editForm.price_amount) || 0,
+          price_currency:   editForm.price_currency || "IDR",
         }),
       });
       if (!res.ok) throw new Error("Save failed");
@@ -399,6 +471,13 @@ export default function AdCampaignsPage() {
                     <span className="text-[10px] font-bold text-primary bg-primary/10 px-2 py-0.5 rounded-full w-fit capitalize">{c.category}</span>
                   )}
 
+                  {c.listing_type && (
+                    <span className="text-[10px] font-bold text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full w-fit">
+                      Listing: {ECOSYSTEM_LISTING_TYPES[c.placement]?.label ?? c.listing_type}
+                      {c.listing_external_id ? ` · ${c.listing_external_id.slice(0, 12)}…` : ""}
+                    </span>
+                  )}
+
                   {formatPrice(c.price_amount, c.price_currency) && (
                     <div className="flex items-center justify-between gap-2">
                       <span className="text-sm font-bold text-gray-800">{formatPrice(c.price_amount, c.price_currency)}</span>
@@ -572,16 +651,93 @@ export default function AdCampaignsPage() {
                 </div>
               </div>
 
+              {isEcosystemEdit && (
+                <div className="space-y-4 border border-border rounded-xl p-4 bg-bg/50">
+                  <h4 className="text-[10px] font-bold text-gray-400 uppercase tracking-widest font-display">Ecosystem Listing</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-1.5">
+                      <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest font-display block">Listing Type</label>
+                      <input value={ecosystemEditInfo?.label ?? ""} disabled
+                        className="w-full bg-white text-xs px-3.5 py-2.5 rounded-xl border border-border outline-none font-semibold text-gray-400 cursor-not-allowed" />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest font-display block">Listing</label>
+                      {ecosystemListingsLoading ? (
+                        <div className="w-full bg-white flex items-center gap-2 text-xs px-3.5 py-2.5 rounded-xl border border-border text-gray-400">
+                          <Loader2 className="w-3.5 h-3.5 animate-spin" /> Loading listings...
+                        </div>
+                      ) : ecosystemListings.length === 0 ? (
+                        <div className="w-full bg-white text-xs px-3.5 py-2.5 rounded-xl border border-border text-danger">
+                          No {ecosystemEditInfo?.label.toLowerCase()} listings found.
+                        </div>
+                      ) : (
+                        <select value={editForm.listing_external_id} onChange={(e) => f("listing_external_id", e.target.value)}
+                          className="w-full bg-white text-xs px-3.5 py-2.5 rounded-xl border border-border focus:border-primary outline-none font-semibold text-gray-700 cursor-pointer">
+                          <option value="">Select a listing...</option>
+                          {ecosystemListings.map((l) => (
+                            <option key={l.external_id} value={l.external_id}>{l.name}</option>
+                          ))}
+                        </select>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest font-display block">Target Destinations</label>
+                    <div className="flex flex-wrap gap-1.5 max-h-32 overflow-y-auto p-3 rounded-xl border border-border bg-white">
+                      {destinations.length === 0 ? (
+                        <span className="text-xs text-gray-400">No destinations available</span>
+                      ) : (
+                        destinations.map((d) => {
+                          const checked = editForm.target_dest_ids.split(",").includes(d.id);
+                          return (
+                            <button
+                              key={d.id}
+                              type="button"
+                              onClick={() => {
+                                const list = editForm.target_dest_ids.split(",").filter(Boolean);
+                                f("target_dest_ids", checked ? list.filter((x) => x !== d.id).join(",") : [...list, d.id].join(","));
+                              }}
+                              className={`text-xs px-2.5 py-1 rounded-full font-semibold border transition-colors cursor-pointer ${
+                                checked ? "bg-primary/10 border-primary text-primary" : "bg-white border-border text-gray-500 hover:border-gray-300"
+                              }`}
+                            >
+                              {d.name}
+                            </button>
+                          );
+                        })
+                      )}
+                    </div>
+                    <p className="text-[10px] text-gray-400">Kosong = tayang di semua destinasi.</p>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-1.5">
+                      <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest font-display block">Sort Order</label>
+                      <input type="number" min={0} value={editForm.sort_order} onChange={(e) => f("sort_order", e.target.value)}
+                        className="w-full bg-white text-xs px-3.5 py-2.5 rounded-xl border border-border outline-none font-medium" />
+                      <p className="text-[10px] text-gray-400">Terkecil tampil teratas.</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {/* Image */}
               <div className="space-y-1.5">
                 <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest font-display block">Creative Image</label>
-                <CoverImageUpload
-                  value={editForm.image_url}
-                  onChange={(url) => f("image_url", url)}
-                  label="Upload new creative"
-                  folder="explore-jogja/ad-campaigns"
-                  aspectClassName={editForm.placement === "listing_native" ? "aspect-[3/4]" : "aspect-[16/6]"}
-                />
+                {isEcosystemEdit ? (
+                  <p className="text-xs text-gray-500">
+                    Kartu rel menggunakan foto dari listing yang dipilih — tidak perlu upload creative.
+                  </p>
+                ) : (
+                  <CoverImageUpload
+                    value={editForm.image_url}
+                    onChange={(url) => f("image_url", url)}
+                    label="Upload new creative"
+                    folder="explore-jogja/ad-campaigns"
+                    aspectClassName={editForm.placement === "listing_native" ? "aspect-[3/4]" : "aspect-[16/6]"}
+                  />
+                )}
               </div>
             </div>
 
@@ -591,7 +747,7 @@ export default function AdCampaignsPage() {
                 className="px-4 py-2 text-xs font-semibold text-gray-500 hover:text-gray-800 transition-colors cursor-pointer">
                 Cancel
               </button>
-              <button onClick={saveEdit} disabled={saving || !editForm.image_url || !editForm.target_url}
+              <button onClick={saveEdit} disabled={saving || !editForm.target_url || (isEcosystemEdit ? !editForm.listing_external_id : !editForm.image_url)}
                 className="flex items-center gap-1.5 px-5 py-2 rounded-xl bg-primary hover:bg-primary-dark disabled:opacity-50 text-white text-xs font-semibold transition-colors cursor-pointer disabled:cursor-not-allowed">
                 {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
                 {saving ? "Saving..." : "Save Changes"}

@@ -10,11 +10,27 @@ import { useToast } from "@/components/Toast";
 import { ArrowLeft, CheckCircle, ExternalLink, Loader2, Megaphone } from "lucide-react";
 import type { Business } from "@/types";
 import { AD_PLACEMENTS, SELLABLE_PLACEMENTS } from "@/lib/adPlacements";
+import type { Hotel, Restaurant, Souvenir, Rental, Guide, Destination } from "@/types";
 
 const PLACEMENTS = SELLABLE_PLACEMENTS.map((value) => ({
   value,
   label: AD_PLACEMENTS[value].name,
 }));
+
+// listing type per ecosystem placement (backend source of truth:
+// adcampaign/ecosystem.go listingTable()).
+const ECOSYSTEM_LISTING_TYPES: Record<string, { type: string; label: string; api: string }> = {
+  ecosystem_stay: { type: "hotel", label: "Hotel", api: "hotels" },
+  ecosystem_eat: { type: "restaurant", label: "Restoran / Kafe", api: "restaurants" },
+  ecosystem_experience: { type: "rental", label: "Rental / Agen", api: "rentals" },
+  ecosystem_shop: { type: "souvenir", label: "Toko Souvenir", api: "souvenirs" },
+  ecosystem_move: { type: "rental", label: "Rental / Transport", api: "rentals" },
+  ecosystem_guide: { type: "guide", label: "Guide Lokal", api: "guides" },
+};
+
+const ECOSYSTEM_PLACEMENTS = Object.keys(ECOSYSTEM_LISTING_TYPES);
+
+type EcosystemListingOption = { external_id: string; name: string; image?: string };
 
 const CATEGORIES = [
   { value: "", label: "All Categories" },
@@ -59,9 +75,53 @@ export default function CreateAdCampaignPage() {
     weight: "1",
     price_amount: "",
     price_currency: "IDR",
+    listing_type: "",
+    listing_external_id: "",
+    target_dest_ids: "",
+    sort_order: "0",
   });
 
   const selectedBusiness = businesses.find((b) => (b.external_id || b.id) === form.business_id);
+  const isEcosystem = ECOSYSTEM_PLACEMENTS.includes(form.placement);
+  const ecosystemInfo = ECOSYSTEM_LISTING_TYPES[form.placement];
+
+  const [ecosystemListings, setEcosystemListings] = useState<EcosystemListingOption[]>([]);
+  const [ecosystemListingsLoading, setEcosystemListingsLoading] = useState(false);
+  const [destinations, setDestinations] = useState<Destination[]>([]);
+
+  useEffect(() => {
+    fetch("/api/destinations")
+      .then((r) => r.json())
+      .then((d) => setDestinations((d?.data ?? []) as Destination[]))
+      .catch(() => setDestinations([]));
+  }, []);
+
+  useEffect(() => {
+    if (!isEcosystem || !ecosystemInfo) {
+      setEcosystemListings([]);
+      setForm((f) => ({ ...f, listing_type: "", listing_external_id: "" }));
+      return;
+    }
+    let cancelled = false;
+    setEcosystemListingsLoading(true);
+    setForm((f) => ({ ...f, listing_type: ecosystemInfo.type, listing_external_id: "" }));
+    fetch(`/api/${ecosystemInfo.api}`)
+      .then((r) => r.json())
+      .then((d) => {
+        if (cancelled) return;
+        const items = (d?.data ?? []) as (Hotel | Restaurant | Souvenir | Rental | Guide)[];
+        setEcosystemListings(items.map((it) => ({ external_id: String((it as { external_id?: string }).external_id ?? it.id), name: it.name, image: (it as { images?: unknown[] }).images?.[0] as string | undefined })));
+      })
+      .catch(() => {
+        if (!cancelled) setEcosystemListings([]);
+      })
+      .finally(() => {
+        if (!cancelled) setEcosystemListingsLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [isEcosystem, ecosystemInfo?.api]);
 
   useEffect(() => {
     fetch("/api/businesses")
@@ -77,8 +137,12 @@ export default function CreateAdCampaignPage() {
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
-    if (!form.business_id || !selectedBusiness || !form.image_url || !form.target_url) {
-      showToast("Missing fields", "Business, image URL, and target URL are required", "error");
+    if (!form.business_id || !selectedBusiness || !form.target_url) {
+      showToast("Missing fields", "Business and target URL are required", "error");
+      return;
+    }
+    if (isEcosystem && !form.listing_external_id) {
+      showToast("Missing fields", "Ecosystem placements require a listing", "error");
       return;
     }
 
@@ -86,6 +150,10 @@ export default function CreateAdCampaignPage() {
     try {
       const bizExtId = selectedBusiness.external_id || selectedBusiness.id;
       const externalId = `${slugify(selectedBusiness.name)}-${Date.now().toString(36)}`;
+      const targetDestIds = form.target_dest_ids
+        .split(",")
+        .map((s) => s.trim())
+        .filter(Boolean);
       const res = await fetch("/api/ad-campaigns", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -97,9 +165,15 @@ export default function CreateAdCampaignPage() {
           // step 4 drops the column.
           partner_name: selectedBusiness.name,
           placement: form.placement,
-          image_url: form.image_url,
+          // Ecosystem cards render from the listing data; image is derived at
+          // serve time, so the uploaded creative is not used for those slots.
+          image_url: isEcosystem ? "" : form.image_url,
           target_url: form.target_url,
           category: form.category || undefined,
+          listing_type: isEcosystem ? form.listing_type : undefined,
+          listing_external_id: isEcosystem ? form.listing_external_id : undefined,
+          target_dest_ids: isEcosystem ? targetDestIds : undefined,
+          sort_order: isEcosystem ? Number(form.sort_order) || 0 : undefined,
           start_at: form.start_at ? new Date(form.start_at).toISOString() : undefined,
           end_at: form.end_at ? new Date(form.end_at).toISOString() : undefined,
           weight: Number(form.weight) || 1,
@@ -249,15 +323,120 @@ export default function CreateAdCampaignPage() {
               </div>
             </div>
 
+            {isEcosystem && (
+              <div className="bg-white p-6 rounded-card border border-border shadow-soft space-y-5">
+                <h4 className="text-sm font-bold text-gray-800 font-display">Ecosystem Listing</h4>
+                <p className="text-[11px] text-gray-500 -mt-2">
+                  Kartu sponsor dirender dari data listing berikut. Listing harus milik bisnis yang dipilih; target destinasi kosong berarti tayang di semua destinasi.
+                </p>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest font-display block">
+                      Listing Type
+                    </label>
+                    <input
+                      value={ecosystemInfo?.label ?? ""}
+                      disabled
+                      className="w-full bg-bg text-xs px-4 py-3 rounded-xl border border-transparent outline-none font-semibold text-gray-400 cursor-not-allowed"
+                    />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest font-display block">
+                      Listing
+                    </label>
+                    {ecosystemListingsLoading ? (
+                      <div className="w-full bg-bg flex items-center gap-2 text-xs px-4 py-3 rounded-xl border border-transparent text-gray-400">
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" /> Loading listings...
+                      </div>
+                    ) : ecosystemListings.length === 0 ? (
+                      <div className="w-full bg-bg text-xs px-4 py-3 rounded-xl border border-transparent text-danger">
+                        No {ecosystemInfo?.label.toLowerCase()} listings found.
+                      </div>
+                    ) : (
+                      <select
+                        value={form.listing_external_id}
+                        onChange={(e) => set("listing_external_id", e.target.value)}
+                        className="w-full bg-bg focus:bg-white text-xs px-4 py-3 rounded-xl border border-transparent focus:border-border outline-none font-semibold text-gray-700 cursor-pointer"
+                      >
+                        <option value="">Select a listing...</option>
+                        {ecosystemListings.map((l) => (
+                          <option key={l.external_id} value={l.external_id}>{l.name}</option>
+                        ))}
+                      </select>
+                    )}
+                  </div>
+
+                  <div className="space-y-1.5 md:col-span-2">
+                    <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest font-display block">
+                      Target Destinations
+                    </label>
+                    <div className="flex flex-wrap gap-1.5 max-h-40 overflow-y-auto p-3 rounded-xl border border-border bg-bg">
+                      {destinations.length === 0 ? (
+                        <span className="text-xs text-gray-400">No destinations available</span>
+                      ) : (
+                        destinations.map((d) => {
+                          const checked = form.target_dest_ids.split(",").includes(d.id);
+                          return (
+                            <button
+                              key={d.id}
+                              type="button"
+                              onClick={() => {
+                                const list = form.target_dest_ids.split(",").filter(Boolean);
+                                set("target_dest_ids", checked ? list.filter((x) => x !== d.id).join(",") : [...list, d.id].join(","));
+                              }}
+                              className={`text-xs px-2.5 py-1 rounded-full font-semibold border transition-colors ${
+                                checked
+                                  ? "bg-primary/10 border-primary text-primary"
+                                  : "bg-white border-border text-gray-500 hover:border-gray-300"
+                              }`}
+                            >
+                              {d.name}
+                            </button>
+                          );
+                        })
+                      )}
+                    </div>
+                    <p className="text-[10px] text-gray-400">
+                      Kosong = tayang di semua destinasi.
+                    </p>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest font-display block">
+                      Sort Order
+                    </label>
+                    <input
+                      type="number"
+                      min={0}
+                      value={form.sort_order}
+                      onChange={(e) => set("sort_order", e.target.value)}
+                      className="w-full bg-bg focus:bg-white text-xs px-4 py-3 rounded-xl border border-transparent focus:border-border outline-none font-medium"
+                    />
+                    <p className="text-[10px] text-gray-400">
+                      Urutan kartu sponsor dalam rel; terkecil tampil teratas.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+
             <div className="bg-white p-6 rounded-card border border-border shadow-soft space-y-5">
               <h4 className="text-sm font-bold text-gray-800 font-display">Creative</h4>
-              <CoverImageUpload
-                value={form.image_url}
-                onChange={(url) => set("image_url", url)}
-                label="Creative Image"
-                folder="explore-jogja/ad-campaigns"
-                aspectClassName={form.placement === "listing_native" ? "aspect-[3/4]" : "aspect-[16/6]"}
-              />
+              {isEcosystem ? (
+                <p className="text-xs text-gray-500">
+                  Kartu rel menggunakan foto dari listing yang dipilih di atas — tidak perlu upload creative.
+                </p>
+              ) : (
+                <CoverImageUpload
+                  value={form.image_url}
+                  onChange={(url) => set("image_url", url)}
+                  label="Creative Image"
+                  folder="explore-jogja/ad-campaigns"
+                  aspectClassName={form.placement === "listing_native" ? "aspect-[3/4]" : "aspect-[16/6]"}
+                />
+              )}
             </div>
 
             <div className="bg-white p-6 rounded-card border border-border shadow-soft space-y-5">
@@ -312,7 +491,7 @@ export default function CreateAdCampaignPage() {
               <h4 className="text-xs font-bold text-gray-400 uppercase tracking-widest font-display">Publish</h4>
               <button
                 type="submit"
-                disabled={saving || !form.business_id || !form.image_url || !form.target_url}
+                disabled={saving || !form.business_id || !form.target_url || (isEcosystem ? !form.listing_external_id : !form.image_url)}
                 className="w-full bg-primary hover:bg-primary-dark disabled:opacity-60 text-white py-3 rounded-xl text-xs font-semibold shadow-premium transition-premium cursor-pointer disabled:cursor-not-allowed"
               >
                 {saving ? "Creating..." : "Create Campaign"}
@@ -332,8 +511,14 @@ export default function CreateAdCampaignPage() {
               <div className={`relative w-full overflow-hidden rounded-xl bg-bg border border-border ${
                 form.placement === "listing_native" ? "aspect-[3/4]" : "aspect-[16/6]"
               }`}>
-                {form.image_url ? (
-                  <Image src={form.image_url} alt="Campaign preview" fill className="object-cover" sizes="360px" />
+                {(isEcosystem ? ecosystemListings.find((l) => l.external_id === form.listing_external_id)?.image : form.image_url) ? (
+                  <Image
+                    src={(isEcosystem ? ecosystemListings.find((l) => l.external_id === form.listing_external_id)?.image : form.image_url) ?? ""}
+                    alt="Campaign preview"
+                    fill
+                    className="object-cover"
+                    sizes="360px"
+                  />
                 ) : (
                   <div className="h-full w-full flex items-center justify-center text-gray-300">
                     <Megaphone className="w-10 h-10" />
@@ -342,7 +527,9 @@ export default function CreateAdCampaignPage() {
               </div>
               <div className="space-y-2">
                 <h3 className="text-sm font-bold text-gray-900 font-display leading-snug">
-                  {selectedBusiness?.name || "Business name"}
+                  {isEcosystem
+                    ? ecosystemListings.find((l) => l.external_id === form.listing_external_id)?.name
+                    : (selectedBusiness?.name || "Business name")}
                 </h3>
                 {form.target_url && (
                   <a href={form.target_url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 text-xs text-primary font-semibold hover:underline">

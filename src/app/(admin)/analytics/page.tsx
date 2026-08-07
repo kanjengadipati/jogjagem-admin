@@ -5,7 +5,7 @@ import Header from "@/components/Header";
 import { useToast } from "@/components/Toast";
 import {
   TrendingUp, Users, MapPin, Star, Calendar, BookOpen,
-  Briefcase, Hotel, Utensils, ShoppingBag, Car, RefreshCw,
+  Hotel, Utensils, ShoppingBag, Car, RefreshCw,
   MessageSquare, Tag, Activity,
 } from "lucide-react";
 import { BACKEND_URL } from "@/lib/constants";
@@ -16,7 +16,6 @@ interface Overview {
   total_users: number;
   total_reviews: number;
   total_stories: number;
-  total_partners: number;
   total_hotels: number;
   total_restaurants: number;
   total_guides: number;
@@ -111,7 +110,6 @@ export default function AnalyticsPage() {
     { label: "Avg Rating", value: overview.avg_rating.toFixed(1), icon: Star, color: "text-yellow-500", bg: "bg-yellow-50", sub: `${overview.total_review_ratings} ratings` },
     { label: "Reviews", value: overview.total_reviews.toLocaleString(), icon: MessageSquare, color: "text-orange-500", bg: "bg-orange-50" },
     { label: "Stories", value: overview.total_stories.toLocaleString(), icon: BookOpen, color: "text-pink-500", bg: "bg-pink-50" },
-    { label: "Partners", value: overview.total_partners.toLocaleString(), icon: Briefcase, color: "text-indigo-500", bg: "bg-indigo-50" },
     { label: "Hotels", value: overview.total_hotels.toLocaleString(), icon: Hotel, color: "text-cyan-500", bg: "bg-cyan-50" },
   ] : [];
 
