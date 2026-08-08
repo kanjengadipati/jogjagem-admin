@@ -23,7 +23,8 @@ so it becomes bilingual (id/en) like the rest of the main portal.
 - `business-portal/ReviewsPanel.tsx`
 - `business-portal/SettingsPanel.tsx`
 - `business-portal/SubscriptionsPanel.tsx` (uses `SnapCheckoutButton`, Midtrans)
-- Also shared: `SnapCheckoutButton.tsx`, `InvoiceEmailModal`, `useToast`/`Toast.tsx`, `useActiveBusiness.ts` hook
+- `business-portal/TeamPanel.tsx` (team members + invite management, incl. pending-invite list/revoke + invite-link copy modal)
+- Also shared: `SnapCheckoutButton.tsx` (contains a local `InvoiceEmailModal` — no standalone file), `useToast`/`Toast.tsx`, `useActiveBusiness.ts` hook
 
 ### Pages to move — `jogjagem-admin/src/app/business/`
 - `/business/page.tsx` (redirect logic — fetches `/api/businesses/me`, → dashboard or settings)
@@ -33,6 +34,7 @@ so it becomes bilingual (id/en) like the rest of the main portal.
 - `/business/promotions/page.tsx`
 - `/business/reviews/page.tsx`
 - `/business/subscriptions/page.tsx`
+- `/business/team/page.tsx`
 - `/business/[externalId]/layout.tsx`
 - `/business/[externalId]/page.tsx`
 - `/business/[externalId]/dashboard/page.tsx`
@@ -43,6 +45,7 @@ so it becomes bilingual (id/en) like the rest of the main portal.
 - `/business/[externalId]/claims/page.tsx`
 - `/business/[externalId]/settings/page.tsx`
 - `/business/[externalId]/subscriptions/page.tsx`
+- `/business/[externalId]/team/page.tsx`
 
 ### API proxy routes to move — `jogjagem-admin/src/app/api/`
 Under `businesses/`:
@@ -56,10 +59,24 @@ Under `businesses/`:
 - `businesses/me/[id]/claims/route.ts`
 - `businesses/me/[id]/reviews/route.ts`
 - `businesses/me/[id]/reviews/[rid]/reply/route.ts`
+- `businesses/me/[id]/members/route.ts`
+- `businesses/me/[id]/members/invite/route.ts`
+- `businesses/me/[id]/members/[userId]/route.ts`
+- `businesses/me/[id]/members/invites/route.ts`
+- `businesses/me/[id]/members/invites/[inviteId]/route.ts`
 - Plus `auth/login`, `auth/social`, `auth/refresh` etc. as needed for partner auth on the public site
 
-Total: ~15 business proxy routes + auth routes.
-Total code to port: ~3,000+ lines + i18n extraction.
+Note: admin-ops business routes (`/businesses` CRUD, `pending`, `check-name`, `[id]/approve|reject|suspend`) stay in the admin app and are NOT ported.
+
+Total: ~20 business proxy routes + auth routes.
+Total code to port: ~3,500+ lines + i18n extraction.
+
+### Already on the public site (`jogjagem/src/app/[locale]/business/`) — do NOT port, reconcile instead
+- `page.tsx` — "Bisnis / Jogjagem untuk Pelaku Bisnis" landing page
+- `claim/page.tsx` — listing ownership claim flow (uses `/listing-claims/*` via `src/lib/api.ts`)
+- `invites/[token]/page.tsx` — team-invite accept flow (uses `/businesses/invites/:token` via `businessInvites` in `src/lib/api.ts`)
+
+The invite email URL already points to `NEXT_PUBLIC_FRONTEND_URL` (portal), so invite acceptance already runs on the portal. When adding the management panels under `[locale]/business/*`, keep these existing sub-paths and add sibling routes (e.g. `dashboard`, `listings`, `settings`, `team`, `subscriptions`, ...) without collisions.
 
 ## Known issues to preserve/fix during migration
 - Invalid/stale JWT → empty `/api/businesses/me` → redirect to settings. `business/page.tsx` should treat 401 as "log in again", not "no business".
@@ -69,7 +86,7 @@ Total code to port: ~3,000+ lines + i18n extraction.
 - Payment/webhook: Midtrans webhook can't reach localhost in dev; `PollPendingExpired` scheduler in backend is defined but never started (see `payment/service.go`) — wire it up or plan relies on webhook reaching a public URL.
 
 ## Target architecture (public site, port 3001)
-- Route group: `jogjagem/src/app/[locale]/business/*` (pages ported from admin)
+- Route group: `jogjagem/src/app/[locale]/business/*` (pages ported from admin) — reconcile with the existing `claim` and `invites/[token]` sub-paths already on the portal
 - Partner middleware: gate `/[locale]/business` to role `partner`/`business_owner`; non-partner → public home/login
 - Login flow: partner logs in on public site → lands `/[locale]/business` (cookie shared)
 - i18n: extract all hardcoded Indonesian strings → `id.json` + `en.json`; use `useTranslations`
@@ -87,10 +104,10 @@ Total code to port: ~3,000+ lines + i18n extraction.
 - Verify: `tsc --noEmit` + page loads for partner token
 
 ### Phase 2 — Panels + API
-- Port `ListingsPanel`, `PromotionsPanel`, `ReviewsPanel`, `SettingsPanel`, `SubscriptionsPanel`
+- Port `ListingsPanel`, `PromotionsPanel`, `ReviewsPanel`, `SettingsPanel`, `SubscriptionsPanel`, `TeamPanel`
 - Move business API proxy routes to frontend
 - Wire i18n strings into all panels
-- Verify: each panel functional end-to-end (listings, promotions, reviews, settings, upgrade flow)
+- Verify: each panel functional end-to-end (listings, promotions, reviews, settings, upgrade flow, team invites)
 
 ### Phase 3 — Switchover + cleanup
 - Partner login/redirect on public site → `[locale]/business`
@@ -103,7 +120,7 @@ Total code to port: ~3,000+ lines + i18n extraction.
 - Admin: `cd jogjagem-admin && npx tsc --noEmit`
 - Frontend: `cd jogjagem && npx tsc --noEmit`
 - Backend: `cd jogjagem-api && go build ./... && go vet ./...`
-- Manual: partner login → `[locale]/business` → dashboard/listings/promotions/reviews/settings/subscriptions
+- Manual: partner login → `[locale]/business` → dashboard/listings/promotions/reviews/settings/subscriptions/team (invite → accept via link)
 
 ## Refs
 - Frontend i18n: `jogjagem/package.json` has `next-intl`; `messages/en.json`, `messages/id.json`
