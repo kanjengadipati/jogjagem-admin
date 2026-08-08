@@ -13,6 +13,7 @@ import {
   BookOpen, Sparkles, Tag, UserCog, Shield, Settings, ChevronLeft,
   ChevronRight, ExternalLink, Bot, X, Scan, Flag, Megaphone,
   ClipboardList, PanelTop, Wand2,
+  Coins,
 } from "lucide-react";
 
 const ICON_MAP: Record<string, React.ElementType> = {
@@ -35,6 +36,7 @@ const ICON_MAP: Record<string, React.ElementType> = {
   "megaphone": Megaphone,
   "panel-top": PanelTop,
   "wand-2": Wand2,
+  "coins": Coins,
   "bot": Bot,
   "scan": Scan,
   "flag": Flag,

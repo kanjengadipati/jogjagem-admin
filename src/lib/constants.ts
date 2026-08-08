@@ -52,6 +52,7 @@ export const menuGroups: MenuGroup[] = [
     title: "Ads & Slots",
     items: [
       { name: "Ad Campaigns",   icon: "megaphone",  path: "/ad-campaigns", activeId: "ad-campaigns", badge: "New", badgeColor: "primary" },
+      { name: "Placement Pricing", icon: "coins",   path: "/ad-pricing",   activeId: "ad-pricing" },
       { name: "House Ads",      icon: "panel-top",  path: "/house-ads",    activeId: "house-ads" },
       { name: "Promotions",     icon: "tag",        path: "/promotions",   activeId: "promotions" },
     ],

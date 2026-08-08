@@ -129,17 +129,33 @@ export const SELLABLE_PLACEMENTS = Object.entries(AD_PLACEMENTS)
   .map(([key]) => key);
 
 /**
+ * Diskon volume per jumlah bulan (fraksi, 0..1) — mirror dari VolumeDiscounts
+ * di jogjagem-api/internal/modules/adcampaign/pricing.go.
+ */
+export const VOLUME_DISCOUNTS: Record<number, number> = {
+  3: 0.1,
+  6: 0.2,
+  12: 0.3,
+};
+
+export function volumeDiscountFor(months: number): number {
+  return VOLUME_DISCOUNTS[months] ?? 0;
+}
+
+/**
  * Harga flat untuk periode kampanye: tarif bulanan × jumlah bulan yang dicakup
- * (bulan pecahan dibulatkan ke atas, minimal 1 bulan). Disarankan MIRIP dengan
- * logika PriceFor() di jogjagem-api/internal/modules/adcampaign/pricing.go —
- * backend tetap sumber kebenaran harga; ini hanya untuk display di form.
+ * (bulan pecahan dibulatkan ke atas, minimal 1 bulan) − diskon volume tier.
+ * Disarankan MIRIP dengan logika PriceFor() di
+ * jogjagem-api/internal/modules/adcampaign/pricing.go — backend tetap sumber
+ * kebenaran harga; ini hanya untuk display di form.
  */
 export function computePrice(
   placement: string,
   start?: string,
-  end?: string
+  end?: string,
+  monthlyRate?: number
 ): number {
-  const monthly = AD_PLACEMENTS[placement]?.price ?? 0;
+  const monthly = monthlyRate ?? AD_PLACEMENTS[placement]?.price ?? 0;
   if (!start || !end) return monthly;
   const startMs = new Date(start).getTime();
   const endMs = new Date(end).getTime();
@@ -149,7 +165,7 @@ export function computePrice(
   const days = Math.floor((endMs - startMs) / 86400000) + 1;
   if (days <= 0) return monthly;
   const months = Math.max(1, Math.ceil(days / 30));
-  return monthly * months;
+  return monthly * months * (1 - volumeDiscountFor(months));
 }
 
 export function formatPrice(amount?: number): string {
