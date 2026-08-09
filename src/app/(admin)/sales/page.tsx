@@ -33,8 +33,10 @@ export default function SalesPage() {
   const { showToast } = useToast();
   const [items, setItems] = useState<SalesPerformanceItem[]>([]);
   const [bonuses, setBonuses] = useState<SalesBonusRecord[]>([]);
-  const [rate, setRate] = useState(0.2);
-  const [rateInput, setRateInput] = useState("20");
+  const [tier1Rate, setTier1Rate] = useState(0.2);
+  const [tier2Rate, setTier2Rate] = useState(0.1);
+  const [tier1Input, setTier1Input] = useState("20");
+  const [tier2Input, setTier2Input] = useState("10");
   const [editingRate, setEditingRate] = useState(false);
   const [loading, setLoading] = useState(true);
 
@@ -48,12 +50,16 @@ export default function SalesPage() {
       .then(([perf, bonusRes, rateRes]) => {
         const list: SalesPerformanceItem[] = perf?.data ?? [];
         const bonusList: SalesBonusRecord[] = bonusRes?.data ?? [];
-        const r = rateRes?.data?.rate;
+        const r = rateRes?.data;
         setItems(list);
         setBonuses(bonusList);
-        if (typeof r === "number") {
-          setRate(r);
-          setRateInput(String(Math.round(r * 100)));
+        if (typeof r?.tier1_rate === "number") {
+          setTier1Rate(r.tier1_rate);
+          setTier1Input(String(Math.round(r.tier1_rate * 100)));
+        }
+        if (typeof r?.tier2_rate === "number") {
+          setTier2Rate(r.tier2_rate);
+          setTier2Input(String(Math.round(r.tier2_rate * 100)));
         }
       })
       .catch(() => showToast("Error", "Gagal memuat data penjualan", "error"))
@@ -88,20 +94,25 @@ export default function SalesPage() {
     .reduce((s, b) => s + b.amount, 0);
 
   const saveRate = () => {
-    const pct = Number(rateInput);
-    if (Number.isNaN(pct) || pct <= 0 || pct >= 100) {
+    const t1 = Number(tier1Input);
+    const t2 = Number(tier2Input);
+    if (
+      Number.isNaN(t1) || t1 <= 0 || t1 >= 100 ||
+      Number.isNaN(t2) || t2 <= 0 || t2 >= 100
+    ) {
       showToast("Invalid", "Rate harus antara 0% dan 100%", "error");
       return;
     }
     fetch("/api/sales/commission-rate", {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ rate: pct / 100 }),
+      body: JSON.stringify({ tier1_rate: t1 / 100, tier2_rate: t2 / 100 }),
     })
       .then((r) => r.json())
       .then((d) => {
-        if (d?.status === "success" && typeof d?.data?.rate === "number") {
-          setRate(d.data.rate);
+        if (d?.status === "success" && typeof d?.data?.tier1_rate === "number") {
+          setTier1Rate(d.data.tier1_rate);
+          setTier2Rate(d.data.tier2_rate ?? tier2Rate);
           setEditingRate(false);
           showToast("Success", "Rate komisi berhasil diperbarui");
         } else {
@@ -197,22 +208,39 @@ export default function SalesPage() {
             <div>
               <p className="text-xs font-bold text-gray-800">Komisi Per Transaksi</p>
               <p className="text-[11px] text-gray-500 mt-0.5">
-                Persentase komisi yang dipotong dari setiap transaksi partner.
+                Tier 1 berlaku 12 bulan pertama sejak partner direferensikan, lalu turun ke Tier 2.
               </p>
             </div>
           </div>
           {editingRate ? (
-            <div className="flex items-center gap-2">
-              <div className="relative">
-                <input
-                  type="number"
-                  value={rateInput}
-                  onChange={(e) => setRateInput(e.target.value)}
-                  className="w-28 bg-bg focus:bg-white text-sm font-bold px-3.5 py-2 rounded-xl border border-transparent focus:border-border outline-none"
-                />
-                <span className="absolute inset-y-0 right-3 flex items-center text-xs text-gray-400 font-semibold pointer-events-none">
-                  %
-                </span>
+            <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+              <div className="flex items-center gap-2">
+                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Tier 1</label>
+                <div className="relative">
+                  <input
+                    type="number"
+                    value={tier1Input}
+                    onChange={(e) => setTier1Input(e.target.value)}
+                    className="w-20 bg-bg focus:bg-white text-sm font-bold px-3.5 py-2 rounded-xl border border-transparent focus:border-border outline-none"
+                  />
+                  <span className="absolute inset-y-0 right-3 flex items-center text-xs text-gray-400 font-semibold pointer-events-none">
+                    %
+                  </span>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Tier 2</label>
+                <div className="relative">
+                  <input
+                    type="number"
+                    value={tier2Input}
+                    onChange={(e) => setTier2Input(e.target.value)}
+                    className="w-20 bg-bg focus:bg-white text-sm font-bold px-3.5 py-2 rounded-xl border border-transparent focus:border-border outline-none"
+                  />
+                  <span className="absolute inset-y-0 right-3 flex items-center text-xs text-gray-400 font-semibold pointer-events-none">
+                    %
+                  </span>
+                </div>
               </div>
               <button
                 onClick={saveRate}
@@ -223,7 +251,8 @@ export default function SalesPage() {
               <button
                 onClick={() => {
                   setEditingRate(false);
-                  setRateInput(String(Math.round(rate * 100)));
+                  setTier1Input(String(Math.round(tier1Rate * 100)));
+                  setTier2Input(String(Math.round(tier2Rate * 100)));
                 }}
                 className="px-3 py-2 rounded-xl border border-border text-xs font-bold text-gray-500 hover:bg-bg transition cursor-pointer"
               >
@@ -235,7 +264,9 @@ export default function SalesPage() {
               onClick={() => setEditingRate(true)}
               className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-border text-xs font-bold text-gray-700 hover:bg-bg transition cursor-pointer"
             >
-              {formatPercent(rate)}
+              <span className="bg-primary/10 text-primary px-2 py-0.5 rounded-full">{formatPercent(tier1Rate)}</span>
+              <span className="text-gray-400">→</span>
+              <span className="bg-warning/10 text-warning px-2 py-0.5 rounded-full">{formatPercent(tier2Rate)}</span>
               <ChevronDown className="w-3.5 h-3.5" />
             </button>
           )}
