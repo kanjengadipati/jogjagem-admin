@@ -99,7 +99,8 @@ export function getMenuGroupsForRole(role: AdminRole): MenuGroup[] {
       {
         title: "My Earnings",
         items: [
-          { name: "Bonus & Komisi", icon: "trophy", path: "/sales/me", activeId: "sales-me" },
+          { name: "Overview", icon: "layout-dashboard", path: "/sales/me", activeId: "sales-me" },
+          { name: "Komisi", icon: "coins", path: "/sales/commissions", activeId: "sales-commissions" },
         ],
       },
     ];

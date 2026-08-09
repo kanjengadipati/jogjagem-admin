@@ -4,6 +4,7 @@ import { COOKIE_NAME } from "@/lib/constants";
 import { decodeJwtPayload } from "@/lib/jwt";
 import type { AdminRole } from "@/types";
 import { SidebarProvider } from "@/contexts/SidebarContext";
+import { RoleProvider } from "@/contexts/RoleContext";
 import Sidebar from "@/components/Sidebar";
 import { ToastProvider } from "@/components/Toast";
 
@@ -36,12 +37,14 @@ export default async function AdminLayout({
   return (
     <ToastProvider>
       <SidebarProvider>
-        <div className="flex min-h-screen relative">
-          <Sidebar role={role} />
-          <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
-            {children}
+        <RoleProvider role={role}>
+          <div className="flex min-h-screen relative">
+            <Sidebar role={role} />
+            <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+              {children}
+            </div>
           </div>
-        </div>
+        </RoleProvider>
       </SidebarProvider>
     </ToastProvider>
   );

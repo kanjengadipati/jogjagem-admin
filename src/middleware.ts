@@ -41,6 +41,31 @@ export function middleware(req: NextRequest) {
 
   const role = payload.role;
 
+  if (role === 'sales') {
+    // Sales agents get their own earnings page only — everything else in the
+    // admin portal (including the admin dashboard overview) is off-limits.
+    const isSalesPage =
+      pathname === '/sales/me' ||
+      pathname === '/sales/commissions' ||
+      pathname === '/settings/account';
+    const isSalesApi = pathname.startsWith('/api/sales/me');
+    const profileUserId = pathname.startsWith('/api/users/')
+      ? pathname.slice('/api/users/'.length)
+      : '';
+    const isProfileApi = profileUserId !== '' && !profileUserId.includes('/') && /^\d+$/.test(profileUserId);
+    const isAuthApi = pathname.startsWith('/api/auth');
+
+    if (isSalesPage || isSalesApi || isProfileApi || isAuthApi) {
+      return NextResponse.next();
+    }
+
+    if (pathname.startsWith('/api/')) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+
+    return NextResponse.redirect(new URL('/sales/me', req.url));
+  }
+
   if (role === 'partner' || role === 'business_owner') {
     // Allow access to business/partner portal and API
     if (
