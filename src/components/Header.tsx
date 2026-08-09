@@ -64,7 +64,10 @@ export default function Header({ activeId }: HeaderProps) {
         setUser({
           name: d.name || nameFromJwt || "Admin",
           email: d.email || "",
-          role: d.role === "superadmin" ? "Super Admin" : "Admin",
+          role:
+            d.role === "superadmin" ? "Super Admin" :
+            d.role === "sales"      ? "Sales" :
+                                       "Admin",
           avatar: d.avatar_url || FALLBACK_USER.avatar,
         });
       })

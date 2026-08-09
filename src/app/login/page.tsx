@@ -20,6 +20,9 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
     if (role === "partner" || role === "business_owner") {
       redirect("/business");
     }
+    if (role === "sales") {
+      redirect("/sales/me");
+    }
     if (role === "admin" || role === "superadmin") {
       redirect("/dashboard");
     }

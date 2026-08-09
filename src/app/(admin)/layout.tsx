@@ -25,12 +25,13 @@ export default async function AdminLayout({
     redirect("/business");
   }
 
-  // If user is a regular user (not admin/superadmin), kick them out to login
-  if (userRole !== "admin" && userRole !== "superadmin") {
+  // If user is a regular user (not admin/superadmin/sales), kick them out to login
+  if (userRole !== "admin" && userRole !== "superadmin" && userRole !== "sales") {
     redirect("/login");
   }
 
-  const role: AdminRole = userRole === "superadmin" ? "superadmin" : "admin";
+  const role: AdminRole =
+    userRole === "superadmin" ? "superadmin" : userRole === "sales" ? "sales" : "admin";
 
   return (
     <ToastProvider>

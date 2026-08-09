@@ -35,7 +35,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Invalid token received from server" }, { status: 500 });
     }
 
-    if (role !== "admin" && role !== "superadmin" && role !== "partner") {
+    if (role !== "admin" && role !== "superadmin" && role !== "partner" && role !== "sales") {
       return NextResponse.json(
         { error: "Access denied. Valid privileges required." },
         { status: 403 }
@@ -43,7 +43,10 @@ export async function POST(req: NextRequest) {
     }
 
     // Redirect or indicate dashboard/listings based on role
-    const redirectUrl = role === "partner" ? "/business" : "/dashboard";
+    const redirectUrl =
+      role === "partner" ? "/business" :
+      role === "sales"   ? "/sales/me" :
+                           "/dashboard";
     const response = NextResponse.json({ ok: true, redirectUrl });
     const domain = process.env.NODE_ENV === "production"
       ? (process.env.NEXT_PUBLIC_COOKIE_DOMAIN || ".jogjagem.com")

@@ -1,5 +1,5 @@
 // ─── Auth ─────────────────────────────────────────────────────────────────────
-export type AdminRole = "admin" | "superadmin";
+export type AdminRole = "admin" | "superadmin" | "sales";
 
 export interface AdminUser {
   name: string;
@@ -410,6 +410,18 @@ export interface SalesBonusRecord {
   metric?: "tenant" | "transaction";
   tier?: number;
   amount: number;
+  status: "pending" | "paid" | "voided";
+  created_at: string;
+}
+
+export interface SalesCommissionRecord {
+  id: number;
+  partner_user_id: number;
+  order_id: string;
+  subject_type: string;
+  gross_amount: number;
+  commission_rate: number;
+  commission_amount: number;
   status: "pending" | "paid" | "voided";
   created_at: string;
 }

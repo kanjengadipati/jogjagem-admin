@@ -94,6 +94,16 @@ export const partnerMenuGroups: MenuGroup[] = [
 ];
 
 export function getMenuGroupsForRole(role: AdminRole): MenuGroup[] {
+  if (role === "sales") {
+    return [
+      {
+        title: "My Earnings",
+        items: [
+          { name: "Bonus & Komisi", icon: "trophy", path: "/sales/me", activeId: "sales-me" },
+        ],
+      },
+    ];
+  }
   return menuGroups
     .map((group) => ({
       ...group,
@@ -107,6 +117,7 @@ export function getMenuGroupsForRole(role: AdminRole): MenuGroup[] {
 const ROLE_LABELS: Record<AdminRole, string> = {
   admin: "Admin",
   superadmin: "Super Admin",
+  sales: "Sales",
 };
 
 export function getAdminUser(role: AdminRole): AdminUser {
