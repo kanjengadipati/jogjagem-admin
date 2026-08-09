@@ -386,7 +386,7 @@ export default function SalesPage() {
                         <td className="px-4 py-3 text-gray-500 font-mono">
                           {b.type === "milestone"
                             ? `${b.metric} ≥ ${b.tier} · ${b.period ?? ""}`
-                            : `Tenant #${b.tenant_user_id ?? "—"}`}
+                            : `Partner #${b.partner_user_id ?? "—"}`}
                         </td>
                         <td className="px-4 py-3 font-bold text-gray-800">{formatIDR(b.amount)}</td>
                         <td className="px-4 py-3">

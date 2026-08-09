@@ -20,7 +20,7 @@ const TYPE_LABELS: Record<string, string> = {
 };
 
 const METRIC_LABELS: Record<string, string> = {
-  tenant: "Tenant Aktif",
+  tenant: "Partner Aktif",
   transaction: "Transaksi",
 };
 
@@ -192,7 +192,7 @@ export default function BonusRulesPage() {
               Bonus Rules
             </h2>
             <p className="text-xs text-gray-500 mt-1">
-              Aturan bonus sales — onboarding (flat) &amp; milestone (tiered, tier hanya dibayar saat threshold tercapai).
+              Aturan bonus sales — bonus awal (sekali) &amp; bonus tahapan (bertingkat, tiap tahap dibayar saat target tercapai).
             </p>
           </div>
           <button
@@ -221,12 +221,12 @@ export default function BonusRulesPage() {
               <table className="w-full text-xs">
                 <thead>
                   <tr className="border-b border-border bg-bg">
-                    <th className="text-left px-4 py-3 font-bold text-gray-500 uppercase tracking-wide text-[10px]">Tipe</th>
-                    <th className="text-left px-4 py-3 font-bold text-gray-500 uppercase tracking-wide text-[10px]">Metrik</th>
-                    <th className="text-left px-4 py-3 font-bold text-gray-500 uppercase tracking-wide text-[10px]">Tier / Threshold</th>
-                    <th className="text-left px-4 py-3 font-bold text-gray-500 uppercase tracking-wide text-[10px]">Bonus</th>
-                    <th className="text-left px-4 py-3 font-bold text-gray-500 uppercase tracking-wide text-[10px]">Periode Efektif</th>
-                    <th className="text-left px-4 py-3 font-bold text-gray-500 uppercase tracking-wide text-[10px]">Aktif</th>
+                    <th className="text-left px-4 py-3 font-bold text-gray-500 uppercase tracking-wide text-[10px]">Jenis</th>
+                    <th className="text-left px-4 py-3 font-bold text-gray-500 uppercase tracking-wide text-[10px]">Indikator</th>
+                    <th className="text-left px-4 py-3 font-bold text-gray-500 uppercase tracking-wide text-[10px]">Syarat</th>
+                    <th className="text-left px-4 py-3 font-bold text-gray-500 uppercase tracking-wide text-[10px]">Nominal</th>
+                    <th className="text-left px-4 py-3 font-bold text-gray-500 uppercase tracking-wide text-[10px]">Berlaku</th>
+                    <th className="text-left px-4 py-3 font-bold text-gray-500 uppercase tracking-wide text-[10px]">Status</th>
                     <th className="text-left px-4 py-3 font-bold text-gray-500 uppercase tracking-wide text-[10px]">Aksi</th>
                   </tr>
                 </thead>
@@ -249,8 +249,8 @@ export default function BonusRulesPage() {
                       </td>
                       <td className="px-4 py-3 text-gray-700 font-mono">
                         {r.type === "milestone"
-                          ? `≥ ${r.threshold} → tier ${r.tier}`
-                          : "—"}
+                          ? `Tier ${r.tier} · min. ${r.threshold}`
+                          : "Sekali"}
                       </td>
                       <td className="px-4 py-3 font-bold text-gray-800">{formatIDR(r.amount)}</td>
                       <td className="px-4 py-3 text-gray-500 font-mono">
@@ -322,7 +322,7 @@ export default function BonusRulesPage() {
 
         {!loading && (
           <p className="text-xs text-gray-400 font-semibold">
-            {rules.length} rule · Rules aktif dalam periode efektifnya yang dipakai saat settlement
+            {rules.length} rule · Hanya rule aktif yang berada dalam masa berlakunya dipakai saat penghitungan bonus
           </p>
         )}
       </main>
@@ -381,7 +381,7 @@ export default function BonusRulesPage() {
                       }
                       className={inputCls + " cursor-pointer"}
                     >
-                      <option value="tenant">Tenant Aktif</option>
+                      <option value="tenant">Partner Aktif</option>
                       <option value="transaction">Transaksi</option>
                     </select>
                   </div>
@@ -407,7 +407,7 @@ export default function BonusRulesPage() {
                   </div>
                   <div className="flex items-end">
                     <p className="text-[10px] text-gray-400 leading-relaxed">
-                      Bonus tier {form.tier || "n"} dibayar saat {form.metric === "tenant" ? "tenant aktif" : "transaksi"} mencapai {form.threshold || "n"}.
+                      Bonus tier {form.tier || "n"} dibayar saat {form.metric === "tenant" ? "partner aktif" : "transaksi"} mencapai {form.threshold || "n"}.
                     </p>
                   </div>
                 </div>

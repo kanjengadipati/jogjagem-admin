@@ -392,8 +392,6 @@ export interface SalesPerformanceItem {
   total_partners: number;
   total_transactions: number;
   total_volume: number;
-  volume_from_subscription: number;
-  volume_from_ad_campaign: number;
   pending_commission: number;
   paid_commission: number;
   total_commission_earned: number;
@@ -405,7 +403,7 @@ export interface SalesBonusRecord {
   sales_user_name?: string;
   sales_user_email?: string;
   type: "onboarding" | "milestone";
-  tenant_user_id?: number;
+  partner_user_id?: number;
   period?: string;
   metric?: "tenant" | "transaction";
   tier?: number;
