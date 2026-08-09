@@ -64,6 +64,7 @@ type FormState = {
   seo_description_en: string;
   og_image_url: string;
   status: string;
+  hidden_gem_override: string; // '' | 'pin' | 'exclude'
   content_score?: number;
   content_verdict?: string;
 };
@@ -73,6 +74,7 @@ const EMPTY_FORM: FormState = {
   description: "", description_en: "", story: "", story_en: "", ticket_price: "", opening_hours: "", best_time: "", best_time_en: "",
   latitude: "", longitude: "", video_url: "", google_maps_url: "", rating: "", review_count: "", seo_title: "", seo_title_en: "", seo_keywords: "", seo_keywords_en: "", seo_description: "", seo_description_en: "", og_image_url: "",
   status: "published",
+  hidden_gem_override: "",
 };
 
 type FaqItem = { q: string; a: string };
@@ -274,6 +276,7 @@ export default function DestinationDetailPage() {
             seo_description_en: data.seo_description_en ?? "",
             og_image_url: data.og_image_url ?? "",
             status: data.status ?? "published",
+            hidden_gem_override: (data as any).hidden_gem_override ?? "",
           });
           setGalleryImgs(parseImages(data.images));
           setRich({
@@ -400,6 +403,7 @@ export default function DestinationDetailPage() {
         travel_tips: rich.travel_tips,
         faqs: rich.faqs,
         weather: rich.weather,
+        hidden_gem_override: form.hidden_gem_override,
       };
 
       const rating = parseFloat(form.rating);
@@ -1261,6 +1265,32 @@ export default function DestinationDetailPage() {
                   <input type="radio" name="pub-status" checked={form.status === s} onChange={() => setField("status", s)} className="text-primary focus:ring-primary w-4 h-4" />
                 </label>
               ))}
+            </div>
+
+            <div className="bg-white p-6 rounded-card border border-border shadow-soft space-y-3">
+              <h4 className="text-xs font-bold text-gray-400 uppercase tracking-widest font-display">Hidden Gem Override</h4>
+              <p className="text-[10px] text-gray-400 leading-relaxed">
+                Controls whether this destination is forced in or out of the weekly curated Hidden Gem selection (max 15).
+              </p>
+              <select
+                value={form.hidden_gem_override}
+                onChange={(e) => setField("hidden_gem_override", e.target.value)}
+                className="w-full bg-bg focus:bg-white text-xs px-3.5 py-3 rounded-xl border border-transparent focus:border-border outline-none font-semibold text-gray-700 cursor-pointer"
+              >
+                <option value="">Natural — follow formula</option>
+                <option value="pin">📌 Pin — always include</option>
+                <option value="exclude">🚫 Exclude — never include</option>
+              </select>
+              {form.hidden_gem_override === "pin" && (
+                <p className="text-[10px] text-teal-600 font-semibold">
+                  This destination will always appear in the Hidden Gem list regardless of rating or review count.
+                </p>
+              )}
+              {form.hidden_gem_override === "exclude" && (
+                <p className="text-[10px] text-red-500 font-semibold">
+                  This destination will never appear in the Hidden Gem list even if it meets the formula criteria.
+                </p>
+              )}
             </div>
 
             {galleryImgs.length > 0 && (
