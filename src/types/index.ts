@@ -382,3 +382,48 @@ export interface SiteSeoConfig {
   landing_hero_subtitle: string;
   landing_cta_text: string;
 }
+
+// ─── Sales & Bonus ───────────────────────────────────────────────────────────
+export interface SalesPerformanceItem {
+  sales_user_id: number;
+  sales_name: string;
+  sales_email: string;
+  referral_code: string;
+  total_partners: number;
+  total_transactions: number;
+  total_volume: number;
+  volume_from_subscription: number;
+  volume_from_ad_campaign: number;
+  pending_commission: number;
+  paid_commission: number;
+  total_commission_earned: number;
+}
+
+export interface SalesBonusRecord {
+  id: number;
+  sales_user_id: number;
+  sales_user_name?: string;
+  sales_user_email?: string;
+  type: "onboarding" | "milestone";
+  tenant_user_id?: number;
+  period?: string;
+  metric?: "tenant" | "transaction";
+  tier?: number;
+  amount: number;
+  status: "pending" | "paid" | "voided";
+  created_at: string;
+}
+
+export interface BonusRule {
+  id: number;
+  type: "onboarding" | "milestone";
+  metric: "tenant" | "transaction";
+  tier?: number;
+  threshold?: number;
+  amount: number;
+  is_active: boolean;
+  effective_from?: string;
+  effective_until?: string;
+  created_at: string;
+  updated_at: string;
+}

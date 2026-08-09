@@ -58,6 +58,14 @@ export const menuGroups: MenuGroup[] = [
     ],
   },
   {
+    title: "Sales & Bonus",
+    items: [
+      { name: "Sales Performance", icon: "trending-up", path: "/sales",            activeId: "sales",       },
+      { name: "Bonus Records",     icon: "trophy",      path: "/sales/bonuses",    activeId: "bonuses"      },
+      { name: "Bonus Rules",       icon: "coins",       path: "/sales/bonus-rules", activeId: "bonus-rules" },
+    ],
+  },
+  {
     title: "Content",
     items: [
       { name: "Content Queue",  icon: "wand-2",     path: "/content-queue", activeId: "content-queue", badge: "AI", badgeColor: "warning" },
