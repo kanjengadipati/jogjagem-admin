@@ -44,6 +44,11 @@ export default function ScraperReviewPage() {
   const [processing, setProcessing] = useState(false);
   const selectAllRef = useRef<HTMLInputElement>(null);
 
+  // Reset selection whenever the displayed data changes
+  useEffect(() => {
+    setSelectedIds([]);
+  }, [dests, events]);
+
   const items = tab === "events" ? events : dests;
   const hasAiReview = tab === "destinations";
   const allSelected = items.length > 0 && selectedIds.length === items.length;
@@ -111,8 +116,12 @@ export default function ScraperReviewPage() {
   }
 
   const toggleSelect = (id: number) => {
-    setSelectedIds((prev) => (prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]));
+    setSelectedIds((prev) =>
+      prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]
+    );
   };
+
+  const isSelected = (id: number) => selectedIds.includes(Number(id));
 
   const formatDate = (iso?: string) => {
     if (!iso) return null;
@@ -223,7 +232,7 @@ export default function ScraperReviewPage() {
                         ref={selectAllRef}
                         type="checkbox"
                         onChange={(e) =>
-                          setSelectedIds(e.target.checked ? items.map((i) => i.id) : [])
+                          setSelectedIds(e.target.checked ? items.map((i) => Number(i.id)) : [])
                         }
                         checked={allSelected}
                         className="rounded"
@@ -256,8 +265,8 @@ export default function ScraperReviewPage() {
                           <td className="p-4">
                             <input
                               type="checkbox"
-                              checked={selectedIds.includes(item.id)}
-                              onChange={() => toggleSelect(item.id)}
+                              checked={isSelected(item.id)}
+                              onChange={() => toggleSelect(Number(item.id))}
                               className="rounded"
                             />
                           </td>
@@ -305,8 +314,8 @@ export default function ScraperReviewPage() {
                           <td className="p-4">
                             <input
                               type="checkbox"
-                              checked={selectedIds.includes(item.id)}
-                              onChange={() => toggleSelect(item.id)}
+                              checked={isSelected(item.id)}
+                              onChange={() => toggleSelect(Number(item.id))}
                               className="rounded"
                             />
                           </td>
