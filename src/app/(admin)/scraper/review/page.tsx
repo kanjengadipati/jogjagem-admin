@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import Header from "@/components/Header";
 import { useToast } from "@/components/Toast";
@@ -42,6 +42,19 @@ export default function ScraperReviewPage() {
   const [loading, setLoading] = useState(true);
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
   const [processing, setProcessing] = useState(false);
+  const selectAllRef = useRef<HTMLInputElement>(null);
+
+  const items = tab === "events" ? events : dests;
+  const hasAiReview = tab === "destinations";
+  const allSelected = items.length > 0 && selectedIds.length === items.length;
+  const someSelected = selectedIds.length > 0 && selectedIds.length < items.length;
+
+  // Sync indeterminate state on select-all checkbox
+  useEffect(() => {
+    if (selectAllRef.current) {
+      selectAllRef.current.indeterminate = someSelected;
+    }
+  });
 
   async function fetchTab(t: Tab) {
     setLoading(true);
@@ -100,9 +113,6 @@ export default function ScraperReviewPage() {
   const toggleSelect = (id: number) => {
     setSelectedIds((prev) => (prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]));
   };
-
-  const items = tab === "events" ? events : dests;
-  const hasAiReview = tab === "destinations";
 
   const formatDate = (iso?: string) => {
     if (!iso) return null;
@@ -210,11 +220,12 @@ export default function ScraperReviewPage() {
                   <tr className="border-b border-border bg-gray-50/50">
                     <th className="p-4 w-12">
                       <input
+                        ref={selectAllRef}
                         type="checkbox"
                         onChange={(e) =>
                           setSelectedIds(e.target.checked ? items.map((i) => i.id) : [])
                         }
-                        checked={selectedIds.length === items.length && items.length > 0}
+                        checked={allSelected}
                         className="rounded"
                       />
                     </th>
