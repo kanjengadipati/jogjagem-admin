@@ -13,7 +13,7 @@ import { BACKEND_URL } from "@/lib/constants";
 type Tab = "destinations" | "events";
 
 interface StagingDestination {
-  id: number;
+  ID: number;
   name: string;
   description?: string;
   latitude?: string;
@@ -24,7 +24,7 @@ interface StagingDestination {
 }
 
 interface StagingEvent {
-  id: number;
+  ID: number;
   title: string;
   description?: string;
   location?: string;
@@ -232,7 +232,7 @@ export default function ScraperReviewPage() {
                         ref={selectAllRef}
                         type="checkbox"
                         onChange={(e) =>
-                          setSelectedIds(e.target.checked ? items.map((i) => Number(i.id)) : [])
+                          setSelectedIds(e.target.checked ? items.map((i) => Number(i.ID)) : [])
                         }
                         checked={allSelected}
                         className="rounded"
@@ -261,12 +261,12 @@ export default function ScraperReviewPage() {
                 <tbody>
                   {tab === "destinations"
                     ? dests.map((item) => (
-                        <tr key={item.id} className="border-b border-border last:border-0 hover:bg-gray-50/50 transition">
+                        <tr key={item.ID} className="border-b border-border last:border-0 hover:bg-gray-50/50 transition">
                           <td className="p-4">
                             <input
                               type="checkbox"
-                              checked={isSelected(item.id)}
-                              onChange={() => toggleSelect(Number(item.id))}
+                              checked={isSelected(item.ID)}
+                              onChange={() => toggleSelect(Number(item.ID))}
                               className="rounded"
                             />
                           </td>
@@ -310,12 +310,12 @@ export default function ScraperReviewPage() {
                         </tr>
                       ))
                     : events.map((item) => (
-                        <tr key={item.id} className="border-b border-border last:border-0 hover:bg-gray-50/50 transition">
+                        <tr key={item.ID} className="border-b border-border last:border-0 hover:bg-gray-50/50 transition">
                           <td className="p-4">
                             <input
                               type="checkbox"
-                              checked={isSelected(item.id)}
-                              onChange={() => toggleSelect(Number(item.id))}
+                              checked={isSelected(item.ID)}
+                              onChange={() => toggleSelect(Number(item.ID))}
                               className="rounded"
                             />
                           </td>
