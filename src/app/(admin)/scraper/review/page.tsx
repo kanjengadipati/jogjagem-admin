@@ -6,7 +6,7 @@ import Header from "@/components/Header";
 import { useToast } from "@/components/Toast";
 import {
   Table2, Sparkles, Check, X, Loader2, CheckCircle2, ArrowRight, MapPin,
-  Calendar,
+  Calendar, ThumbsUp, ThumbsDown,
 } from "lucide-react";
 import { BACKEND_URL } from "@/lib/constants";
 
@@ -34,6 +34,12 @@ interface StagingEvent {
   status: string;
 }
 
+interface AIRecommendation {
+  id: number;
+  approved: boolean;
+  reason: string;
+}
+
 export default function ScraperReviewPage() {
   const { showToast } = useToast();
   const [tab, setTab] = useState<Tab>("destinations");
@@ -42,11 +48,14 @@ export default function ScraperReviewPage() {
   const [loading, setLoading] = useState(true);
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
   const [processing, setProcessing] = useState(false);
+  const [aiReviewing, setAiReviewing] = useState(false);
+  const [aiRecommendations, setAiRecommendations] = useState<Record<number, AIRecommendation>>({});
   const selectAllRef = useRef<HTMLInputElement>(null);
 
-  // Reset selection whenever the displayed data changes
+  // Reset selection and AI recommendations whenever the displayed data changes
   useEffect(() => {
     setSelectedIds([]);
+    setAiRecommendations({});
   }, [dests, events]);
 
   const items = tab === "events" ? events : dests;
@@ -64,6 +73,7 @@ export default function ScraperReviewPage() {
   async function fetchTab(t: Tab) {
     setLoading(true);
     setSelectedIds([]);
+    setAiRecommendations({});
     try {
       const path = t === "events" ? "/admin/staging/events" : "/admin/staging/destinations";
       const res = await fetch(`${BACKEND_URL}${path}`);
@@ -91,12 +101,39 @@ export default function ScraperReviewPage() {
     await fetchTab(t);
   }
 
-  async function handleBulkAction(action: "approve" | "reject" | "ai-review") {
+  async function handleAIReview() {
+    if (selectedIds.length === 0) return;
+    setAiReviewing(true);
+    try {
+      const res = await fetch(`${BACKEND_URL}/admin/staging/destinations/ai-review`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ids: selectedIds }),
+      });
+      const body = await res.json();
+      if (res.ok && body.status === "success") {
+        const results: AIRecommendation[] = body.data || [];
+        const map: Record<number, AIRecommendation> = {};
+        for (const r of results) {
+          map[r.id] = r;
+        }
+        setAiRecommendations((prev) => ({ ...prev, ...map }));
+        showToast("AI Review", `${results.length} item reviewed. Check recommendations below.`, "success");
+      } else {
+        showToast("Error", "AI review failed", "error");
+      }
+    } catch {
+      showToast("Error", "Network error", "error");
+    } finally {
+      setAiReviewing(false);
+    }
+  }
+
+  async function handleBulkAction(action: "approve" | "reject") {
     if (selectedIds.length === 0) return;
     setProcessing(true);
     try {
-      const endpoint = action === "ai-review" ? "ai-review" : action;
-      const res = await fetch(`${BACKEND_URL}/admin/staging/${tab}/${endpoint}`, {
+      const res = await fetch(`${BACKEND_URL}/admin/staging/${tab}/${action}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ids: selectedIds }),
@@ -160,12 +197,16 @@ export default function ScraperReviewPage() {
             </Link>
             {hasAiReview && (
               <button
-                onClick={() => handleBulkAction("ai-review")}
-                disabled={processing || selectedIds.length === 0}
+                onClick={handleAIReview}
+                disabled={aiReviewing || selectedIds.length === 0}
                 className="flex items-center gap-2 bg-purple-600 hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed text-white px-4 py-2 rounded-xl text-xs font-semibold shadow-premium transition cursor-pointer"
               >
-                <Sparkles className="w-4 h-4" />
-                AI Review
+                {aiReviewing ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Sparkles className="w-4 h-4" />
+                )}
+                {aiReviewing ? "Reviewing…" : "AI Review"}
               </button>
             )}
             <button
@@ -256,59 +297,93 @@ export default function ScraperReviewPage() {
                     )}
                     <th className="p-4 text-[11px] font-bold text-gray-400 uppercase tracking-wider">Source</th>
                     <th className="p-4 text-[11px] font-bold text-gray-400 uppercase tracking-wider">Status</th>
+                    {Object.keys(aiRecommendations).length > 0 && tab === "destinations" && (
+                      <th className="p-4 text-[11px] font-bold text-gray-400 uppercase tracking-wider">AI Rec.</th>
+                    )}
                   </tr>
                 </thead>
                 <tbody>
                   {tab === "destinations"
-                    ? dests.map((item) => (
-                        <tr key={item.ID} className="border-b border-border last:border-0 hover:bg-gray-50/50 transition">
-                          <td className="p-4">
-                            <input
-                              type="checkbox"
-                              checked={isSelected(item.ID)}
-                              onChange={() => toggleSelect(Number(item.ID))}
-                              className="rounded"
-                            />
-                          </td>
-                          <td className="p-4">
-                            <p className="text-sm font-semibold text-gray-900">{item.name}</p>
-                          </td>
-                          <td className="p-4 max-w-xs">
-                            <p className="text-xs text-gray-500 line-clamp-2">
-                              {item.description || <span className="text-gray-300">—</span>}
-                            </p>
-                          </td>
-                          <td className="p-4">
-                            {item.category ? (
-                              <span className="text-[10px] font-bold px-2 py-1 rounded-full bg-primary/10 text-primary capitalize">
-                                {item.category}
+                    ? dests.map((item) => {
+                        const rec = aiRecommendations[item.ID];
+                        return (
+                          <tr key={item.ID} className="border-b border-border last:border-0 hover:bg-gray-50/50 transition">
+                            <td className="p-4">
+                              <input
+                                type="checkbox"
+                                checked={isSelected(item.ID)}
+                                onChange={() => toggleSelect(Number(item.ID))}
+                                className="rounded"
+                              />
+                            </td>
+                            <td className="p-4">
+                              <p className="text-sm font-semibold text-gray-900">{item.name}</p>
+                            </td>
+                            <td className="p-4 max-w-xs">
+                              <p className="text-xs text-gray-500 line-clamp-2">
+                                {item.description || <span className="text-gray-300">—</span>}
+                              </p>
+                            </td>
+                            <td className="p-4">
+                              {item.category ? (
+                                <span className="text-[10px] font-bold px-2 py-1 rounded-full bg-primary/10 text-primary capitalize">
+                                  {item.category}
+                                </span>
+                              ) : (
+                                <span className="text-gray-300">—</span>
+                              )}
+                            </td>
+                            <td className="p-4">
+                              {item.latitude && item.longitude ? (
+                                <span className="flex items-center gap-1 text-[11px] text-gray-500 font-mono">
+                                  <MapPin className="w-3 h-3 text-gray-400" />
+                                  {Number(item.latitude).toFixed(4)}, {Number(item.longitude).toFixed(4)}
+                                </span>
+                              ) : (
+                                <span className="text-gray-300">—</span>
+                              )}
+                            </td>
+                            <td className="p-4">
+                              <span className="text-[10px] font-bold px-2 py-1 rounded-full bg-gray-100 text-gray-600 capitalize">
+                                {item.source}
                               </span>
-                            ) : (
-                              <span className="text-gray-300">—</span>
-                            )}
-                          </td>
-                          <td className="p-4">
-                            {item.latitude && item.longitude ? (
-                              <span className="flex items-center gap-1 text-[11px] text-gray-500 font-mono">
-                                <MapPin className="w-3 h-3 text-gray-400" />
-                                {Number(item.latitude).toFixed(4)}, {Number(item.longitude).toFixed(4)}
+                            </td>
+                            <td className="p-4">
+                              <span className="text-[10px] font-bold px-2 py-1 rounded-full bg-warning/10 text-warning capitalize">
+                                {item.status}
                               </span>
-                            ) : (
-                              <span className="text-gray-300">—</span>
+                            </td>
+                            {Object.keys(aiRecommendations).length > 0 && (
+                              <td className="p-4">
+                                {rec ? (
+                                  <div className="group relative flex items-center gap-1.5">
+                                    {rec.approved ? (
+                                      <span className="flex items-center gap-1 text-[10px] font-bold px-2 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                        <ThumbsUp className="w-3 h-3" />
+                                        Approve
+                                      </span>
+                                    ) : (
+                                      <span className="flex items-center gap-1 text-[10px] font-bold px-2 py-1 rounded-full bg-red-50 text-red-700 border border-red-200">
+                                        <ThumbsDown className="w-3 h-3" />
+                                        Reject
+                                      </span>
+                                    )}
+                                    {/* Tooltip */}
+                                    {rec.reason && (
+                                      <div className="absolute bottom-full left-0 mb-1.5 z-10 hidden group-hover:block w-56 bg-gray-900 text-white text-[10px] leading-relaxed rounded-lg px-3 py-2 shadow-lg pointer-events-none">
+                                        {rec.reason}
+                                        <div className="absolute top-full left-3 border-4 border-transparent border-t-gray-900" />
+                                      </div>
+                                    )}
+                                  </div>
+                                ) : (
+                                  <span className="text-gray-300">—</span>
+                                )}
+                              </td>
                             )}
-                          </td>
-                          <td className="p-4">
-                            <span className="text-[10px] font-bold px-2 py-1 rounded-full bg-gray-100 text-gray-600 capitalize">
-                              {item.source}
-                            </span>
-                          </td>
-                          <td className="p-4">
-                            <span className="text-[10px] font-bold px-2 py-1 rounded-full bg-warning/10 text-warning capitalize">
-                              {item.status}
-                            </span>
-                          </td>
-                        </tr>
-                      ))
+                          </tr>
+                        );
+                      })
                     : events.map((item) => (
                         <tr key={item.ID} className="border-b border-border last:border-0 hover:bg-gray-50/50 transition">
                           <td className="p-4">
