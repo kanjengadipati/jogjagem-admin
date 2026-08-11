@@ -9,9 +9,11 @@ async function getApi() {
   return fetchWithAuth(token);
 }
 
-export async function GET(_: NextRequest, { params }: { params: Promise<{ tab: string }> }) {
+export async function GET(req: NextRequest, { params }: { params: Promise<{ tab: string }> }) {
   const { tab } = await params;
   const api = await getApi();
-  const { status, data } = await api(`/admin/staging/${tab}`);
+  const source = req.nextUrl.searchParams.get("source") ?? "";
+  const qs = source ? `?source=${encodeURIComponent(source)}` : "";
+  const { status, data } = await api(`/admin/staging/${tab}${qs}`);
   return NextResponse.json(data, { status });
 }

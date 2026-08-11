@@ -50,6 +50,22 @@ export default function ScraperReviewPage() {
   const [aiReviewing, setAiReviewing] = useState(false);
   const [aiRecommendations, setAiRecommendations] = useState<Record<number, AIRecommendation>>({});
   const selectAllRef = useRef<HTMLInputElement>(null);
+  // Filters
+  type DateGroup = "all" | "active" | "upcoming" | "completed";
+  const [sourceFilter, setSourceFilter] = useState<string>("all");
+  const [dateGroup, setDateGroup] = useState<DateGroup>("all");
+  const SOURCE_OPTIONS = [
+    { value: "all", label: "All Sources" },
+    { value: "visitingjogja", label: "Visiting Jogja" },
+    { value: "injourney", label: "InJourney" },
+    { value: "jadesta", label: "Jadesta" },
+  ];
+  const DATE_OPTIONS: { value: DateGroup; label: string }[] = [
+    { value: "all", label: "All Dates" },
+    { value: "active", label: "Active Now" },
+    { value: "upcoming", label: "Upcoming" },
+    { value: "completed", label: "Completed" },
+  ];
 
   // Reset selection and AI recommendations whenever the displayed data changes
   useEffect(() => {
@@ -58,8 +74,20 @@ export default function ScraperReviewPage() {
   }, [dests, events]);
 
   const items = tab === "events" ? events : dests;
-  const allSelected = items.length > 0 && selectedIds.length === items.length;
-  const someSelected = selectedIds.length > 0 && selectedIds.length < items.length;
+  // Client-side date/status-group filter (events only)
+  const now = Date.now();
+  function eventGroup(e: StagingEvent): DateGroup {
+    const s = e.start_date ? Date.parse(e.start_date) : NaN;
+    const en = e.end_date ? Date.parse(e.end_date) : NaN;
+    if (!Number.isNaN(en) && en < now) return "completed";
+    if (!Number.isNaN(s) && s > now) return "upcoming";
+    return "active";
+  }
+  const displayItems = tab === "events" && dateGroup !== "all"
+    ? items.filter((e) => eventGroup(e as StagingEvent) === dateGroup)
+    : items;
+  const allSelected = displayItems.length > 0 && selectedIds.length === displayItems.length;
+  const someSelected = selectedIds.length > 0 && selectedIds.length < displayItems.length;
 
   // Sync indeterminate state on select-all checkbox
   useEffect(() => {
@@ -73,8 +101,9 @@ export default function ScraperReviewPage() {
     setSelectedIds([]);
     setAiRecommendations({});
     try {
-      const path = t === "events" ? "/api/scraper/staging/events" : "/api/scraper/staging/destinations";
-      const res = await fetch(path);
+      const base = t === "events" ? "/api/scraper/staging/events" : "/api/scraper/staging/destinations";
+      const qs = sourceFilter && sourceFilter !== "all" ? `?source=${encodeURIComponent(sourceFilter)}` : "";
+      const res = await fetch(`${base}${qs}`);
       const body = await res.json();
       if (body.status === "success") {
         if (t === "events") {
@@ -96,6 +125,8 @@ export default function ScraperReviewPage() {
 
   async function switchTab(t: Tab) {
     setTab(t);
+    if (t === "destinations") setDateGroup("all");
+    setSourceFilter("all");
     await fetchTab(t);
   }
 
@@ -274,11 +305,44 @@ export default function ScraperReviewPage() {
           </button>
         </div>
 
+        {/* Filters */}
+        <div className="flex flex-wrap items-center gap-3">
+          <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest font-display">Source</label>
+          <select
+            value={sourceFilter}
+            onChange={(e) => { setSourceFilter(e.target.value); fetchTab(tab); }}
+            className="appearance-none bg-white border border-border text-xs font-semibold text-gray-700 rounded-xl px-3.5 py-2 pl-8 pr-3 focus:outline-none focus:ring-2 focus:ring-primary/30"
+            style={{ backgroundImage: "url(\"data:image/svg;charset=UTF-8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 9 12 15 18 9'></polyline></svg>\")" }}
+          >
+            {SOURCE_OPTIONS.map((o) => (
+              <option key={o.value} value={o.value}>{o.label}</option>
+            ))}
+          </select>
+          {tab === "events" && (
+            <>
+              <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest font-display">Date</label>
+              <select
+                value={dateGroup}
+                onChange={(e) => setDateGroup(e.target.value as DateGroup)}
+                className="appearance-none bg-white border border-border text-xs font-semibold text-gray-700 rounded-xl px-3.5 py-2 pl-8 focus:outline-none focus:ring-2 focus:ring-primary/30"
+                style={{ backgroundImage: "url(\"data:image/svg;charset=UTF-8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 9 12 15 18 9'></polyline></svg>\")" }}
+              >
+                {DATE_OPTIONS.map((o) => (
+                  <option key={o.value} value={o.value}>{o.label}</option>
+                ))}
+              </select>
+            </>
+          )}
+          <span className="text-[10px] text-gray-400">
+            {displayItems.length} item{displayItems.length !== 1 ? "s" : ""} shown
+          </span>
+        </div>
+
         {loading ? (
           <div className="flex items-center justify-center py-20">
             <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
           </div>
-        ) : items.length === 0 ? (
+        ) : displayItems.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20 text-gray-400 gap-4">
             <CheckCircle2 className="w-14 h-14" />
             <span className="text-sm font-semibold">All caught up</span>
@@ -297,7 +361,7 @@ export default function ScraperReviewPage() {
                         ref={selectAllRef}
                         type="checkbox"
                         onChange={(e) =>
-                          setSelectedIds(e.target.checked ? items.map((i) => Number(i.ID)) : [])
+                          setSelectedIds(e.target.checked ? displayItems.map((i) => Number(i.ID)) : [])
                         }
                         checked={allSelected}
                         className="rounded"
@@ -382,7 +446,7 @@ export default function ScraperReviewPage() {
                           </tr>
                         );
                       })
-                    : events.map((item) => (
+                    : events.filter((e) => dateGroup === "all" || eventGroup(e) === dateGroup).map((item) => (
                         <tr key={item.ID} className="border-b border-border last:border-0 hover:bg-gray-50/50 transition">
                           <td className="p-4">
                             <input
