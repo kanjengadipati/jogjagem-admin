@@ -412,11 +412,6 @@ export default function EventsPage() {
                           <Link href={`/events/${ev.id}`} className="text-sm font-bold text-gray-900 font-display hover:text-primary transition-colors block">
                             {ev.title}
                           </Link>
-                          {ev.description && (
-                            <span className="text-[10px] text-gray-400 block mt-0.5 line-clamp-1 max-w-xs">
-                              {ev.description}
-                            </span>
-                          )}
                         </div>
                       </div>
                     </td>
