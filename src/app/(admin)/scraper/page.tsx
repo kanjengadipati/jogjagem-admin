@@ -9,15 +9,24 @@ import {
 } from "lucide-react";
 
 type ScrapeType = "all" | "destinations" | "events";
+type ScrapeSource = "all" | "injourney" | "jadesta" | "visitingjogja";
 
 interface ScrapeStatus {
   type: ScrapeType;
   startedAt: Date;
 }
 
+const SOURCE_OPTIONS: { value: ScrapeSource; label: string }[] = [
+  { value: "all", label: "All sources" },
+  { value: "visitingjogja", label: "Visiting Jogja (Events)" },
+  { value: "injourney", label: "InJourney" },
+  { value: "jadesta", label: "Jadesta" },
+];
+
 export default function ScraperPage() {
   const { showToast } = useToast();
   const [activeScrape, setActiveScrape] = useState<ScrapeStatus | null>(null);
+  const [source, setSource] = useState<ScrapeSource>("all");
 
   async function runScraper(type: ScrapeType) {
     if (activeScrape) {
@@ -25,7 +34,8 @@ export default function ScraperPage() {
       return;
     }
     try {
-      const endpoint = type === "all" ? "/api/scraper/run/all" : `/api/scraper/run/${type}`;
+      const base = type === "all" ? "/api/scraper/run/all" : `/api/scraper/run/${type}`;
+      const endpoint = source !== "all" ? `${base}?source=${source}` : base;
       const res = await fetch(endpoint);
       const body = await res.json();
       if (res.status === 409) {
@@ -64,7 +74,7 @@ export default function ScraperPage() {
                 Run Scraper
               </h2>
               <p className="text-xs text-gray-500 mt-1">
-                Fetch new events and destinations from external sources (InJourney, Jadesta).
+                Fetch new events and destinations from external sources (Visiting Jogja, InJourney, Jadesta).
               </p>
               <p className="text-[10px] text-gray-400 mt-1">
                 Destinations: monthly | Events: every 3 days
@@ -72,6 +82,17 @@ export default function ScraperPage() {
             </div>
           </div>
           <div className="flex items-center gap-2">
+            <select
+              value={source}
+              onChange={(e) => setSource(e.target.value as ScrapeSource)}
+              disabled={!!activeScrape}
+              className="px-3 py-2.5 rounded-xl border border-border bg-white text-xs font-semibold text-gray-700 focus:outline-none focus:ring-2 focus:ring-primary/30 disabled:opacity-50"
+              title="Choose which source to scrape"
+            >
+              {SOURCE_OPTIONS.map((o) => (
+                <option key={o.value} value={o.value}>{o.label}</option>
+              ))}
+            </select>
             <Link
               href="/scraper/review"
               className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-border bg-white text-xs font-semibold text-gray-600 hover:bg-bg transition cursor-pointer"
