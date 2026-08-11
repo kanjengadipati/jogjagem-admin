@@ -12,19 +12,26 @@ import { DownloadCloud, FileSpreadsheet, Plus, Search, Star, Edit3, X, Trash2, L
 import type { Destination, PaginationMeta } from "@/types";
 
 const PAGE_SIZE = 25;
-const CATEGORIES = ["Temple","Beach","Nature","Heritage","Cultural","Culinary","Shopping","Adventure","hidden-gem","family","weekend","sunset","sunrise","camping"];
-const REGIONS    = ["Sleman","Bantul","Yogyakarta","Gunungkidul","Kulon Progo","Near Yogyakarta"];
+const CATEGORIES = ["Temple", "Beach", "Nature", "Heritage", "Cultural", "Culinary", "Shopping", "Adventure", "hidden-gem", "family", "weekend", "sunset", "sunrise", "camping"];
+const REGIONS = ["Sleman", "Bantul", "Yogyakarta", "Gunungkidul", "Kulon Progo", "Near Yogyakarta"];
 const RATING_OPTIONS = [
-  { value: "",     label: "All Ratings" },
+  { value: "", label: "All Ratings" },
   { value: "high", label: "High (4.5+)" },
-  { value: "mid",  label: "Mid (3.5–4.5)" },
-  { value: "low",  label: "Low (< 3.5)" },
+  { value: "mid", label: "Mid (3.5–4.5)" },
+  { value: "low", label: "Low (< 3.5)" },
 ];
 
 const STATUS_OPTIONS = [
   { value: "", label: "All Statuses" },
   { value: "published", label: "Published" },
   { value: "draft", label: "Draft" },
+];
+
+const QUALITY_OPTIONS = [
+  { value: "", label: "All Quality" },
+  { value: "excellent", label: "Excellent (80+)" },
+  { value: "good", label: "Good (60–79)" },
+  { value: "needs_work", label: "Needs Work (< 60)" },
 ];
 
 /* ------------------------------------------------------------------ */
@@ -35,27 +42,27 @@ function matchesRegion(subRegion: string | undefined, filter: string): boolean {
   if (!filter) return true;          // no filter → show all
   if (!subRegion) return false;      // filter active but no region on record → hide
   const sr = subRegion.toLowerCase();
-  const f  = filter.toLowerCase();
+  const f = filter.toLowerCase();
   // "Yogyakarta" should match both "Yogyakarta" and "Kota Yogyakarta"
   return sr === f || sr.includes(f) || f.includes(sr);
 }
 
 function matchesCategory(d: Destination, filter: string): boolean {
   if (!filter) return true;
-  const f   = filter.toLowerCase();
+  const f = filter.toLowerCase();
   const cat = (d.category ?? "").toLowerCase();
-  const bt  = (d.best_time ?? "").toLowerCase();
-  const nm  = (d.name ?? "").toLowerCase();
+  const bt = (d.best_time ?? "").toLowerCase();
+  const nm = (d.name ?? "").toLowerCase();
   const tag = (d.tagline ?? "").toLowerCase();
   const desc = (d.description ?? "").toLowerCase();
 
   // ── Virtual / computed categories ────────────────────────────────────────
   if (f === "hidden-gem") return (d.rating ?? 0) >= 4.5 && (d.review_count ?? 0) < 2500;
-  if (f === "sunset")    return bt.includes("sore") || bt.includes("sunset");
-  if (f === "sunrise")   return bt.includes("sunrise") || bt.includes("fajar") || bt.includes("dawn");
-  if (f === "camping")   return bt.includes("camping");
-  if (f === "weekend")   return bt.includes("weekend") || tag.includes("weekend") || desc.includes("weekend");
-  if (f === "family")    return tag.includes("keluarga") || tag.includes("family") || desc.includes("keluarga") || desc.includes("family");
+  if (f === "sunset") return bt.includes("sore") || bt.includes("sunset");
+  if (f === "sunrise") return bt.includes("sunrise") || bt.includes("fajar") || bt.includes("dawn");
+  if (f === "camping") return bt.includes("camping");
+  if (f === "weekend") return bt.includes("weekend") || tag.includes("weekend") || desc.includes("weekend");
+  if (f === "family") return tag.includes("keluarga") || tag.includes("family") || desc.includes("keluarga") || desc.includes("family");
   if (f === "temple" || f === "candi") {
     return cat === "temple" || cat === "candi" ||
       nm.includes("candi") || nm.includes("temple") ||
@@ -81,8 +88,8 @@ function matchesRating(rating: number | undefined, filter: string): boolean {
   if (!filter) return true;
   const r = rating ?? 0;
   if (filter === "high") return r >= 4.5;
-  if (filter === "mid")  return r >= 3.5 && r < 4.5;
-  if (filter === "low")  return r < 3.5;
+  if (filter === "mid") return r >= 3.5 && r < 4.5;
+  if (filter === "low") return r < 3.5;
   return true;
 }
 
@@ -91,13 +98,27 @@ function matchesStatus(d: Destination, filter: string): boolean {
   return (d.status ?? "published").toLowerCase() === filter.toLowerCase();
 }
 
-function applyFilters(all: Destination[], search: string, category: string, region: string, rating: string, status: string): Destination[] {
+// Mirrors the thresholds in quality.go (VerdictExcellent >= 80, VerdictGood >= 60,
+// PublishScoreGate = 60). Records that were never scored (content_score undefined,
+// e.g. legacy rows from before the quality gate existed) fall into "needs_work" so
+// they surface for review instead of being silently treated as fine.
+function matchesQuality(score: number | undefined, filter: string): boolean {
+  if (!filter) return true;
+  const s = score ?? 0;
+  if (filter === "excellent") return s >= 80;
+  if (filter === "good") return s >= 60 && s < 80;
+  if (filter === "needs_work") return s < 60;
+  return true;
+}
+
+function applyFilters(all: Destination[], search: string, category: string, region: string, rating: string, status: string, quality: string): Destination[] {
   return all.filter(d =>
     matchesSearch(d, search) &&
     matchesCategory(d, category) &&
     matchesRegion(d.sub_region, region) &&
     matchesRating(d.rating, rating) &&
-    matchesStatus(d, status)
+    matchesStatus(d, status) &&
+    matchesQuality(d.content_score, quality)
   );
 }
 
@@ -109,12 +130,12 @@ export default function DestinationsPage() {
   const { showToast } = useToast();
 
   // ── Data state ──────────────────────────────────────────────────────────────
-  const [allItems,  setAllItems]  = useState<Destination[]>([]);
-  const [loading,   setLoading]   = useState(true);
+  const [allItems, setAllItems] = useState<Destination[]>([]);
+  const [loading, setLoading] = useState(true);
   const [exporting, setExporting] = useState(false);
 
   const [selected, setSelected] = useState<Set<string>>(new Set());
-  const [confirm,  setConfirm]  = useState<{ ids: string[]; label: string } | null>(null);
+  const [confirm, setConfirm] = useState<{ ids: string[]; label: string } | null>(null);
   const [deleting, setDeleting] = useState(false);
 
   const searchParams = useSearchParams();
@@ -122,24 +143,26 @@ export default function DestinationsPage() {
   const pathname = usePathname();
 
   // ── Filter / page state ─────────────────────────────────────────────────────
-  const [page,     setPage]     = useState(1);
-  const [search,   setSearch]   = useState(searchParams.get("search") || "");
+  const [page, setPage] = useState(1);
+  const [search, setSearch] = useState(searchParams.get("search") || "");
   const [category, setCategory] = useState(searchParams.get("category") || "");
-  const [region,   setRegion]   = useState(searchParams.get("region") || "");
-  const [rating,   setRating]   = useState(searchParams.get("rating") || "");
-  const [status,   setStatus]   = useState(searchParams.get("status") || "");
+  const [region, setRegion] = useState(searchParams.get("region") || "");
+  const [rating, setRating] = useState(searchParams.get("rating") || "");
+  const [status, setStatus] = useState(searchParams.get("status") || "");
+  const [quality, setQuality] = useState(searchParams.get("quality") || "");
 
   // Sync filters to URL
   useEffect(() => {
     const params = new URLSearchParams();
-    if (search)   params.set("search", search);
+    if (search) params.set("search", search);
     if (category) params.set("category", category);
-    if (region)   params.set("region", region);
-    if (rating)   params.set("rating", rating);
-    if (status)   params.set("status", status);
-    
+    if (region) params.set("region", region);
+    if (rating) params.set("rating", rating);
+    if (status) params.set("status", status);
+    if (quality) params.set("quality", quality);
+
     router.replace(`${pathname}?${params.toString()}`, { scroll: false });
-  }, [search, category, region, rating, status, router, pathname]);
+  }, [search, category, region, rating, status, quality, router, pathname]);
 
   // Track whether we've done the initial full fetch
   const didInit = useRef(false);
@@ -152,7 +175,7 @@ export default function DestinationsPage() {
       let p = 1;
       // eslint-disable-next-line no-constant-condition
       while (true) {
-        const res  = await fetch(`/api/destinations?page=${p}&limit=100`);
+        const res = await fetch(`/api/destinations?page=${p}&limit=100`);
         const json = await res.json();
         const batch: Destination[] = json?.data ?? [];
         pages.push(...batch);
@@ -167,7 +190,7 @@ export default function DestinationsPage() {
     } finally {
       setLoading(false);
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
@@ -178,11 +201,11 @@ export default function DestinationsPage() {
   }, [fetchAll]);
 
   // Reset to page 1 when filters change
-  useEffect(() => { setPage(1); }, [search, category, region, rating]);
+  useEffect(() => { setPage(1); }, [search, category, region, rating, quality]);
 
   // ── Filtered + paginated ────────────────────────────────────────────────────
-  const filtered = applyFilters(allItems, search, category, region, rating, status);
-  const anyFilter = !!(search || category || region || rating || status);
+  const filtered = applyFilters(allItems, search, category, region, rating, status, quality);
+  const anyFilter = !!(search || category || region || rating || status || quality);
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const safePage = Math.min(page, totalPages);
   const paged = filtered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
@@ -197,11 +220,11 @@ export default function DestinationsPage() {
   async function exportCSV() {
     setExporting(true);
     try {
-      const rows = [["Name","Category","Region","Rating","Reviews","Status"]];
-      filtered.forEach(d => rows.push([d.name, d.category ?? "", d.sub_region ?? "", String(d.rating ?? 0), String(d.review_count ?? 0), d.status ?? ""]));
+      const rows = [["Name", "Category", "Region", "Rating", "Reviews", "Quality Score", "Status"]];
+      filtered.forEach(d => rows.push([d.name, d.category ?? "", d.sub_region ?? "", String(d.rating ?? 0), String(d.review_count ?? 0), String(d.content_score ?? 0), d.status ?? ""]));
       const csv = rows.map(r => r.map(v => `"${v}"`).join(",")).join("\n");
-      const a   = document.createElement("a");
-      a.href    = "data:text/csv;charset=utf-8," + encodeURIComponent(csv);
+      const a = document.createElement("a");
+      a.href = "data:text/csv;charset=utf-8," + encodeURIComponent(csv);
       a.download = "destinations.csv";
       a.click();
       showToast("Export", `${filtered.length} destinations exported`, "success");
@@ -212,7 +235,7 @@ export default function DestinationsPage() {
     }
   }
 
-  const clearFilters = () => { setSearch(""); setCategory(""); setRegion(""); setRating(""); setStatus(""); };
+  const clearFilters = () => { setSearch(""); setCategory(""); setRegion(""); setRating(""); setStatus(""); setQuality(""); };
 
   // ── Selection + delete ────────────────────────────────────────────────────────
   const pageIds = paged.map(d => d.id);
@@ -301,7 +324,7 @@ export default function DestinationsPage() {
         </div>
 
         {/* Filters */}
-        <div className="bg-white p-5 rounded-card border border-border shadow-soft grid grid-cols-1 md:grid-cols-6 gap-4">
+        <div className="bg-white p-5 rounded-card border border-border shadow-soft grid grid-cols-1 md:grid-cols-7 gap-4">
           <div className="relative md:col-span-2">
             <Search className="absolute inset-y-0 left-3 my-auto w-4 h-4 text-gray-400 pointer-events-none" />
             <input
@@ -323,6 +346,11 @@ export default function DestinationsPage() {
           <select value={rating} onChange={e => setRating(e.target.value)}
             className="w-full bg-bg focus:bg-white text-xs px-3.5 py-2.5 rounded-xl border border-transparent focus:border-border outline-none font-semibold text-gray-700 cursor-pointer">
             {RATING_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+          </select>
+          <select value={quality} onChange={e => setQuality(e.target.value)}
+            title="Content quality score (from the AI content quality gate)"
+            className="w-full bg-bg focus:bg-white text-xs px-3.5 py-2.5 rounded-xl border border-transparent focus:border-border outline-none font-semibold text-gray-700 cursor-pointer">
+            {QUALITY_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
           </select>
           <div className="flex gap-2">
             <select value={status} onChange={e => setStatus(e.target.value)}
@@ -389,6 +417,7 @@ export default function DestinationsPage() {
                   <th className="py-4 px-6">Region</th>
                   <th className="py-4 px-4 text-center">Rating</th>
                   <th className="py-4 px-4 text-center">Reviews</th>
+                  <th className="py-4 px-4 text-center">Quality</th>
                   <th className="py-4 px-6 text-center">Status</th>
                   <th className="py-4 px-6 text-right">Actions</th>
                 </tr>
@@ -407,7 +436,7 @@ export default function DestinationsPage() {
                           </div>
                         </div>
                       </td>
-                      {[...Array(5)].map((_, j) => (
+                      {[...Array(6)].map((_, j) => (
                         <td key={j} className="py-4 px-4"><div className="h-3 w-16 bg-bg rounded mx-auto" /></td>
                       ))}
                       <td className="py-4 px-6" />
@@ -415,7 +444,7 @@ export default function DestinationsPage() {
                   ))
                 ) : paged.length === 0 ? (
                   <tr>
-                    <td colSpan={8} className="py-16 text-center text-gray-400">
+                    <td colSpan={9} className="py-16 text-center text-gray-400">
                       <div className="flex flex-col items-center gap-3">
                         <Search className="w-10 h-10" />
                         <span className="text-sm font-semibold">
@@ -470,6 +499,19 @@ export default function DestinationsPage() {
                     </td>
                     <td className="py-4 px-4 text-center font-bold text-gray-800">
                       {(dest.review_count ?? 0).toLocaleString()}
+                    </td>
+                    <td className="py-4 px-4 text-center">
+                      {(() => {
+                        const score = dest.content_score ?? 0;
+                        const tone = score >= 80 ? "bg-success/10 text-success"
+                          : score >= 60 ? "bg-primary/10 text-primary"
+                            : "bg-red-50 text-red-600";
+                        return (
+                          <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full ${tone}`}>
+                            {score}/100
+                          </span>
+                        );
+                      })()}
                     </td>
                     <td className="py-4 px-6 text-center">
                       <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full ${dest.status === "published" ? "bg-success/10 text-success" : dest.status === "draft" ? "bg-warning/10 text-warning" : "bg-gray-100 text-gray-500"}`}>

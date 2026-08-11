@@ -23,6 +23,13 @@ const STATUS_OPTIONS = [
   { value: "cancelled", label: "Cancelled" },
 ];
 
+const QUALITY_OPTIONS = [
+  { value: "",          label: "All Quality" },
+  { value: "excellent",  label: "Excellent (80+)" },
+  { value: "good",       label: "Good (60–79)" },
+  { value: "needs_work", label: "Needs Work (< 60)" },
+];
+
 /* ------------------------------------------------------------------ */
 /* Helpers                                                             */
 /* ------------------------------------------------------------------ */
@@ -48,11 +55,25 @@ function matchesStatus(e: Event, filter: string): boolean {
   return (e.status ?? "").toLowerCase() === filter.toLowerCase();
 }
 
-function applyFilters(all: Event[], search: string, category: string, status: string): Event[] {
+// Mirrors the thresholds in event/quality.go (VerdictExcellent >= 80,
+// VerdictGood >= 60). Events never scored yet (content_score undefined, e.g.
+// rows created before this rubric existed) fall into "needs_work" so they
+// surface for review instead of being silently treated as fine.
+function matchesQuality(score: number | undefined, filter: string): boolean {
+  if (!filter) return true;
+  const s = score ?? 0;
+  if (filter === "excellent")  return s >= 80;
+  if (filter === "good")       return s >= 60 && s < 80;
+  if (filter === "needs_work") return s < 60;
+  return true;
+}
+
+function applyFilters(all: Event[], search: string, category: string, status: string, quality: string): Event[] {
   return all.filter(e =>
     matchesSearch(e, search) &&
     matchesCategory(e, category) &&
-    matchesStatus(e, status)
+    matchesStatus(e, status) &&
+    matchesQuality(e.content_score, quality)
   );
 }
 
@@ -91,6 +112,7 @@ export default function EventsPage() {
   const [search,   setSearch]   = useState(searchParams.get("search") || "");
   const [category, setCategory] = useState(searchParams.get("category") || "");
   const [status,   setStatus]   = useState(searchParams.get("status") || "");
+  const [quality,  setQuality]  = useState(searchParams.get("quality") || "");
 
   // Sync filters to URL
   useEffect(() => {
@@ -98,8 +120,9 @@ export default function EventsPage() {
     if (search)   params.set("search", search);
     if (category) params.set("category", category);
     if (status)   params.set("status", status);
+    if (quality)  params.set("quality", quality);
     router.replace(`${pathname}?${params.toString()}`, { scroll: false });
-  }, [search, category, status, router, pathname]);
+  }, [search, category, status, quality, router, pathname]);
 
   const didInit = useRef(false);
 
@@ -135,7 +158,7 @@ export default function EventsPage() {
     }
   }, [fetchAll]);
 
-  useEffect(() => { setPage(1); }, [search, category, status]);
+  useEffect(() => { setPage(1); }, [search, category, status, quality]);
 
   // Derived categories
   const knownCategories = Array.from(
@@ -143,8 +166,8 @@ export default function EventsPage() {
   ).sort() as string[];
 
   // Filtered + paginated
-  const filtered   = applyFilters(allItems, search, category, status);
-  const anyFilter  = !!(search || category || status);
+  const filtered   = applyFilters(allItems, search, category, status, quality);
+  const anyFilter  = !!(search || category || status || quality);
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const safePage   = Math.min(page, totalPages);
   const paged      = filtered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
@@ -159,11 +182,11 @@ export default function EventsPage() {
   async function exportCSV() {
     setExporting(true);
     try {
-      const rows = [["Title", "Category", "Location", "Start Date", "End Date", "Ticket Price", "Status"]];
+      const rows = [["Title", "Category", "Location", "Start Date", "End Date", "Ticket Price", "Quality Score", "Status"]];
       filtered.forEach(e => rows.push([
         e.title, e.category ?? "", e.location ?? "",
         e.start_date ?? "", e.end_date ?? "",
-        e.ticket_price ?? "", e.status ?? "",
+        e.ticket_price ?? "", String(e.content_score ?? 0), e.status ?? "",
       ]));
       const csv = rows.map(r => r.map(v => `"${v}"`).join(",")).join("\n");
       const a   = document.createElement("a");
@@ -178,7 +201,7 @@ export default function EventsPage() {
     }
   }
 
-  const clearFilters = () => { setSearch(""); setCategory(""); setStatus(""); };
+  const clearFilters = () => { setSearch(""); setCategory(""); setStatus(""); setQuality(""); };
 
   // Selection + delete
   const pageIds        = paged.map(e => e.id);
@@ -265,7 +288,7 @@ export default function EventsPage() {
         </div>
 
         {/* Filters */}
-        <div className="bg-white p-5 rounded-card border border-border shadow-soft grid grid-cols-1 md:grid-cols-5 gap-4">
+        <div className="bg-white p-5 rounded-card border border-border shadow-soft grid grid-cols-1 md:grid-cols-6 gap-4">
           <div className="relative md:col-span-2">
             <Search className="absolute inset-y-0 left-3 my-auto w-4 h-4 text-gray-400 pointer-events-none" />
             <input
@@ -278,6 +301,11 @@ export default function EventsPage() {
             className="w-full bg-bg focus:bg-white text-xs px-3.5 py-2.5 rounded-xl border border-transparent focus:border-border outline-none font-semibold text-gray-700 cursor-pointer">
             <option value="">All Categories</option>
             {knownCategories.map(c => <option key={c} value={c}>{c}</option>)}
+          </select>
+          <select value={quality} onChange={e => setQuality(e.target.value)}
+            title="Content quality score (from the AI content quality gate)"
+            className="w-full bg-bg focus:bg-white text-xs px-3.5 py-2.5 rounded-xl border border-transparent focus:border-border outline-none font-semibold text-gray-700 cursor-pointer">
+            {QUALITY_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
           </select>
           <div className="flex gap-2 md:col-span-2">
             <select value={status} onChange={e => setStatus(e.target.value)}
@@ -343,6 +371,7 @@ export default function EventsPage() {
                   <th className="py-4 px-6">Location</th>
                   <th className="py-4 px-6">Date</th>
                   <th className="py-4 px-6">Ticket</th>
+                  <th className="py-4 px-4 text-center">Quality</th>
                   <th className="py-4 px-6 text-center">Status</th>
                   <th className="py-4 px-6 text-right">Actions</th>
                 </tr>
@@ -361,7 +390,7 @@ export default function EventsPage() {
                           </div>
                         </div>
                       </td>
-                      {[...Array(5)].map((_, j) => (
+                      {[...Array(6)].map((_, j) => (
                         <td key={j} className="py-4 px-4"><div className="h-3 w-16 bg-bg rounded" /></td>
                       ))}
                       <td className="py-4 px-6" />
@@ -369,7 +398,7 @@ export default function EventsPage() {
                   ))
                 ) : paged.length === 0 ? (
                   <tr>
-                    <td colSpan={8} className="py-16 text-center text-gray-400">
+                    <td colSpan={9} className="py-16 text-center text-gray-400">
                       <div className="flex flex-col items-center gap-3">
                         <Calendar className="w-10 h-10" />
                         <span className="text-sm font-semibold">
@@ -456,6 +485,19 @@ export default function EventsPage() {
                       ) : (
                         <span className="text-gray-300">—</span>
                       )}
+                    </td>
+                    <td className="py-4 px-4 text-center">
+                      {(() => {
+                        const score = ev.content_score ?? 0;
+                        const tone = score >= 80 ? "bg-success/10 text-success"
+                          : score >= 60 ? "bg-primary/10 text-primary"
+                          : "bg-red-50 text-red-600";
+                        return (
+                          <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full ${tone}`}>
+                            {score}/100
+                          </span>
+                        );
+                      })()}
                     </td>
                     <td className="py-4 px-6 text-center">
                       <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full capitalize ${statusColor(ev.status)}`}>

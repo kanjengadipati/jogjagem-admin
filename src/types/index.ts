@@ -185,6 +185,8 @@ export interface Event {
   highlights?: unknown[];
   badge?: string;
   badges?: string[];
+  content_score?: number;
+  content_verdict?: string;
   created_at?: string;
   updated_at?: string;
 }
