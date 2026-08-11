@@ -7,7 +7,6 @@ import { useToast } from "@/components/Toast";
 import {
   Bot, RefreshCw, Loader2, MapPin, Calendar, Clock, Scan, Table2,
 } from "lucide-react";
-import { BACKEND_URL } from "@/lib/constants";
 
 type ScrapeType = "all" | "destinations" | "events";
 
@@ -26,8 +25,8 @@ export default function ScraperPage() {
       return;
     }
     try {
-      const endpoint = type === "all" ? "/admin/scrape" : `/admin/scrape/${type}`;
-      const res = await fetch(`${BACKEND_URL}${endpoint}`);
+      const endpoint = type === "all" ? "/api/scraper/run/all" : `/api/scraper/run/${type}`;
+      const res = await fetch(endpoint);
       const body = await res.json();
       if (res.status === 409) {
         showToast("Already Running", body.message || "A scrape is already in progress.", "error");

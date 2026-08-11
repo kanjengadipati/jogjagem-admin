@@ -8,7 +8,6 @@ import {
   Table2, Sparkles, Check, X, Loader2, CheckCircle2, ArrowRight, MapPin,
   Calendar, ThumbsUp, ThumbsDown,
 } from "lucide-react";
-import { BACKEND_URL } from "@/lib/constants";
 
 type Tab = "destinations" | "events";
 
@@ -74,8 +73,8 @@ export default function ScraperReviewPage() {
     setSelectedIds([]);
     setAiRecommendations({});
     try {
-      const path = t === "events" ? "/admin/staging/events" : "/admin/staging/destinations";
-      const res = await fetch(`${BACKEND_URL}${path}`);
+      const path = t === "events" ? "/api/scraper/staging/events" : "/api/scraper/staging/destinations";
+      const res = await fetch(path);
       const body = await res.json();
       if (body.status === "success") {
         if (t === "events") {
@@ -104,8 +103,8 @@ export default function ScraperReviewPage() {
     if (selectedIds.length === 0) return;
     setAiReviewing(true);
     try {
-      const endpoint = tab === "events" ? "/admin/staging/events/ai-review" : "/admin/staging/destinations/ai-review";
-      const res = await fetch(`${BACKEND_URL}${endpoint}`, {
+      const endpoint = tab === "events" ? "/api/scraper/staging/events/ai-review" : "/api/scraper/staging/destinations/ai-review";
+      const res = await fetch(endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ids: selectedIds }),
@@ -133,7 +132,7 @@ export default function ScraperReviewPage() {
     if (selectedIds.length === 0) return;
     setProcessing(true);
     try {
-      const res = await fetch(`${BACKEND_URL}/admin/staging/${tab}/${action}`, {
+      const res = await fetch(`/api/scraper/staging/${tab}/${action}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ids: selectedIds }),

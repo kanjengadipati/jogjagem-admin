@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { fetchWithAuth } from "@/lib/api";
 import { COOKIE_NAME } from "@/lib/constants";
@@ -9,8 +9,9 @@ async function getApi() {
   return fetchWithAuth(token);
 }
 
-export async function GET() {
+export async function GET(_: NextRequest, { params }: { params: Promise<{ tab: string }> }) {
+  const { tab } = await params;
   const api = await getApi();
-  const { status, data } = await api("/reviews/admin");
+  const { status, data } = await api(`/admin/staging/${tab}`);
   return NextResponse.json(data, { status });
 }
