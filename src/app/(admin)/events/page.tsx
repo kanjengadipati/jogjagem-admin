@@ -1,24 +1,24 @@
 "use client";
 
-import { useEffect, useState, useCallback, useRef } from "react";
-import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
+import { useEffect, useState, useCallback, useRef } from "react";
+import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import Header from "@/components/Header";
 import Pagination from "@/components/Pagination";
 import { useToast } from "@/components/Toast";
-import { Calendar, MapPin, Search, Tag, Plus, FileSpreadsheet, X, Trash2, Loader2, CheckSquare, Check } from "lucide-react";
+import { Calendar, MapPin, Search, Plus, FileSpreadsheet, X, Trash2, Loader2, CheckSquare, Edit3, Tag } from "lucide-react";
 import type { Event, PaginationMeta } from "@/types";
 
 const PAGE_SIZE = 25;
 
 const STATUS_OPTIONS = [
-  { value: "", label: "All Statuses" },
-  { value: "draft", label: "Draft" },
-  { value: "active", label: "Active" },
-  { value: "upcoming", label: "Upcoming" },
-  { value: "popular", label: "Popular" },
-  { value: "limited", label: "Limited" },
+  { value: "",          label: "All Statuses" },
+  { value: "draft",     label: "Draft" },
+  { value: "active",    label: "Active" },
+  { value: "upcoming",  label: "Upcoming" },
+  { value: "popular",   label: "Popular" },
+  { value: "limited",   label: "Limited" },
   { value: "completed", label: "Completed" },
   { value: "cancelled", label: "Cancelled" },
 ];
@@ -56,6 +56,19 @@ function applyFilters(all: Event[], search: string, category: string, status: st
   );
 }
 
+function statusColor(s?: string) {
+  switch (s) {
+    case "active":    return "bg-success/10 text-success";
+    case "upcoming":  return "bg-blue-50 text-blue-600";
+    case "popular":   return "bg-primary/10 text-primary";
+    case "limited":   return "bg-warning/10 text-warning";
+    case "completed": return "bg-gray-100 text-gray-500";
+    case "cancelled": return "bg-danger/10 text-danger";
+    case "draft":     return "bg-gray-100 text-gray-400";
+    default:          return "bg-warning/10 text-warning";
+  }
+}
+
 /* ------------------------------------------------------------------ */
 /* Page                                                                */
 /* ------------------------------------------------------------------ */
@@ -85,13 +98,11 @@ export default function EventsPage() {
     if (search)   params.set("search", search);
     if (category) params.set("category", category);
     if (status)   params.set("status", status);
-    
     router.replace(`${pathname}?${params.toString()}`, { scroll: false });
   }, [search, category, status, router, pathname]);
 
   const didInit = useRef(false);
 
-  // ── Fetch ALL events ────────────────────────────────────────────────────────
   const fetchAll = useCallback(async () => {
     setLoading(true);
     try {
@@ -107,7 +118,7 @@ export default function EventsPage() {
         if (!meta || p >= meta.total_pages) break;
         p++;
       }
-      pages.sort((a, b) => (b.updated_at || '').localeCompare(a.updated_at || ''));
+      pages.sort((a, b) => (b.updated_at || "").localeCompare(a.updated_at || ""));
       setAllItems(pages);
     } catch {
       showToast("Error", "Failed to load events", "error");
@@ -126,17 +137,17 @@ export default function EventsPage() {
 
   useEffect(() => { setPage(1); }, [search, category, status]);
 
-  // ── Derived categories from all data ────────────────────────────────────────
+  // Derived categories
   const knownCategories = Array.from(
     new Set(allItems.map(e => e.category).filter(Boolean))
   ).sort() as string[];
 
-  // ── Filtered + paginated ────────────────────────────────────────────────────
-  const filtered = applyFilters(allItems, search, category, status);
-  const anyFilter = !!(search || category || status);
+  // Filtered + paginated
+  const filtered   = applyFilters(allItems, search, category, status);
+  const anyFilter  = !!(search || category || status);
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
-  const safePage = Math.min(page, totalPages);
-  const paged = filtered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
+  const safePage   = Math.min(page, totalPages);
+  const paged      = filtered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
   const meta: PaginationMeta = {
     total: filtered.length,
     page: safePage,
@@ -144,11 +155,11 @@ export default function EventsPage() {
     total_pages: totalPages,
   };
 
-  // ── Export CSV ──────────────────────────────────────────────────────────────
+  // Export CSV
   async function exportCSV() {
     setExporting(true);
     try {
-      const rows = [["Title","Category","Location","Start Date","End Date","Ticket Price","Status"]];
+      const rows = [["Title", "Category", "Location", "Start Date", "End Date", "Ticket Price", "Status"]];
       filtered.forEach(e => rows.push([
         e.title, e.category ?? "", e.location ?? "",
         e.start_date ?? "", e.end_date ?? "",
@@ -169,8 +180,8 @@ export default function EventsPage() {
 
   const clearFilters = () => { setSearch(""); setCategory(""); setStatus(""); };
 
-  // ── Selection + delete ────────────────────────────────────────────────────────
-  const pageIds = paged.map(e => e.id);
+  // Selection + delete
+  const pageIds        = paged.map(e => e.id);
   const allPageSelected = pageIds.length > 0 && pageIds.every(id => selected.has(id));
 
   const toggleAllPage = () => {
@@ -185,8 +196,7 @@ export default function EventsPage() {
   const toggleOne = (id: string) => {
     setSelected(prev => {
       const n = new Set(prev);
-      if (n.has(id)) n.delete(id);
-      else n.add(id);
+      if (n.has(id)) n.delete(id); else n.add(id);
       return n;
     });
   };
@@ -200,9 +210,9 @@ export default function EventsPage() {
           fetch(`/api/events/${id}`, { method: "DELETE" }).then(r => r.ok)
         )
       );
-      const ok = results.filter(Boolean).length;
+      const ok     = results.filter(Boolean).length;
       const failed = results.length - ok;
-      const gone = new Set(confirm.ids);
+      const gone   = new Set(confirm.ids);
       setAllItems(prev => prev.filter(e => !gone.has(e.id)));
       setSelected(new Set());
       if (failed === 0) {
@@ -217,15 +227,6 @@ export default function EventsPage() {
       setConfirm(null);
     }
   }
-
-  const statusColor = (s?: string) =>
-    s === "active"    ? "bg-success/10 text-success" :
-    s === "cancelled" ? "bg-danger/10 text-danger"   :
-    s === "completed" ? "bg-info/10 text-info"       :
-    s === "draft"     ? "bg-gray-100 text-gray-400"  :
-    s === "popular"   ? "bg-primary/10 text-primary" :
-    s === "limited"   ? "bg-warning/10 text-warning" :
-                        "bg-warning/10 text-warning";
 
   return (
     <>
@@ -254,20 +255,23 @@ export default function EventsPage() {
               <FileSpreadsheet className="w-4 h-4 text-gray-500" />
               <span>{exporting ? "Exporting…" : "Export CSV"}</span>
             </button>
-            <button className="flex items-center gap-2 bg-primary hover:bg-primary-dark text-white px-4 py-2.5 rounded-xl text-xs font-semibold shadow-premium transition cursor-pointer">
+            <Link
+              href="/events/create"
+              className="flex items-center gap-2 bg-primary hover:bg-primary-dark text-white px-4 py-2.5 rounded-xl text-xs font-semibold shadow-premium transition-premium cursor-pointer"
+            >
               <Plus className="w-4 h-4" /><span>Add Event</span>
-            </button>
+            </Link>
           </div>
         </div>
 
         {/* Filters */}
-        <div className="bg-white p-4 rounded-card border border-border shadow-soft grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="bg-white p-5 rounded-card border border-border shadow-soft grid grid-cols-1 md:grid-cols-5 gap-4">
           <div className="relative md:col-span-2">
             <Search className="absolute inset-y-0 left-3 my-auto w-4 h-4 text-gray-400 pointer-events-none" />
             <input
-              value={search} onChange={e => setSearch(e.target.value)}
-              placeholder="Search events by title, location, category…"
-              className="w-full bg-bg focus:bg-white text-xs pl-9 pr-4 py-2.5 rounded-xl border border-transparent focus:border-border outline-none font-medium"
+              type="text" value={search} onChange={e => setSearch(e.target.value)}
+              placeholder="Search by title, location, category…"
+              className="w-full bg-bg focus:bg-white text-xs pl-9 pr-4 py-2.5 rounded-xl border border-transparent focus:border-border outline-none transition font-medium"
             />
           </div>
           <select value={category} onChange={e => setCategory(e.target.value)}
@@ -275,7 +279,7 @@ export default function EventsPage() {
             <option value="">All Categories</option>
             {knownCategories.map(c => <option key={c} value={c}>{c}</option>)}
           </select>
-          <div className="flex gap-2">
+          <div className="flex gap-2 md:col-span-2">
             <select value={status} onChange={e => setStatus(e.target.value)}
               className="flex-1 bg-bg focus:bg-white text-xs px-3.5 py-2.5 rounded-xl border border-transparent focus:border-border outline-none font-semibold text-gray-700 cursor-pointer">
               {STATUS_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
@@ -318,113 +322,179 @@ export default function EventsPage() {
           </div>
         )}
 
-        {/* Grid */}
-        {loading ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {Array.from({ length: PAGE_SIZE }).map((_, i) => (
-              <div key={i} className="rounded-card border border-border bg-white overflow-hidden animate-pulse">
-                <div className="h-40 bg-bg" />
-                <div className="p-5 space-y-3">
-                  <div className="h-3 w-3/4 bg-bg rounded" />
-                  <div className="h-2 w-1/2 bg-bg rounded" />
-                  <div className="h-2 w-2/3 bg-bg rounded" />
-                </div>
-              </div>
-            ))}
+        {/* Table */}
+        <div className="bg-white rounded-card border border-border shadow-soft overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="border-b border-border bg-bg/40 text-[10px] font-bold text-gray-400 uppercase tracking-widest font-display">
+                  <th className="py-4 px-4 w-10">
+                    <input
+                      type="checkbox"
+                      checked={allPageSelected}
+                      onChange={toggleAllPage}
+                      disabled={paged.length === 0}
+                      className="w-4 h-4 accent-primary cursor-pointer disabled:opacity-40"
+                      title="Select all on page"
+                    />
+                  </th>
+                  <th className="py-4 px-6">Event</th>
+                  <th className="py-4 px-6">Category</th>
+                  <th className="py-4 px-6">Location</th>
+                  <th className="py-4 px-6">Date</th>
+                  <th className="py-4 px-6">Ticket</th>
+                  <th className="py-4 px-6 text-center">Status</th>
+                  <th className="py-4 px-6 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border text-xs text-gray-700 font-medium">
+                {loading ? (
+                  Array.from({ length: PAGE_SIZE }).map((_, i) => (
+                    <tr key={i} className="animate-pulse">
+                      <td className="py-4 px-4" />
+                      <td className="py-4 px-6">
+                        <div className="flex items-center gap-4">
+                          <div className="w-12 h-12 rounded-xl bg-bg shrink-0" />
+                          <div className="space-y-2">
+                            <div className="h-3 w-40 bg-bg rounded" />
+                            <div className="h-2 w-24 bg-bg rounded" />
+                          </div>
+                        </div>
+                      </td>
+                      {[...Array(5)].map((_, j) => (
+                        <td key={j} className="py-4 px-4"><div className="h-3 w-16 bg-bg rounded" /></td>
+                      ))}
+                      <td className="py-4 px-6" />
+                    </tr>
+                  ))
+                ) : paged.length === 0 ? (
+                  <tr>
+                    <td colSpan={8} className="py-16 text-center text-gray-400">
+                      <div className="flex flex-col items-center gap-3">
+                        <Calendar className="w-10 h-10" />
+                        <span className="text-sm font-semibold">
+                          {anyFilter ? "No events match the current filters" : "No events found"}
+                        </span>
+                        {anyFilter && (
+                          <button onClick={clearFilters} className="text-xs font-bold text-primary hover:underline cursor-pointer">
+                            Clear filters
+                          </button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ) : paged.map(ev => (
+                  <tr key={ev.id} className="hover:bg-bg/40 transition-premium">
+                    <td className="py-4 px-4">
+                      <input
+                        type="checkbox"
+                        checked={selected.has(ev.id)}
+                        onChange={() => toggleOne(ev.id)}
+                        className="w-4 h-4 accent-primary cursor-pointer"
+                      />
+                    </td>
+                    <td className="py-4 px-6">
+                      <div className="flex items-center gap-4">
+                        <div className="w-12 h-12 rounded-xl overflow-hidden border border-border bg-bg shrink-0 relative">
+                          {ev.image_url ? (
+                            <Image
+                              src={ev.image_url} alt={ev.title}
+                              width={48} height={48}
+                              className="w-full h-full object-cover"
+                            />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center text-gray-300">
+                              <Calendar className="w-5 h-5" />
+                            </div>
+                          )}
+                        </div>
+                        <div>
+                          <Link href={`/events/${ev.id}`} className="text-sm font-bold text-gray-900 font-display hover:text-primary transition-colors block">
+                            {ev.title}
+                          </Link>
+                          {ev.description && (
+                            <span className="text-[10px] text-gray-400 block mt-0.5 line-clamp-1 max-w-xs">
+                              {ev.description}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </td>
+                    <td className="py-4 px-6">
+                      {ev.category ? (
+                        <span className="bg-primary/10 text-primary text-[10px] font-bold px-2.5 py-0.5 rounded-full uppercase tracking-wider font-display capitalize">
+                          {ev.category}
+                        </span>
+                      ) : (
+                        <span className="text-gray-300">—</span>
+                      )}
+                    </td>
+                    <td className="py-4 px-6">
+                      {ev.location ? (
+                        <span className="flex items-center gap-1.5 text-gray-600">
+                          <MapPin className="w-3 h-3 text-gray-400 shrink-0" />
+                          <span className="truncate max-w-[140px]">{ev.location}</span>
+                        </span>
+                      ) : (
+                        <span className="text-gray-300">—</span>
+                      )}
+                    </td>
+                    <td className="py-4 px-6 whitespace-nowrap">
+                      {ev.start_date ? (
+                        <span className="flex items-center gap-1.5 text-gray-600">
+                          <Calendar className="w-3 h-3 text-gray-400 shrink-0" />
+                          <span>
+                            {ev.start_date}
+                            {ev.end_date && ev.end_date !== ev.start_date ? ` – ${ev.end_date}` : ""}
+                          </span>
+                        </span>
+                      ) : (
+                        <span className="text-gray-300">—</span>
+                      )}
+                    </td>
+                    <td className="py-4 px-6">
+                      {ev.ticket_price ? (
+                        <span className="flex items-center gap-1 text-primary font-bold">
+                          <Tag className="w-3 h-3 shrink-0" />
+                          {ev.ticket_price}
+                        </span>
+                      ) : (
+                        <span className="text-gray-300">—</span>
+                      )}
+                    </td>
+                    <td className="py-4 px-6 text-center">
+                      <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full capitalize ${statusColor(ev.status)}`}>
+                        {ev.status ?? "draft"}
+                      </span>
+                    </td>
+                    <td className="py-4 px-6 text-right">
+                      <Link
+                        href={`/events/${ev.id}`}
+                        className="p-1.5 rounded-lg border border-border hover:bg-bg text-gray-500 hover:text-text cursor-pointer transition-premium inline-flex"
+                      >
+                        <Edit3 className="w-4 h-4" />
+                      </Link>
+                      <button
+                        onClick={() => setConfirm({ ids: [ev.id], label: ev.title })}
+                        title="Delete event"
+                        className="p-1.5 rounded-lg border border-border hover:bg-red-50 hover:border-red-200 text-gray-500 hover:text-red-600 cursor-pointer transition-premium inline-flex ml-2"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
-        ) : paged.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-24 text-gray-400 gap-3">
-            <Calendar className="w-10 h-10" />
-            <span className="text-sm font-semibold">
-              {anyFilter ? "No events match the current filters" : "No events found"}
-            </span>
-            {anyFilter && (
-              <button onClick={clearFilters} className="text-xs font-bold text-primary hover:underline cursor-pointer">
-                Clear filters
-              </button>
+
+          {/* Pagination footer */}
+          <div className="px-6 py-4">
+            {filtered.length > 0 && (
+              <Pagination meta={meta} onPageChange={setPage} />
             )}
           </div>
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {paged.map(ev => (
-              <div key={ev.id} className="bg-white rounded-card border border-border shadow-soft overflow-hidden hover:border-primary/20 hover:shadow-premium transition-premium flex flex-col relative">
-                <Link href={`/events/${ev.id}`} className="block relative h-40 bg-gray-100">
-                  {ev.image_url ? (
-                    <Image src={ev.image_url} alt={ev.title} fill className="object-cover" sizes="400px" />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center text-gray-300">
-                      <Calendar className="w-10 h-10" />
-                    </div>
-                  )}
-                  {ev.category && (
-                    <span className="absolute top-3 left-3 text-[10px] font-bold bg-white/90 text-primary px-2.5 py-0.5 rounded-lg capitalize shadow-sm">
-                      {ev.category}
-                    </span>
-                  )}
-                  {ev.status && (
-                    <span className={`absolute top-3 right-3 text-[10px] font-bold px-2 py-0.5 rounded-full capitalize ${statusColor(ev.status)}`}>
-                      {ev.status}
-                    </span>
-                  )}
-                </Link>
-                <div className="absolute bottom-3 left-3 flex items-center gap-2 z-10">
-                  <button
-                    onClick={() => toggleOne(ev.id)}
-                    title={selected.has(ev.id) ? "Remove from selection" : "Select event"}
-                    className={`w-7 h-7 rounded-lg flex items-center justify-center bg-white/95 border shadow-sm transition cursor-pointer ${selected.has(ev.id) ? "border-primary bg-primary/10" : "border-gray-200 hover:border-primary/40"}`}
-                  >
-                    {selected.has(ev.id)
-                      ? <Check className="w-3.5 h-3.5 text-primary" />
-                      : <CheckSquare className="w-3.5 h-3.5 text-gray-300" />
-                    }
-                  </button>
-                  <button
-                    onClick={() => setConfirm({ ids: [ev.id], label: ev.title })}
-                    title="Delete event"
-                    className="w-7 h-7 rounded-lg flex items-center justify-center bg-white/95 border border-gray-200 hover:border-red-200 text-gray-500 hover:text-red-600 shadow-sm transition cursor-pointer"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-                <Link href={`/events/${ev.id}`} className="p-5 flex flex-col gap-3 flex-1">
-                  <h4 className="text-sm font-bold text-gray-900 font-display leading-snug">{ev.title}</h4>
-                  {ev.description && (
-                    <p className="text-[11px] text-gray-500 line-clamp-2 leading-relaxed">{ev.description}</p>
-                  )}
-                  <div className="mt-auto border-t border-border pt-3 space-y-1.5 text-[10px] text-gray-400">
-                    {ev.location && (
-                      <div className="flex items-center gap-1.5">
-                        <MapPin className="w-3 h-3 shrink-0" />
-                        <span className="text-gray-600 font-medium truncate">{ev.location}</span>
-                      </div>
-                    )}
-                    {(ev.start_date || ev.end_date) && (
-                      <div className="flex items-center gap-1.5">
-                        <Calendar className="w-3 h-3 shrink-0" />
-                        <span className="text-gray-600 font-medium">
-                          {ev.start_date}{ev.end_date && ev.end_date !== ev.start_date ? ` – ${ev.end_date}` : ""}
-                        </span>
-                      </div>
-                    )}
-                    {ev.ticket_price && (
-                      <div className="flex items-center gap-1.5">
-                        <Tag className="w-3 h-3 shrink-0" />
-                        <span className="text-primary font-bold">{ev.ticket_price}</span>
-                      </div>
-                    )}
-                  </div>
-                </Link>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {/* Pagination */}
-        {!loading && filtered.length > 0 && (
-          <div className="bg-white rounded-card border border-border shadow-soft px-6 py-4">
-            <Pagination meta={meta} onPageChange={setPage} />
-          </div>
-        )}
+        </div>
       </main>
 
       {/* Delete Confirmation Modal */}
