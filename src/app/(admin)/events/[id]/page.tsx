@@ -50,14 +50,52 @@ function extractYouTubeId(url: string): string {
   return m?.[1] ?? "";
 }
 
-function FieldInput({ label, value, onChange, mono = false }: {
+function FieldInput({ label, value, onChange, mono = false, aiField, onAiGenerate, aiLoadingField }: {
   label: string; value: string; onChange: (v: string) => void; mono?: boolean;
+  aiField?: string; onAiGenerate?: (field: string) => void; aiLoadingField?: string | null;
 }) {
+  const loading = aiField && aiLoadingField === aiField;
   return (
     <div className="space-y-1.5">
-      <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest font-display block">{label}</label>
+      <div className="flex items-center justify-between">
+        <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest font-display block">{label}</label>
+        {aiField && onAiGenerate && (
+          <button
+            type="button"
+            onClick={() => onAiGenerate(aiField)}
+            disabled={!!loading}
+            className="flex items-center gap-1 px-2 py-1 text-[9px] font-bold text-primary bg-primary/10 hover:bg-primary/20 rounded-md transition cursor-pointer disabled:opacity-50"
+            title={`AI generate ${aiField}`}
+          >
+            {loading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Sparkles className="w-3 h-3" />}
+            <span>AI</span>
+          </button>
+        )}
+      </div>
       <input value={value} onChange={(e) => onChange(e.target.value)}
         className={`w-full bg-bg focus:bg-white text-xs px-4 py-3 rounded-xl border border-transparent focus:border-border outline-none font-medium${mono ? " font-mono" : ""}`} />
+    </div>
+  );
+}
+
+function AIGroupButton({ label, subLabel, fields, onGenerateAll, loading }: {
+  label: string; subLabel?: string; fields: string[]; onGenerateAll: (label: string, fields: string[]) => void; loading: boolean;
+}) {
+  return (
+    <div className="flex items-center justify-between">
+      <div>
+        <h4 className="text-sm font-bold text-gray-800 font-display">{label}</h4>
+        {subLabel && <p className="text-[10px] text-gray-400">{subLabel}</p>}
+      </div>
+      <button
+        type="button"
+        onClick={() => onGenerateAll(label, fields)}
+        disabled={loading}
+        className="flex items-center gap-1.5 px-3 py-1.5 text-[10px] font-bold text-primary hover:text-primary-dark bg-primary/10 hover:bg-primary/20 rounded-lg transition cursor-pointer disabled:opacity-50"
+      >
+        {loading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
+        <span>AI</span>
+      </button>
     </div>
   );
 }
@@ -102,6 +140,8 @@ export default function EventDetailPage() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [aiLoading, setAiLoading] = useState(false);
+  const [aiResult, setAiResult] = useState<any>(null);
+  const [aiFieldLoading, setAiFieldLoading] = useState<string | null>(null);
   const [tab, setTab]             = useState<Tab>("overview");
   const [lang, setLang]           = useState<"id" | "en">("id");
   const [form, setForm]           = useState<FormState>(EMPTY_FORM);
@@ -307,6 +347,7 @@ export default function EventDetailPage() {
         }),
       });
       const data = await res.json();
+      setAiResult(data);
       if (data.title) setField("title", data.title);
       if (data.title_en) setField("title_en", data.title_en);
       if (data.description) setField("description", data.description);
@@ -328,9 +369,63 @@ export default function EventDetailPage() {
       showToast("AI", "Event content generated", "success");
     } catch {
       showToast("AI Error", "Generation failed", "error");
+      setAiResult(null);
     } finally {
       setAiLoading(false);
     }
+  }
+
+  // Form field -> AI response key mapping
+  const EVENT_FIELD_MAP: Record<string, string> = {
+    title: "title", title_en: "title_en", description: "description", description_en: "description_en",
+    location: "location", start_date: "start_date", end_date: "end_date",
+    category: "category", ticket_price: "ticket_price", organizer: "organizer",
+    max_attendees: "max_attendees", latitude: "latitude", longitude: "longitude",
+    seo_title: "seo_title", seo_title_en: "seo_title_en",
+    seo_description: "seo_description", seo_description_en: "seo_description_en",
+    seo_keywords: "seo_keywords", seo_keywords_en: "seo_keywords_en",
+  };
+
+  async function ensureAIResult(label: string): Promise<any | null> {
+    if (aiResult) return aiResult;
+    if (!form.title) { showToast("Required", "Enter an event title first", "warning"); return null; }
+    setAiFieldLoading(label);
+    try {
+      const res = await fetch("/api/ai/generate-event", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ eventTitle: form.title, category: form.category, location: form.location }),
+      });
+      const data = await res.json();
+      if (res.ok) setAiResult(data);
+      return data;
+    } catch {
+      showToast("AI Error", "Generation failed", "error");
+      return null;
+    } finally {
+      setAiFieldLoading(null);
+    }
+  }
+
+  async function generateField(field: string) {
+    const data = await ensureAIResult(field);
+    if (!data) return;
+    const key = EVENT_FIELD_MAP[field];
+    const val = key ? data[key] : undefined;
+    if (val) { setField(field as any, String(val)); showToast("AI", `${field} generated`, "success"); }
+    else { showToast("AI", `No value for ${field}`, "info"); }
+  }
+
+  async function generateFields(label: string, fields: string[]) {
+    const data = await ensureAIResult(label);
+    if (!data) return;
+    let filled = 0;
+    for (const field of fields) {
+      const key = EVENT_FIELD_MAP[field];
+      const val = key ? data[key] : undefined;
+      if (val) { setField(field as any, String(val)); filled++; }
+    }
+    showToast("AI", `${filled} fields generated`, "success");
   }
 
   const linkedDest = allDests.find((d) => d.id === linkedDestId) ?? null;
@@ -422,7 +517,7 @@ export default function EventDetailPage() {
                       </button>
                     </div>
                   </div>
-                  <FieldInput label={lang === "id" ? "Title" : "Title (EN)"} value={lang === "id" ? form.title : form.title_en} onChange={(v) => setField(lang === "id" ? "title" : "title_en", v)} />
+                  <FieldInput label={lang === "id" ? "Title" : "Title (EN)"} value={lang === "id" ? form.title : form.title_en} onChange={(v) => setField(lang === "id" ? "title" : "title_en", v)} aiField={lang === "id" ? "title" : "title_en"} onAiGenerate={generateField} aiLoadingField={aiFieldLoading} />
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                     <div className="space-y-1.5">
                       <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest font-display block">Category</label>
@@ -443,13 +538,18 @@ export default function EventDetailPage() {
                       </select>
                     </div>
                   </div>
-                  <FieldInput label="Location / Venue" value={form.location} onChange={(v) => setField("location", v)} />
+                  <FieldInput label="Location / Venue" value={form.location} onChange={(v) => setField("location", v)} aiField="location" onAiGenerate={generateField} aiLoadingField={aiFieldLoading} />
                   <div className="space-y-1.5">
                     <div className="flex items-center justify-between">
-                    <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest font-display block">
-                      {lang === "id" ? "Description" : "Description (EN)"}
-                    </label>
-                  </div>
+                      <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest font-display block">
+                        {lang === "id" ? "Description" : "Description (EN)"}
+                      </label>
+                      <button type="button" onClick={() => generateField(lang === "id" ? "description" : "description_en")} disabled={aiFieldLoading === (lang === "id" ? "description" : "description_en")}
+                        className="flex items-center gap-1 px-2 py-1 text-[9px] font-bold text-primary bg-primary/10 hover:bg-primary/20 rounded-md transition cursor-pointer disabled:opacity-50">
+                        {aiFieldLoading === (lang === "id" ? "description" : "description_en") ? <Loader2 className="w-3 h-3 animate-spin" /> : <Sparkles className="w-3 h-3" />}
+                        <span>AI</span>
+                      </button>
+                    </div>
                   <textarea value={lang === "id" ? form.description : form.description_en} onChange={(e) => setField(lang === "id" ? "description" : "description_en", e.target.value)} rows={5}
                     className="w-full bg-bg focus:bg-white text-xs p-4 rounded-xl border border-transparent focus:border-border outline-none font-medium leading-relaxed" />
 
@@ -463,13 +563,13 @@ export default function EventDetailPage() {
                     <FieldInput label="End Date"   value={form.end_date}   onChange={(v) => setField("end_date", v)} />
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-                    <FieldInput label="Ticket Price"   value={form.ticket_price}   onChange={(v) => setField("ticket_price", v)} />
-                    <FieldInput label="Organizer"      value={form.organizer}      onChange={(v) => setField("organizer", v)} />
-                    <FieldInput label="Max Attendees"  value={form.max_attendees}  onChange={(v) => setField("max_attendees", v)} />
+                    <FieldInput label="Ticket Price"   value={form.ticket_price}   onChange={(v) => setField("ticket_price", v)} aiField="ticket_price" onAiGenerate={generateField} aiLoadingField={aiFieldLoading} />
+                    <FieldInput label="Organizer"      value={form.organizer}      onChange={(v) => setField("organizer", v)} aiField="organizer" onAiGenerate={generateField} aiLoadingField={aiFieldLoading} />
+                    <FieldInput label="Max Attendees"  value={form.max_attendees}  onChange={(v) => setField("max_attendees", v)} aiField="max_attendees" onAiGenerate={generateField} aiLoadingField={aiFieldLoading} />
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                    <FieldInput label="Latitude"  value={form.latitude}  onChange={(v) => setField("latitude", v)}  mono />
-                    <FieldInput label="Longitude" value={form.longitude} onChange={(v) => setField("longitude", v)} mono />
+                    <FieldInput label="Latitude"  value={form.latitude}  onChange={(v) => setField("latitude", v)}  mono aiField="latitude" onAiGenerate={generateField} aiLoadingField={aiFieldLoading} />
+                    <FieldInput label="Longitude" value={form.longitude} onChange={(v) => setField("longitude", v)} mono aiField="longitude" onAiGenerate={generateField} aiLoadingField={aiFieldLoading} />
                   </div>
                   {/* Video URL */}
                   <div className="space-y-1.5">
@@ -605,21 +705,52 @@ export default function EventDetailPage() {
             )}
 
             {/* ── SEO ── */}
-            {tab === "seo" && (
-              <div className="bg-white p-6 rounded-card border border-border shadow-soft space-y-5">
-                <h4 className="text-sm font-bold text-gray-800 font-display">SEO</h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                  <FieldInput label="Meta Title"    value={form.seo_title}    onChange={(v) => setField("seo_title", v)} />
-                  <FieldInput label="Meta Keywords" value={form.seo_keywords} onChange={(v) => setField("seo_keywords", v)} />
-                </div>
-                <div className="space-y-1.5">
-                  <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block">Meta Description</label>
-                  <textarea value={form.seo_description} onChange={(e) => setField("seo_description", e.target.value)} rows={3}
-                    className="w-full bg-bg focus:bg-white text-xs p-4 rounded-xl border border-transparent focus:border-border outline-none font-medium" />
-                </div>
-                <OgImageUploader value={form.og_image_url} onChange={(v) => setField("og_image_url", v)} />
-              </div>
-            )}
+             {tab === "seo" && (
+               <div className="bg-white p-6 rounded-card border border-border shadow-soft space-y-5">
+                 <AIGroupButton
+                   label="SEO"
+                   subLabel="Generate all SEO metadata at once (title, keywords, description — ID + EN)"
+                   fields={["seo_title", "seo_title_en", "seo_keywords", "seo_keywords_en", "seo_description", "seo_description_en"]}
+                   onGenerateAll={generateFields}
+                   loading={aiFieldLoading === "seo-all"}
+                 />
+                 <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                   <FieldInput label="Meta Title (ID)"    value={form.seo_title}    onChange={(v) => setField("seo_title", v)} aiField="seo_title" onAiGenerate={generateField} aiLoadingField={aiFieldLoading} />
+                   <FieldInput label="Meta Title (EN)"    value={form.seo_title_en} onChange={(v) => setField("seo_title_en", v)} aiField="seo_title_en" onAiGenerate={generateField} aiLoadingField={aiFieldLoading} />
+                 </div>
+                 <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                   <FieldInput label="Meta Keywords (ID)" value={form.seo_keywords}    onChange={(v) => setField("seo_keywords", v)} aiField="seo_keywords" onAiGenerate={generateField} aiLoadingField={aiFieldLoading} />
+                   <FieldInput label="Meta Keywords (EN)" value={form.seo_keywords_en} onChange={(v) => setField("seo_keywords_en", v)} aiField="seo_keywords_en" onAiGenerate={generateField} aiLoadingField={aiFieldLoading} />
+                 </div>
+                 <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                   <div className="space-y-1.5">
+                     <div className="flex items-center justify-between">
+                       <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block">Meta Description (ID)</label>
+                       <button type="button" onClick={() => generateField("seo_description")} disabled={aiFieldLoading === "seo_description"}
+                         className="flex items-center gap-1 px-2 py-1 text-[9px] font-bold text-primary bg-primary/10 hover:bg-primary/20 rounded-md transition cursor-pointer disabled:opacity-50">
+                         {aiFieldLoading === "seo_description" ? <Loader2 className="w-3 h-3 animate-spin" /> : <Sparkles className="w-3 h-3" />}
+                         <span>AI</span>
+                       </button>
+                     </div>
+                     <textarea value={form.seo_description} onChange={(e) => setField("seo_description", e.target.value)} rows={3}
+                       className="w-full bg-bg focus:bg-white text-xs p-4 rounded-xl border border-transparent focus:border-border outline-none font-medium" />
+                   </div>
+                   <div className="space-y-1.5">
+                     <div className="flex items-center justify-between">
+                       <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block">Meta Description (EN)</label>
+                       <button type="button" onClick={() => generateField("seo_description_en")} disabled={aiFieldLoading === "seo_description_en"}
+                         className="flex items-center gap-1 px-2 py-1 text-[9px] font-bold text-primary bg-primary/10 hover:bg-primary/20 rounded-md transition cursor-pointer disabled:opacity-50">
+                         {aiFieldLoading === "seo_description_en" ? <Loader2 className="w-3 h-3 animate-spin" /> : <Sparkles className="w-3 h-3" />}
+                         <span>AI</span>
+                       </button>
+                     </div>
+                     <textarea value={form.seo_description_en} onChange={(e) => setField("seo_description_en", e.target.value)} rows={3}
+                       className="w-full bg-bg focus:bg-white text-xs p-4 rounded-xl border border-transparent focus:border-border outline-none font-medium" />
+                   </div>
+                 </div>
+                 <OgImageUploader value={form.og_image_url} onChange={(v) => setField("og_image_url", v)} />
+               </div>
+             )}
 
             {/* ── DESTINATION ── */}
             {tab === "destination" && (

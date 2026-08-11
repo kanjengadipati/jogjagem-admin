@@ -140,17 +140,55 @@ function mapsUrlFor(form: FormState): string | null {
   }
   return null;
 }
-function FieldInput({ label, value, onChange, mono = false }: {
+function FieldInput({ label, value, onChange, mono = false, aiField, onAiGenerate, aiLoadingField }: {
   label: string; value: string; onChange: (v: string) => void; mono?: boolean;
+  aiField?: string; onAiGenerate?: (field: string) => void; aiLoadingField?: string | null;
 }) {
+  const loading = aiField && aiLoadingField === aiField;
   return (
     <div className="space-y-1.5">
-      <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest font-display block">{label}</label>
+      <div className="flex items-center justify-between">
+        <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest font-display block">{label}</label>
+        {aiField && onAiGenerate && (
+          <button
+            type="button"
+            onClick={() => onAiGenerate(aiField)}
+            disabled={!!loading}
+            className="flex items-center gap-1 px-2 py-1 text-[9px] font-bold text-primary hover:text-primary-dark bg-primary/10 hover:bg-primary/20 rounded-md transition cursor-pointer disabled:opacity-50"
+            title={`AI generate ${aiField}`}
+          >
+            {loading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Sparkles className="w-3 h-3" />}
+            <span>AI</span>
+          </button>
+        )}
+      </div>
       <input
         value={value}
         onChange={(e) => onChange(e.target.value)}
         className={`w-full bg-bg focus:bg-white text-xs px-4 py-3 rounded-xl border border-transparent focus:border-border outline-none font-medium${mono ? " font-mono" : ""}`}
       />
+    </div>
+  );
+}
+
+function AIGroupButton({ label, subLabel, fields, onGenerateAll, loading }: {
+  label: string; subLabel?: string; fields: string[]; onGenerateAll: (label: string, fields: string[]) => void; loading: boolean;
+}) {
+  return (
+    <div className="flex items-center justify-between">
+      <div>
+        <h4 className="text-sm font-bold text-gray-800 font-display">{label}</h4>
+        {subLabel && <p className="text-[10px] text-gray-400">{subLabel}</p>}
+      </div>
+      <button
+        type="button"
+        onClick={() => onGenerateAll(label, fields)}
+        disabled={loading}
+        className="flex items-center gap-1.5 px-3 py-1.5 text-[10px] font-bold text-primary hover:text-primary-dark bg-primary/10 hover:bg-primary/20 rounded-lg transition cursor-pointer disabled:opacity-50"
+      >
+        {loading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
+        <span>AI</span>
+      </button>
     </div>
   );
 }
@@ -215,6 +253,10 @@ export default function DestinationDetailPage() {
   const [deleting, setDeleting] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [aiLoading, setAiLoading] = useState(false);
+  // Cached result of the last full AI generation so per-field buttons can reuse
+  // it without re-hitting the provider for every field.
+  const [aiResult, setAiResult] = useState<any>(null);
+  const [aiFieldLoading, setAiFieldLoading] = useState<string | null>(null);
   // savedScore: the last score persisted to DB (from API response after save)
   const [savedScore, setSavedScore] = useState<{ score: number; verdict: string } | null>(null);
   const [uploading, setUploading] = useState(false);
@@ -517,18 +559,77 @@ export default function DestinationDetailPage() {
       if (data.review_count) { setField("review_count", String(data.review_count)); filled++; }
       if (data.seoTitle) { setField("seo_title", data.seoTitle); filled++; }
       if (data.seoTitleEn) { setField("seo_title_en", data.seoTitleEn); filled++; }
-      if (data.seoDescription) { setField("seo_description", data.seoDescription); filled++; }
-      if (data.seoDescriptionEn) { setField("seo_description_en", data.seoDescriptionEn); filled++; }
-      if (data.seoKeywords) { setField("seo_keywords", data.seoKeywords); filled++; }
-      if (data.seoKeywordsEn) { setField("seo_keywords_en", data.seoKeywordsEn); filled++; }
+       if (data.seoDescription) { setField("seo_description", data.seoDescription); filled++; }
+       if (data.seoDescriptionEn) { setField("seo_description_en", data.seoDescriptionEn); filled++; }
+       if (data.seoKeywords) { setField("seo_keywords", data.seoKeywords); filled++; }
+       if (data.seoKeywordsEn) { setField("seo_keywords_en", data.seoKeywordsEn); filled++; }
 
+      setAiResult(data); // cache for per-field reuse
       showToast("AI", `${filled} fields generated`, "success");
+     } catch {
+      showToast("AI Error", "Generation failed", "error");
+      setAiResult(null);
+     } finally {
+      setAiLoading(false);
+     }
+   }
+
+  // Form field -> AI response key mapping
+  const DEST_FIELD_MAP: Record<string, string> = {
+    name: "name", name_en: "name_en", tagline: "tagline", tagline_en: "tagline_en",
+    location: "location", description: "description", description_en: "description_en",
+    story: "story", story_en: "story_en", ticket_price: "ticket_price",
+    opening_hours: "opening_hours", best_time: "best_time", best_time_en: "best_time_en",
+    latitude: "latitude", longitude: "longitude", rating: "rating", review_count: "review_count",
+    seo_title: "seoTitle", seo_title_en: "seoTitleEn",
+    seo_description: "seoDescription", seo_description_en: "seoDescriptionEn",
+    seo_keywords: "seoKeywords", seo_keywords_en: "seoKeywordsEn",
+  };
+
+  async function ensureAIResult(label: string): Promise<any | null> {
+    if (aiResult) return aiResult;
+    if (!form.name) { showToast("Required", "Enter a destination name first", "warning"); return null; }
+    setAiFieldLoading(label);
+    try {
+      const res = await fetch("/api/ai/generate-description", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ destinationName: form.name, category: form.category, region: form.sub_region }),
+      });
+      const data = await res.json();
+      if (res.ok) setAiResult(data);
+      return data;
     } catch {
       showToast("AI Error", "Generation failed", "error");
+      return null;
     } finally {
-      setAiLoading(false);
+      setAiFieldLoading(null);
     }
   }
+
+  // Generate (or reuse cached) for a single field
+  async function generateField(field: string) {
+    const data = await ensureAIResult(field);
+    if (!data) return;
+    const key = DEST_FIELD_MAP[field];
+    const val = key ? data[key] : undefined;
+    if (val) { setField(field as any, String(val)); showToast("AI", `${field} generated`, "success"); }
+    else { showToast("AI", `No value for ${field}`, "info"); }
+  }
+
+  // Generate (or reuse cached) for a group of fields — used by lat/lng etc.
+  async function generateFields(label: string, fields: string[]) {
+    const data = await ensureAIResult(label);
+    if (!data) return;
+    let filled = 0;
+    for (const field of fields) {
+      const key = DEST_FIELD_MAP[field];
+      const val = key ? data[key] : undefined;
+      if (val) { setField(field as any, String(val)); filled++; }
+    }
+    showToast("AI", `${filled} fields generated`, "success");
+  }
+
 
   async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     console.log("File change detected");
@@ -742,7 +843,7 @@ export default function DestinationDetailPage() {
                     </div>
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                    <FieldInput label={lang === "id" ? "Nama Destinasi" : "Destination Name"} value={lang === "id" ? form.name : form.name_en} onChange={(v) => setField(lang === "id" ? "name" : "name_en", v)} />
+                    <FieldInput label={lang === "id" ? "Nama Destinasi" : "Destination Name"} value={lang === "id" ? form.name : form.name_en} onChange={(v) => setField(lang === "id" ? "name" : "name_en", v)} aiField={lang === "id" ? "name" : "name_en"} onAiGenerate={generateField} aiLoadingField={aiFieldLoading} />
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-1.5">
                         <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest font-display block">Category</label>
@@ -763,20 +864,34 @@ export default function DestinationDetailPage() {
                     </div>
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                    <FieldInput label={lang === "id" ? "Tagline" : "Tagline (EN)"} value={lang === "id" ? form.tagline : form.tagline_en} onChange={(v) => setField(lang === "id" ? "tagline" : "tagline_en", v)} />
-                    <FieldInput label="Location / Address" value={form.location} onChange={(v) => setField("location", v)} />
+                    <FieldInput label={lang === "id" ? "Tagline" : "Tagline (EN)"} value={lang === "id" ? form.tagline : form.tagline_en} onChange={(v) => setField(lang === "id" ? "tagline" : "tagline_en", v)} aiField={lang === "id" ? "tagline" : "tagline_en"} onAiGenerate={generateField} aiLoadingField={aiFieldLoading} />
+                    <FieldInput label="Location / Address" value={form.location} onChange={(v) => setField("location", v)} aiField="location" onAiGenerate={generateField} aiLoadingField={aiFieldLoading} />
                   </div>
                   <div className="space-y-3">
-                    <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest font-display block">
-                      {lang === "id" ? "Deskripsi Editorial" : "Editorial Description (EN)"}
-                    </label>
+                    <div className="flex items-center justify-between">
+                      <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest font-display block">
+                        {lang === "id" ? "Deskripsi Editorial" : "Editorial Description (EN)"}
+                      </label>
+                      <button type="button" onClick={() => generateField(lang === "id" ? "description" : "description_en")} disabled={aiFieldLoading === (lang === "id" ? "description" : "description_en")}
+                        className="flex items-center gap-1 px-2 py-1 text-[9px] font-bold text-primary bg-primary/10 hover:bg-primary/20 rounded-md transition cursor-pointer disabled:opacity-50">
+                        {aiFieldLoading === (lang === "id" ? "description" : "description_en") ? <Loader2 className="w-3 h-3 animate-spin" /> : <Sparkles className="w-3 h-3" />}
+                        <span>AI</span>
+                      </button>
+                    </div>
                     <textarea value={lang === "id" ? form.description : form.description_en} onChange={(e) => setField(lang === "id" ? "description" : "description_en", e.target.value)} rows={6}
                       className="w-full bg-bg focus:bg-white text-xs p-4 rounded-xl border border-transparent focus:border-border outline-none font-medium leading-relaxed" />
                   </div>
                   <div className="space-y-3">
-                    <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest font-display block">
-                      {lang === "id" ? "Cerita / Editorial" : "Story / Editorial (EN)"}
-                    </label>
+                    <div className="flex items-center justify-between">
+                      <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest font-display block">
+                        {lang === "id" ? "Cerita / Editorial" : "Story / Editorial (EN)"}
+                      </label>
+                      <button type="button" onClick={() => generateField(lang === "id" ? "story" : "story_en")} disabled={aiFieldLoading === (lang === "id" ? "story" : "story_en")}
+                        className="flex items-center gap-1 px-2 py-1 text-[9px] font-bold text-primary bg-primary/10 hover:bg-primary/20 rounded-md transition cursor-pointer disabled:opacity-50">
+                        {aiFieldLoading === (lang === "id" ? "story" : "story_en") ? <Loader2 className="w-3 h-3 animate-spin" /> : <Sparkles className="w-3 h-3" />}
+                        <span>AI</span>
+                      </button>
+                    </div>
                     <textarea value={lang === "id" ? form.story : form.story_en} onChange={(e) => setField(lang === "id" ? "story" : "story_en", e.target.value)} rows={4}
                       className="w-full bg-bg focus:bg-white text-xs p-4 rounded-xl border border-transparent focus:border-border outline-none font-medium leading-relaxed" />
                   </div>
@@ -785,17 +900,17 @@ export default function DestinationDetailPage() {
                 <div className="bg-white p-6 rounded-card border border-border shadow-soft space-y-5">
                   <h4 className="text-sm font-bold text-gray-800 font-display">Practical Information</h4>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-                    <FieldInput label="Ticket Price" value={form.ticket_price} onChange={(v) => setField("ticket_price", v)} />
-                    <FieldInput label="Opening Hours" value={form.opening_hours} onChange={(v) => setField("opening_hours", v)} />
-                    <FieldInput label={lang === "id" ? "Waktu Terbaik" : "Best Time to Visit (EN)"} value={lang === "id" ? form.best_time : form.best_time_en} onChange={(v) => setField(lang === "id" ? "best_time" : "best_time_en", v)} />
+                    <FieldInput label="Ticket Price" value={form.ticket_price} onChange={(v) => setField("ticket_price", v)} aiField="ticket_price" onAiGenerate={generateField} aiLoadingField={aiFieldLoading} />
+                    <FieldInput label="Opening Hours" value={form.opening_hours} onChange={(v) => setField("opening_hours", v)} aiField="opening_hours" onAiGenerate={generateField} aiLoadingField={aiFieldLoading} />
+                    <FieldInput label={lang === "id" ? "Waktu Terbaik" : "Best Time to Visit (EN)"} value={lang === "id" ? form.best_time : form.best_time_en} onChange={(v) => setField(lang === "id" ? "best_time" : "best_time_en", v)} aiField={lang === "id" ? "best_time" : "best_time_en"} onAiGenerate={generateField} aiLoadingField={aiFieldLoading} />
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                    <FieldInput label="Latitude" value={form.latitude} onChange={(v) => setField("latitude", v)} mono />
-                    <FieldInput label="Longitude" value={form.longitude} onChange={(v) => setField("longitude", v)} mono />
+                    <FieldInput label="Latitude" value={form.latitude} onChange={(v) => setField("latitude", v)} mono aiField="latitude" onAiGenerate={generateField} aiLoadingField={aiFieldLoading} />
+                    <FieldInput label="Longitude" value={form.longitude} onChange={(v) => setField("longitude", v)} mono aiField="longitude" onAiGenerate={generateField} aiLoadingField={aiFieldLoading} />
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                    <FieldInput label="Rating" value={form.rating} onChange={(v) => setField("rating", v)} />
-                    <FieldInput label="Review Count" value={form.review_count} onChange={(v) => setField("review_count", v)} />
+                    <FieldInput label="Rating" value={form.rating} onChange={(v) => setField("rating", v)} aiField="rating" onAiGenerate={generateField} aiLoadingField={aiFieldLoading} />
+                    <FieldInput label="Review Count" value={form.review_count} onChange={(v) => setField("review_count", v)} aiField="review_count" onAiGenerate={generateField} aiLoadingField={aiFieldLoading} />
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-1 gap-5">
                     <div>
@@ -1096,33 +1211,55 @@ export default function DestinationDetailPage() {
               </div>
             )}
 
-            {/* SEO */}
-            {tab === "seo" && (
-              <div className="bg-white p-6 rounded-card border border-border shadow-soft space-y-5">
-                <h4 className="text-sm font-bold text-gray-800 font-display">SEO & AI Translation</h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                  <FieldInput label="Meta Title (ID)" value={form.seo_title} onChange={(v) => setField("seo_title", v)} />
-                  <FieldInput label="Meta Title (EN)" value={form.seo_title_en} onChange={(v) => setField("seo_title_en", v)} />
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                  <FieldInput label="Meta Keywords (ID)" value={form.seo_keywords} onChange={(v) => setField("seo_keywords", v)} />
-                  <FieldInput label="Meta Keywords (EN)" value={form.seo_keywords_en} onChange={(v) => setField("seo_keywords_en", v)} />
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                  <div className="space-y-1.5">
-                    <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block">Meta Description (ID)</label>
-                    <textarea value={form.seo_description} onChange={(e) => setField("seo_description", e.target.value)} rows={3}
-                      className="w-full bg-bg focus:bg-white text-xs p-4 rounded-xl border border-transparent focus:border-border outline-none font-medium" />
-                  </div>
-                  <div className="space-y-1.5">
-                    <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block">Meta Description (EN)</label>
-                    <textarea value={form.seo_description_en} onChange={(e) => setField("seo_description_en", e.target.value)} rows={3}
-                      className="w-full bg-bg focus:bg-white text-xs p-4 rounded-xl border border-transparent focus:border-border outline-none font-medium" />
-                  </div>
-                </div>
-                <OgImageUploader value={form.og_image_url} onChange={(v) => setField("og_image_url", v)} />
-              </div>
-            )}
+              {/* SEO */}
+             {tab === "seo" && (
+               <div className="bg-white p-6 rounded-card border border-border shadow-soft space-y-5">
+                 <div className="flex items-center justify-between">
+                   <h4 className="text-sm font-bold text-gray-800 font-display">SEO & AI Translation</h4>
+                   <AIGroupButton
+                     label="Generate All SEO"
+                     fields={["seo_title", "seo_title_en", "seo_description", "seo_description_en", "seo_keywords", "seo_keywords_en"]}
+                     onGenerateAll={generateFields}
+                     loading={aiFieldLoading === "seo-all"}
+                   />
+                 </div>
+                 <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                   <FieldInput label="Meta Title (ID)" value={form.seo_title} onChange={(v) => setField("seo_title", v)} aiField="seo_title" onAiGenerate={generateField} aiLoadingField={aiFieldLoading} />
+                   <FieldInput label="Meta Title (EN)" value={form.seo_title_en} onChange={(v) => setField("seo_title_en", v)} aiField="seo_title_en" onAiGenerate={generateField} aiLoadingField={aiFieldLoading} />
+                 </div>
+                 <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                   <FieldInput label="Meta Keywords (ID)" value={form.seo_keywords} onChange={(v) => setField("seo_keywords", v)} aiField="seo_keywords" onAiGenerate={generateField} aiLoadingField={aiFieldLoading} />
+                   <FieldInput label="Meta Keywords (EN)" value={form.seo_keywords_en} onChange={(v) => setField("seo_keywords_en", v)} aiField="seo_keywords_en" onAiGenerate={generateField} aiLoadingField={aiFieldLoading} />
+                 </div>
+                 <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                   <div className="space-y-1.5">
+                     <div className="flex items-center justify-between">
+                       <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block">Meta Description (ID)</label>
+                       <button type="button" onClick={() => generateField("seo_description")} disabled={aiFieldLoading === "seo_description"}
+                         className="flex items-center gap-1 px-2 py-1 text-[9px] font-bold text-primary bg-primary/10 hover:bg-primary/20 rounded-md transition cursor-pointer disabled:opacity-50">
+                         {aiFieldLoading === "seo_description" ? <Loader2 className="w-3 h-3 animate-spin" /> : <Sparkles className="w-3 h-3" />}
+                         <span>AI</span>
+                       </button>
+                     </div>
+                     <textarea value={form.seo_description} onChange={(e) => setField("seo_description", e.target.value)} rows={3}
+                       className="w-full bg-bg focus:bg-white text-xs p-4 rounded-xl border border-transparent focus:border-border outline-none font-medium" />
+                   </div>
+                   <div className="space-y-1.5">
+                     <div className="flex items-center justify-between">
+                       <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block">Meta Description (EN)</label>
+                       <button type="button" onClick={() => generateField("seo_description_en")} disabled={aiFieldLoading === "seo_description_en"}
+                         className="flex items-center gap-1 px-2 py-1 text-[9px] font-bold text-primary bg-primary/10 hover:bg-primary/20 rounded-md transition cursor-pointer disabled:opacity-50">
+                         {aiFieldLoading === "seo_description_en" ? <Loader2 className="w-3 h-3 animate-spin" /> : <Sparkles className="w-3 h-3" />}
+                         <span>AI</span>
+                       </button>
+                     </div>
+                     <textarea value={form.seo_description_en} onChange={(e) => setField("seo_description_en", e.target.value)} rows={3}
+                       className="w-full bg-bg focus:bg-white text-xs p-4 rounded-xl border border-transparent focus:border-border outline-none font-medium" />
+                   </div>
+                 </div>
+                 <OgImageUploader value={form.og_image_url} onChange={(v) => setField("og_image_url", v)} />
+               </div>
+             )}
 
             {/* Events */}
             {tab === "events" && (
