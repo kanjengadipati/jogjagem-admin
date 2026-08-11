@@ -24,7 +24,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Verify the user has an admin or superadmin role by decoding the JWT payload
+    // Verify the user has an admin, superadmin, or sales role by decoding the JWT payload
     let role: string | undefined;
     try {
       const payload = JSON.parse(
@@ -35,18 +35,22 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Invalid token received from server" }, { status: 500 });
     }
 
-    if (role !== "admin" && role !== "superadmin" && role !== "partner" && role !== "sales") {
+    if (role === "partner" || role === "business_owner") {
+      return NextResponse.json(
+        { error: "Login ini khusus operator admin. Pemilik bisnis silakan masuk melalui portal utama." },
+        { status: 403 }
+      );
+    }
+
+    if (role !== "admin" && role !== "superadmin" && role !== "sales") {
       return NextResponse.json(
         { error: "Access denied. Valid privileges required." },
         { status: 403 }
       );
     }
 
-    // Redirect or indicate dashboard/listings based on role
-    const redirectUrl =
-      role === "partner" ? "/business" :
-      role === "sales"   ? "/sales/me" :
-                           "/dashboard";
+    // Redirect based on role
+    const redirectUrl = role === "sales" ? "/sales/me" : "/dashboard";
     const response = NextResponse.json({ ok: true, redirectUrl });
     const domain = process.env.NODE_ENV === "production"
       ? (process.env.NEXT_PUBLIC_COOKIE_DOMAIN || ".jogjagem.com")

@@ -12,7 +12,7 @@ test.describe('Admin Portal', () => {
   });
 
   test('protected routes redirect to login when unauthenticated', async ({ page }) => {
-    for (const path of ['/dashboard', '/business', '/sales', '/sales/bonus-rules']) {
+    for (const path of ['/dashboard', '/sales', '/sales/bonus-rules']) {
       await page.goto(path);
       await expect(page).toHaveURL(/\/login$/);
     }

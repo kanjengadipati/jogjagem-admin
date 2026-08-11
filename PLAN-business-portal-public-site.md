@@ -1,6 +1,7 @@
 # Plan: Move Business Portal to the Public Site (bilingual)
 
-Status: PENDING — not started
+Status: DONE — business portal lives on the public site (`jogjagem`) at `/[locale]/business/*`;
+the legacy copy was removed from this admin app (Phase 3 cleanup).
 Created: 2026-08-05
 
 ## Goal
@@ -115,6 +116,15 @@ The invite email URL already points to `NEXT_PUBLIC_FRONTEND_URL` (portal), so i
 - Remove ported components, pages, and proxy routes from admin app
 - Update AGENTS.md/README with new locations
 - Verify: full partner journey on public site; admin portal unaffected for ops
+
+> **DONE (2026-08-11):** admin app cleanup executed —
+> deleted `src/app/business/**`, `BusinessSidebar`/`BusinessHeader`,
+> `src/components/business-portal/`, `src/hooks/useActiveBusiness.ts`,
+> and `src/app/api/businesses/me/**`. Partner/business_owner login is now rejected
+> (403) on this admin app; existing partner sessions redirect to the public portal
+> (`NEXT_PUBLIC_FRONTEND_URL`). Removed dead `partnerMenuGroups` + unused `Partner`
+> type. Admin ops (`(admin)/businesses`, `business-claims`, `ad-campaigns`,
+> sales pages) unaffected. `SnapCheckoutButton` kept (still used by ad-campaigns page).
 
 ## Verification commands
 - Admin: `cd jogjagem-admin && npx tsc --noEmit`

@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Mail, Lock, ArrowRight, Compass, Loader2 } from "lucide-react";
+import Image from "next/image";
+import { Mail, Lock, ArrowRight, Loader2 } from "lucide-react";
 import SocialLoginButtons from "@/components/SocialLoginButtons";
 
 export default function LoginForm() {
@@ -82,8 +83,8 @@ export default function LoginForm() {
 
         {/* Logo */}
         <div className="text-center space-y-3 relative z-10">
-          <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-primary to-secondary flex items-center justify-center text-white mx-auto shadow-lg shadow-primary/10">
-            <Compass className="w-7 h-7" />
+          <div className="w-14 h-14 rounded-2xl bg-white border border-border flex items-center justify-center mx-auto shadow-lg shadow-primary/10 overflow-hidden">
+            <Image src="/logo-gold-new.png" alt="Jogjagem Logo" width={40} height={40} className="object-contain" />
           </div>
           <div>
             <h1 className="font-display font-extrabold text-xl tracking-tight text-primary">

@@ -5,6 +5,9 @@ export const BACKEND_URL =
 
 export const COOKIE_NAME = "jogjagem_session";
 
+export const FRONTEND_URL =
+  process.env.NEXT_PUBLIC_FRONTEND_URL || "http://localhost:3001";
+
 export const ADMIN_USER: AdminUser = {
   name: "Admin Jogjagem",
   role: "Super Admin",
@@ -77,18 +80,6 @@ export const menuGroups: MenuGroup[] = [
       { name: "User Management", icon: "user-cog", path: "/users",    activeId: "users",    roles: ["superadmin"] },
       { name: "Role Management", icon: "shield",   path: "/roles",    activeId: "roles",    roles: ["superadmin"] },
       { name: "Settings",        icon: "settings", path: "/settings", activeId: "settings" },
-    ],
-  },
-];
-
-export const partnerMenuGroups: MenuGroup[] = [
-  {
-    title: "Business Portal",
-    items: [
-      { name: "Dashboard", icon: "layout-dashboard", path: "/business", activeId: "dashboard" },
-      { name: "My Listings", icon: "briefcase", path: "/business/listings", activeId: "listings" },
-      { name: "Promotions", icon: "tag", path: "/business/promotions", activeId: "promotions" },
-      { name: "Reviews", icon: "message-square", path: "/business/reviews", activeId: "reviews" },
     ],
   },
 ];

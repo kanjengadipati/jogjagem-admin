@@ -286,7 +286,7 @@ export default async function DashboardPage() {
           <StatCard icon={Database} label="Backend" value={backendConnected ? "Online" : "Offline"} color={backendConnected ? "#10b981" : "#ef4444"} bgColor={backendConnected ? "#ecfdf5" : "#fef2f2"} borderColor={backendConnected ? "#10b981" : "#ef4444"} />
         </div>
 
-        {/* Partner Stats Grid */}
+        {/* Business Stats Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
           <StatCard icon={Briefcase} label="Total Bisnis" value={bizTotal} color="#d97706" bgColor="#fffbeb" borderColor="#d97706" />
           <StatCard icon={Clock} label="Bisnis Pending" value={bizPending} color="#f59e0b" bgColor="#fef3c7" borderColor="#f59e0b" />

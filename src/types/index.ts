@@ -66,39 +66,6 @@ export interface Destination {
   updated_at?: string;
 }
 
-export interface Partner {
-  id: string;
-  name: string;
-  description?: string;
-  category?: string;
-  location?: string;
-  address?: string;
-  image?: string;
-  rating?: number;
-  price?: string;
-  distance?: string;
-  phone?: string;
-  website?: string;
-  latitude?: number;
-  longitude?: number;
-  is_sponsored?: boolean;
-  sponsor_tier?: number;
-  sponsor_start_at?: string;
-  sponsor_end_at?: string;
-  target_dest_ids?: string[];
-  impression_count?: number;
-  click_count?: number;
-  sponsor_price?: number;
-  sponsor_price_currency?: string;
-  sponsor_payment_status?: string;
-  status?: string;
-  owner_user_id?: string;
-  rejection_reason?: string;
-  submitted_at?: string;
-  reviewed_at?: string;
-  reviewed_by?: string;
-}
-
 export interface Business {
   id: string;
   external_id?: string;

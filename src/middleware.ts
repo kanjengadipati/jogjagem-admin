@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { COOKIE_NAME } from "@/lib/constants";
+import { COOKIE_NAME, FRONTEND_URL } from "@/lib/constants";
 import { decodeJwtPayload } from "@/lib/jwt";
 
 // Routes that do NOT require authentication
@@ -7,9 +7,6 @@ const PUBLIC_PATHS = ["/login", "/logout", "/api/auth"];
 
 export function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
-  const isPartnerPortal =
-    pathname === "/business" ||
-    pathname.startsWith("/business/");
 
   // Allow public routes and static assets
   if (
@@ -66,23 +63,12 @@ export function middleware(req: NextRequest) {
     return NextResponse.redirect(new URL('/sales/me', req.url));
   }
 
+  // Business owners use the business portal on the public site, not this admin app
   if (role === 'partner' || role === 'business_owner') {
-    // Allow access to business/partner portal and API
-    if (
-      !isPartnerPortal &&
-      !req.nextUrl.pathname.startsWith('/api/businesses') &&
-      !req.nextUrl.pathname.startsWith('/api/me') &&
-      !req.nextUrl.pathname.startsWith('/api/auth')
-    ) {
-      return NextResponse.redirect(new URL('/business', req.url));
-    }
-  } else {
-    // Admin/Superadmin: restrict root /business without business ID
-    if (pathname === '/business') {
-      return NextResponse.redirect(new URL('/dashboard', req.url));
-    }
+    return NextResponse.redirect(new URL(FRONTEND_URL));
   }
 
+  // Admin/Superadmin
   return NextResponse.next();
 }
 

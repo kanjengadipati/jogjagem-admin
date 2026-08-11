@@ -31,8 +31,15 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ status: 'error', message: "Invalid token" }, { status: 500 });
     }
 
-    // Allow admins, superadmins, partners, and regular users accessing the portal to check business status
-    const redirectUrl = (role === "admin" || role === "superadmin") ? "/dashboard" : "/business";
+    // Only admin, superadmin, and sales roles are allowed on the admin portal
+    if (role !== "admin" && role !== "superadmin" && role !== "sales") {
+      return NextResponse.json(
+        { status: 'error', message: 'Login ini khusus operator admin. Pemilik bisnis silakan masuk melalui portal utama.' },
+        { status: 403 },
+      );
+    }
+
+    const redirectUrl = (role === "admin" || role === "superadmin") ? "/dashboard" : "/sales/me";
 
     const response = NextResponse.json({ status: 'success', redirectUrl });
 

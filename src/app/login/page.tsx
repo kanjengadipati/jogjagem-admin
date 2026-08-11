@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { cookies } from "next/headers";
-import { COOKIE_NAME } from "@/lib/constants";
+import { COOKIE_NAME, FRONTEND_URL } from "@/lib/constants";
 import { decodeJwtPayload } from "@/lib/jwt";
 import LoginForm from "@/components/LoginForm";
 
@@ -18,7 +18,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
     const payload = decodeJwtPayload(existingToken);
     const role = payload?.role;
     if (role === "partner" || role === "business_owner") {
-      redirect("/business");
+      redirect(FRONTEND_URL);
     }
     if (role === "sales") {
       redirect("/sales/me");
