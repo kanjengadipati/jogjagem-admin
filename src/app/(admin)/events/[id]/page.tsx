@@ -335,6 +335,7 @@ export default function EventDetailPage() {
 
   async function generateAI() {
     if (!form.title) { showToast("Required", "Enter a title first", "warning"); return; }
+    if (!confirm(`AI will generate and OVERWRITE event content fields for "${form.title}". Continue?`)) return;
     setAiLoading(true);
     try {
       const res = await fetch("/api/ai/generate-event", {

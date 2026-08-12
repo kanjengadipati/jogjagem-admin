@@ -522,6 +522,7 @@ export default function DestinationDetailPage() {
 
   async function generateAI() {
     if (!form.name) { showToast("Required", "Enter a destination name first", "warning"); return; }
+    if (!confirm(`AI will generate and OVERWRITE destination content fields for "${form.name}". Continue?`)) return;
     setAiLoading(true);
     try {
       const res = await fetch("/api/ai/generate-description", {
