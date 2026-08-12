@@ -49,6 +49,11 @@ export async function POST(req: NextRequest) {
       longitude?: string;
       rating?: string;
       review_count?: string;
+      facilities?: string[];
+      facilities_en?: string[];
+      travel_tips?: string[];
+      travel_tips_en?: string[];
+      faqs?: { q?: string; a?: string }[];
       seo_title?: string;
       seo_title_en?: string;
       seo_description?: string;
@@ -58,6 +63,13 @@ export async function POST(req: NextRequest) {
     };
   };
   const d = (data as GenDestData)?.data ?? {};
+  const strArr = (v: unknown): string[] =>
+    Array.isArray(v) ? v.filter((x): x is string => typeof x === "string") : [];
+  const faqs = Array.isArray(d.faqs)
+    ? d.faqs
+        .map((f) => ({ q: typeof f?.q === "string" ? f.q : "", a: typeof f?.a === "string" ? f.a : "" }))
+        .filter((f) => f.q || f.a)
+    : [];
 
   return NextResponse.json({
     name: d.name ?? "",
@@ -79,6 +91,11 @@ export async function POST(req: NextRequest) {
     longitude: d.longitude ?? "",
     rating: d.rating ?? "",
     review_count: d.review_count ?? "",
+    facilities: strArr(d.facilities),
+    facilities_en: strArr(d.facilities_en),
+    travel_tips: strArr(d.travel_tips),
+    travel_tips_en: strArr(d.travel_tips_en),
+    faqs,
     seoTitle: d.seo_title ?? "",
     seoTitleEn: d.seo_title_en ?? "",
     seoDescription: d.seo_description ?? "",

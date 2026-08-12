@@ -564,6 +564,13 @@ export default function DestinationDetailPage() {
        if (data.seoKeywords) { setField("seo_keywords", data.seoKeywords); filled++; }
        if (data.seoKeywordsEn) { setField("seo_keywords_en", data.seoKeywordsEn); filled++; }
 
+      if (Array.isArray(data.facilities) && data.facilities.length > 0) { setRich((r) => ({ ...r, facilities: data.facilities })); filled++; }
+      if (Array.isArray(data.travel_tips) && data.travel_tips.length > 0) { setRich((r) => ({ ...r, travel_tips: data.travel_tips })); filled++; }
+      if (Array.isArray(data.faqs) && data.faqs.length > 0) {
+        setRich((r) => ({ ...r, faqs: data.faqs.map((f: any) => ({ q: String(f.q ?? ""), a: String(f.a ?? "") })) }));
+        filled++;
+      }
+
       setAiResult(data); // cache for per-field reuse
       showToast("AI", `${filled} fields generated`, "success");
      } catch {
