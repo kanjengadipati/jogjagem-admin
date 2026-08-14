@@ -33,6 +33,35 @@ const EMPTY_FORM: Omit<HouseAd, "id"> = {
   is_enabled: true,
 };
 
+// ─── Target URL normalization ──────────────────────────────────────────────
+// Keeps the target_url field clean: fixes the common "https//" typo (missing
+// colon), prepends https:// to bare domains, and accepts relative paths.
+function normalizeTargetUrl(raw: string): string | null {
+  let value = raw.trim();
+  if (!value) return null;
+
+  // Relative paths and same-page links are allowed as-is.
+  if (value.startsWith("/") || value.startsWith("#") || value.startsWith("?")) return value;
+
+  // Fix missing colon after scheme: "https//x" → "https://x", "https:/x" → "https://x".
+  value = value
+    .replace(/^(https?)\/{1,2}/i, "$1://")
+    .replace(/^(https?):\//i, "$1://");
+
+  // Bare domain without scheme: "www.jogjagem.com/..." → "https://...".
+  if (!/^[a-z]+:/i.test(value) && /^[a-z0-9-]+(\.[a-z0-9-]+)+(:\d+)?(\/.*)?$/i.test(value)) {
+    value = `https://${value}`;
+  }
+
+  // Only http(s) is a valid ad destination; everything else is rejected.
+  if (!/^https?:\/\//i.test(value)) return null;
+  try {
+    return new URL(value).toString();
+  } catch {
+    return null;
+  }
+}
+
 // ─── Live Preview ──────────────────────────────────────────────────────────
 function LivePreview({ form, locale }: { form: Omit<HouseAd, "id">; locale: "id" | "en" }) {
   const hasImage = Boolean(form.image_url);
@@ -218,6 +247,11 @@ export default function HouseAdsPage() {
       showToast("Validasi", "Headline, CTA Label, dan Target URL wajib diisi", "error");
       return;
     }
+    const targetUrl = normalizeTargetUrl(form.target_url);
+    if (!targetUrl) {
+      showToast("Validasi", "Target URL tidak valid — gunakan https://… atau /path/relatif", "error");
+      return;
+    }
     setSaving(true);
     try {
       const res = await fetch(
@@ -225,7 +259,7 @@ export default function HouseAdsPage() {
         {
           method: editingId ? "PUT" : "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(form),
+          body: JSON.stringify({ ...form, target_url: targetUrl }),
         }
       );
       const data = await res.json().catch(() => ({}));
@@ -370,6 +404,18 @@ export default function HouseAdsPage() {
                     placeholder="https://... atau /path/relatif"
                     className="w-full px-3 py-2 text-xs border border-stone-200 rounded-xl bg-stone-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-amber-400/40 focus:border-amber-400 font-mono transition placeholder:text-stone-300"
                   />
+                  {form.target_url.trim() && (() => {
+                    const normalized = normalizeTargetUrl(form.target_url);
+                    return normalized === null ? (
+                      <p className="text-[10px] font-medium text-red-500">
+                        Tidak valid — gunakan https://… atau /path/relatif
+                      </p>
+                    ) : normalized !== form.target_url.trim() ? (
+                      <p className="text-[10px] font-medium text-stone-400">
+                        Akan disimpan sebagai: <span className="text-amber-600 font-mono">{normalized}</span>
+                      </p>
+                    ) : null;
+                  })()}
                 </div>
 
                 {/* Image */}
